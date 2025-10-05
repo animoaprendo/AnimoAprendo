@@ -42,6 +42,62 @@ export default function Browse() {
       availability: [{ id: "2", day: "Wednesday", start: "10:00", end: "11:00" }],
       banner: "https://images.unsplash.com/photo-1524995997946-a1c2e315a42f",
       status: "available",
+    },{
+      _id: { $oid: "68e124f6ca2cd032c7132636" },
+      userId: "user_32v6ZOB8bP3oHl5kBPSDgvxc7eG",
+      subject: "English Literature",
+      description: "<p>Improve your literary analysis and writing skills with expert guidance.</p>",
+      availability: [{ id: "2", day: "Wednesday", start: "10:00", end: "11:00" }],
+      banner: "https://images.unsplash.com/photo-1524995997946-a1c2e315a42f",
+      status: "available",
+    },{
+      _id: { $oid: "68e124f6ca2cd032c7132636" },
+      userId: "user_32v6ZOB8bP3oHl5kBPSDgvxc7eG",
+      subject: "English Literature",
+      description: "<p>Improve your literary analysis and writing skills with expert guidance.</p>",
+      availability: [{ id: "2", day: "Wednesday", start: "10:00", end: "11:00" }],
+      banner: "https://images.unsplash.com/photo-1524995997946-a1c2e315a42f",
+      status: "available",
+    },{
+      _id: { $oid: "68e124f6ca2cd032c7132636" },
+      userId: "user_32v6ZOB8bP3oHl5kBPSDgvxc7eG",
+      subject: "English Literature",
+      description: "<p>Improve your literary analysis and writing skills with expert guidance.</p>",
+      availability: [{ id: "2", day: "Wednesday", start: "10:00", end: "11:00" }],
+      banner: "https://images.unsplash.com/photo-1524995997946-a1c2e315a42f",
+      status: "available",
+    },{
+      _id: { $oid: "68e124f6ca2cd032c7132636" },
+      userId: "user_32v6ZOB8bP3oHl5kBPSDgvxc7eG",
+      subject: "English Literature",
+      description: "<p>Improve your literary analysis and writing skills with expert guidance.</p>",
+      availability: [{ id: "2", day: "Wednesday", start: "10:00", end: "11:00" }],
+      banner: "https://images.unsplash.com/photo-1524995997946-a1c2e315a42f",
+      status: "available",
+    },{
+      _id: { $oid: "68e124f6ca2cd032c7132636" },
+      userId: "user_32v6ZOB8bP3oHl5kBPSDgvxc7eG",
+      subject: "English Literature",
+      description: "<p>Improve your literary analysis and writing skills with expert guidance.</p>",
+      availability: [{ id: "2", day: "Wednesday", start: "10:00", end: "11:00" }],
+      banner: "https://images.unsplash.com/photo-1524995997946-a1c2e315a42f",
+      status: "available",
+    },{
+      _id: { $oid: "68e124f6ca2cd032c7132636" },
+      userId: "user_32v6ZOB8bP3oHl5kBPSDgvxc7eG",
+      subject: "English Literature",
+      description: "<p>Improve your literary analysis and writing skills with expert guidance.</p>",
+      availability: [{ id: "2", day: "Wednesday", start: "10:00", end: "11:00" }],
+      banner: "https://images.unsplash.com/photo-1524995997946-a1c2e315a42f",
+      status: "available",
+    },{
+      _id: { $oid: "68e124f6ca2cd032c7132636" },
+      userId: "user_32v6ZOB8bP3oHl5kBPSDgvxc7eG",
+      subject: "English Literature",
+      description: "<p>Improve your literary analysis and writing skills with expert guidance.</p>",
+      availability: [{ id: "2", day: "Wednesday", start: "10:00", end: "11:00" }],
+      banner: "https://images.unsplash.com/photo-1524995997946-a1c2e315a42f",
+      status: "available",
     },
   ];
 
@@ -98,7 +154,7 @@ export default function Browse() {
           {NewOffers.map((item, i) => (
             <div
               key={i}
-              className="min-w-[280px] max-w-[300px] bg-white rounded-xl shadow-lg hover:shadow-xl hover:scale-105 transition-transform flex flex-col"
+              className="min-w-[280px] max-w-[300px] bg-white rounded-xl shadow-lg hover:shadow-xl hover:scale-101 transition-transform flex flex-col"
             >
               <div className="relative">
                 <img
@@ -130,7 +186,7 @@ export default function Browse() {
               </div>
             </div>
           ))}
-        </div>
+        </div> 
       </section>
 
       {/* Trending Tutors */}

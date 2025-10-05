@@ -44,7 +44,7 @@ export default async function Layout({
       <SignedIn>
         <NavLinksTutee />
         {/* Page content here */}
-        <div className="flex flex-col grow items-center pt-0">
+        <div className="flex flex-col grow items-center pt-0 mb-8">
           {children}
         </div>
         <div className="">
