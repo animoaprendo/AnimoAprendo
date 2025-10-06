@@ -94,9 +94,9 @@ export default function MessagingPage() {
   );
 
   return (
-    <div className="p-4 h-[92vh] bg-gray-100 -my-8 grid grid-cols-1 md:grid-cols-4 xl:grid-cols-5 gap-4 w-full relative overflow-hidden">
+    <div className="p-4 h-[92vh] max-h-[92vh] bg-gray-100 -my-8 grid grid-cols-1 md:grid-cols-4 xl:grid-cols-5 gap-4 w-full relative overflow-hidden">
       {/* Left Column */}
-      <div className="bg-white rounded-2xl shadow p-4 flex flex-col col-span-1">
+      <div className="bg-white rounded-2xl shadow p-4 flex flex-col col-span-1 overflow-y-auto">
         <div className="flex items-center gap-2 mb-4">
           <Search className="w-5 h-5 text-gray-500" />
           <input
@@ -226,11 +226,11 @@ export default function MessagingPage() {
             ref={chatRef}
             onChange={(e) => setNewMessage(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleSend()}
-            className="flex-1 bg-green-50 rounded-full px-3 py-2 text-sm outline-none"
+            className="flex-1 bg-green-50 rounded-full px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-green-700 transition"
           />
           <button
             onClick={handleSend}
-            className="bg-green-700 hover:bg-green-800 text-white p-2 rounded-full"
+            className="bg-green-700 hover:bg-green-800 text-white p-2 rounded-full flex items-center justify-center"
           >
             <Send className="w-4 h-4" />
           </button>
@@ -277,14 +277,14 @@ export default function MessagingPage() {
               <div className="flex flex-col gap-1">
                 <h1 className="font-bold flex flex-row items-center gap-2"><InfoIcon className="inline-block size-6"/> No quiz created</h1>
                 <p className="text-xs">You have not created any quiz yet.</p>
-                <button className="font-semibold py-2 mt-2 bg-white text-black hover:bg-white/70 hover:cursor-pointer transition-all rounded-lg">Make Quiz</button>
+                <button className="font-semibold py-2 mt-2 bg-white text-black hover:bg-white/80 hover:cursor-pointer transition-all rounded-lg">Make Quiz</button>
               </div>
             </li>
             <li>
               <div className="flex flex-col gap-1">
                 <h1 className="font-bold flex flex-row items-center gap-2"><InfoIcon className="inline-block size-6"/> Appointment</h1>
                 <p className="text-xs">You have an appointment scheduled for tomorrow at 10 AM.</p>
-                <button className="font-semibold py-2 mt-2 bg-white text-black hover:bg-white/70 hover:cursor-pointer transition-all rounded-lg">Enter Meeting</button>
+                <button className="font-semibold py-2 mt-2 bg-white text-black hover:bg-white/80 hover:cursor-pointer transition-all rounded-lg">Enter Meeting</button>
               </div>
             </li>
           </ul>

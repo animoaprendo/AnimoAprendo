@@ -9,10 +9,10 @@ import {
   pauseSubject,
   getOffers,
   resumeSubject,
-} from "../../actions";
+} from "../actions";
 import { useUser } from "@clerk/nextjs";
 import { motion, AnimatePresence } from "framer-motion";
-import { CreatePopup } from "../../alert";
+import { CreatePopup } from "../alert";
 
 export default function TutorSubjects() {
   const { user } = useUser();
