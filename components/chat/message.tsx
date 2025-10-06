@@ -163,7 +163,7 @@ export default function MessagingPage() {
             <div className={`flex gap-2 w-full group ${msg.senderId === "2" ? "flex-row-reverse ml-auto" : "flex-row"}`} key={msg.id}>
               <div
                 key={msg.id}
-                className={`p-3 rounded-2xl ${
+                className={`max-w-9/12 p-3 rounded-2xl ${
                   msg.senderId === "2"
                     ? "bg-green-700 text-white"
                     : "bg-green-50 text-green-900"
@@ -192,7 +192,7 @@ export default function MessagingPage() {
                   setReplyTo(msg.id);
                   chatRef.current?.focus();
                 }}
-                className="text-sm mt-1 text-green-800 hover:underline select-none hover:cursor-pointer group-hover:block hidden"
+                className="text-sm mt-1 text-green-800 hover:underline select-none hover:cursor-pointer group-hover:block lg:hidden"
               >
                 <CornerUpLeft className="inline w-4 h-4 mr-1 stroke-3" />
               </button>
@@ -253,7 +253,7 @@ export default function MessagingPage() {
             Inquiry
           </h4>
           <div
-              className="w-full bg-white rounded-xl shadow-lg hover:shadow-xl hover:scale-101 transition-transform flex flex-col"
+              className="w-full bg-white rounded-xl shadow-lg transition-transform flex flex-col"
             >
               <div className="relative">
                 <img
