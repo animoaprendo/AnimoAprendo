@@ -1,16 +1,16 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Search, Send, CornerDownRight, Info } from "lucide-react";
+import { Search, Send, CornerDownRight, Info, CornerDownLeft, CornerUpLeft, InfoIcon } from "lucide-react";
 
 interface Message {
   id: number;
-  sender: string;
   text: string;
   timestamp: string;
   isUnread?: boolean;
-  isOwn?: boolean;
-  replyTo?: Message | null;
+  senderId?: string;
+  receipientId?: string;
+  replyTo?: Message["id"] | null;
 }
 
 interface User {
@@ -23,20 +23,49 @@ interface User {
 
 export default function MessagingPage() {
   const [users, setUsers] = useState<User[]>([
-    { id: 1, name: "Alex Johnson", lastMessage: "See you tomorrow!", unreadCount: 2 },
-    { id: 2, name: "Maria Lopez", lastMessage: "Thanks for the update!", unreadCount: 0 },
-    { id: 3, name: "Chris Lee", lastMessage: "Let’s fix the issue.", unreadCount: 1 },
+    {
+      id: 1,
+      name: "Alex Johnson",
+      lastMessage: "See you tomorrow!",
+      unreadCount: 2,
+    },
+    {
+      id: 2,
+      name: "Maria Lopez",
+      lastMessage: "Thanks for the update!",
+      unreadCount: 0,
+    },
+    {
+      id: 3,
+      name: "Chris Lee",
+      lastMessage: "Let’s fix the issue.",
+      unreadCount: 1,
+    },
   ]);
   const [activeUser, setActiveUser] = useState<User | null>(users[0]);
   const [messages, setMessages] = useState<Message[]>([
-    { id: 1, sender: "Alex Johnson", text: "Hey, how’s it going?", timestamp: "10:00 AM" },
-    { id: 2, sender: "You", text: "Doing great! You?", timestamp: "10:02 AM", isOwn: true },
+    {
+      id: 1,
+      senderId: "1",
+      text: "Hey, how’s it going?",
+      timestamp: "10:00 AM",
+      receipientId: "2",
+    },
+    {
+      id: 2,
+      senderId: "2",
+      text: "Doing great! You?",
+      timestamp: "10:02 AM",
+      receipientId: "1",
+      replyTo: 1,
+    },
   ]);
   const [search, setSearch] = useState("");
   const [newMessage, setNewMessage] = useState("");
-  const [replyTo, setReplyTo] = useState<Message | null>(null);
+  const [replyTo, setReplyTo] = useState<Message["id"] | null>(null);
   const [showSidebar, setShowSidebar] = useState(false);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const chatRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const container = messagesContainerRef.current;
@@ -49,11 +78,11 @@ export default function MessagingPage() {
     if (!newMessage.trim()) return;
     const newMsg: Message = {
       id: messages.length + 1,
-      sender: "You",
+      senderId: "2",
       text: newMessage,
       timestamp: "Just now",
-      isOwn: true,
       replyTo,
+      receipientId: "1",
     };
     setMessages((prev) => [...prev, newMsg]);
     setNewMessage("");
@@ -90,16 +119,22 @@ export default function MessagingPage() {
               }`}
             >
               <div className="flex justify-between items-center">
-                <h4 className="font-semibold text-sm text-green-900">{user.name}</h4>
+                <h4 className="font-semibold text-sm text-green-900">
+                  {user.name}
+                </h4>
                 {user.unreadCount > 0 && (
                   <span className="bg-green-700 text-white text-xs px-2 py-0.5 rounded-full">
                     {user.unreadCount}
                   </span>
                 )}
               </div>
-              <p className="text-xs text-gray-500 truncate">{user.lastMessage}</p>
+              <p className="text-xs text-gray-500 truncate">
+                {user.lastMessage}
+              </p>
               {user.isTyping && (
-                <p className="text-xs text-green-600 mt-1 animate-pulse">Typing...</p>
+                <p className="text-xs text-green-600 mt-1 animate-pulse">
+                  Typing...
+                </p>
               )}
             </div>
           ))}
@@ -108,7 +143,7 @@ export default function MessagingPage() {
 
       {/* Middle Column - Chat */}
       <div className="bg-white rounded-2xl shadow flex flex-col overflow-hidden col-span-1 md:col-span-3">
-        <div className="p-4 border-b flex justify-between items-center">
+        <div className="p-4 border-b border-black/30 flex justify-between items-center">
           <h3 className="font-semibold text-green-900 text-sm">
             {activeUser?.name ?? "Select a user"}
           </h3>
@@ -120,36 +155,47 @@ export default function MessagingPage() {
           </button>
         </div>
 
-        <div ref={messagesContainerRef} className="flex-1 overflow-y-auto p-4 space-y-3">
+        <div
+          ref={messagesContainerRef}
+          className="flex-1 overflow-y-auto p-4 space-y-3"
+        >
           {messages.map((msg) => (
-            <div
-              key={msg.id}
-              className={`max-w-[80%] w-fit p-3 rounded-2xl ${
-                msg.isOwn
-                  ? "ml-auto bg-green-700 text-white"
-                  : "bg-green-50 text-green-900"
-              }`}
-            >
-              {msg.replyTo && (
-                <div
-                  className={`text-xs mb-1 p-2 rounded-md ${
-                    msg.isOwn ? "bg-green-800/40" : "bg-green-100"
-                  }`}
-                >
-                  <CornerDownRight className="inline w-3 h-3 mr-1" />
-                  <span className="italic">{msg.replyTo.text}</span>
-                </div>
-              )}
-              <p>{msg.text}</p>
-              <span className="block text-[10px] mt-1 opacity-70">{msg.timestamp}</span>
-              {!msg.isOwn && (
-                <button
-                  onClick={() => setReplyTo(msg)}
-                  className="text-[10px] mt-1 text-green-800 hover:underline select-none hover:cursor-pointer"
-                >
-                  Reply
-                </button>
-              )}
+            <div className={`flex gap-2 w-full group ${msg.senderId === "2" ? "flex-row-reverse ml-auto" : "flex-row"}`} key={msg.id}>
+              <div
+                key={msg.id}
+                className={`p-3 rounded-2xl ${
+                  msg.senderId === "2"
+                    ? "bg-green-700 text-white"
+                    : "bg-green-50 text-green-900"
+                }`}
+              >
+                {msg.replyTo && (
+                  <div
+                    className={`text-xs mb-1 p-2 rounded-md ${
+                      msg.senderId === "2" ? "bg-green-800/40" : "bg-green-100"
+                    }`}
+                  >
+                    <CornerDownRight className="inline w-3 h-3 mr-1" />
+                    <span className="italic">
+                      {messages.find((m) => m.id === msg.replyTo)?.text ??
+                        "Message not found"}
+                    </span>
+                  </div>
+                )}
+                <p>{msg.text}</p>
+                <span className="block text-[10px] mt-1 opacity-70">
+                  {msg.timestamp}
+                </span>
+              </div>
+              <button
+                onClick={() => {
+                  setReplyTo(msg.id);
+                  chatRef.current?.focus();
+                }}
+                className="text-sm mt-1 text-green-800 hover:underline select-none hover:cursor-pointer group-hover:block hidden"
+              >
+                <CornerUpLeft className="inline w-4 h-4 mr-1 stroke-3" />
+              </button>
             </div>
           ))}
         </div>
@@ -157,22 +203,27 @@ export default function MessagingPage() {
         {replyTo && (
           <div className="p-2 bg-green-50 border-t text-xs flex items-center justify-between">
             <span>
-              Replying to: <span className="font-semibold">{replyTo.text}</span>
+              Replying to:{" "}
+              <span className="font-semibold">
+                {messages.find((m) => m.id === replyTo)?.text ??
+                  "Message not found"}
+              </span>
             </span>
             <button
               onClick={() => setReplyTo(null)}
-              className="text-green-700 font-semibold"
+              className="text-green-700 font-semibold hover:cursor-pointer"
             >
               ✕
             </button>
           </div>
         )}
 
-        <div className="p-3 border-t flex items-center gap-2">
+        <div className="p-3 border-t border-black/30 flex items-center gap-2">
           <input
             type="text"
-            placeholder="Type a message..."
+            placeholder="Aa"
             value={newMessage}
+            ref={chatRef}
             onChange={(e) => setNewMessage(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleSend()}
             className="flex-1 bg-green-50 rounded-full px-3 py-2 text-sm outline-none"
@@ -189,18 +240,53 @@ export default function MessagingPage() {
       {/* Right Column (Desktop only) */}
       <div className="bg-white rounded-2xl shadow p-4 space-y-4 col-span-1 hidden xl:block">
         <div>
-          <h4 className="font-semibold text-green-900 text-sm mb-2">User Information</h4>
+          <h4 className="font-semibold text-green-900 text-sm mb-2">
+            User Information
+          </h4>
           <p className="text-sm text-gray-600">
             Name: <span className="font-medium">{activeUser?.name ?? "—"}</span>
           </p>
-          <p className="text-sm text-gray-600">Status: Active</p>
+          <p className="text-sm text-gray-600">CYS: <span className="font-medium">BIT43</span></p>
         </div>
         <div>
-          <h4 className="font-semibold text-green-900 text-sm mb-2">Reminders</h4>
-          <ul className="text-sm text-gray-600 space-y-1 list-disc ml-4">
-            <li>Team meeting at 3 PM</li>
-            <li>Submit report by Friday</li>
-            <li>Check new updates</li>
+          <h4 className="font-semibold text-green-900 text-sm mb-2">
+            Inquiry
+          </h4>
+          <div
+              className="w-full bg-white rounded-xl shadow-lg hover:shadow-xl hover:scale-101 transition-transform flex flex-col"
+            >
+              <div className="relative">
+                <img
+                  src={"https://9idxhts2vbwdh6hb.public.blob.vercel-storage.com/keikchoco2-O9gw3FUynxpw5S2mxxD61TTgm4E5ln.jpg"}
+                  alt={"Mathematics"}
+                  className="w-full h-24 object-cover rounded-t-xl"
+                />
+              </div>
+              <div className="flex flex-col gap-2 p-4">
+                <h2 className="font-bold text-lg text-green-900">Mathematics</h2>
+              </div>
+            </div>
+
+        </div>
+        <div>
+          <h4 className="font-semibold text-green-900 text-sm mb-2">
+            Reminders
+          </h4>
+          <ul className="text-sm space-y-1 *:bg-green-700 text-white/95 *:px-3 *:py-4 *:rounded-md overflow-y-auto max-h-[34rem] rounded-md">
+            <li>
+              <div className="flex flex-col gap-1">
+                <h1 className="font-bold flex flex-row items-center gap-2"><InfoIcon className="inline-block size-6"/> No quiz created</h1>
+                <p className="text-xs">You have not created any quiz yet.</p>
+                <button className="font-semibold py-2 mt-2 bg-white text-black hover:bg-white/70 hover:cursor-pointer transition-all rounded-lg">Make Quiz</button>
+              </div>
+            </li>
+            <li>
+              <div className="flex flex-col gap-1">
+                <h1 className="font-bold flex flex-row items-center gap-2"><InfoIcon className="inline-block size-6"/> Appointment</h1>
+                <p className="text-xs">You have an appointment scheduled for tomorrow at 10 AM.</p>
+                <button className="font-semibold py-2 mt-2 bg-white text-black hover:bg-white/70 hover:cursor-pointer transition-all rounded-lg">Enter Meeting</button>
+              </div>
+            </li>
           </ul>
         </div>
       </div>
@@ -220,12 +306,15 @@ export default function MessagingPage() {
             </div>
             <div>
               <p className="text-sm text-gray-600">
-                Name: <span className="font-medium">{activeUser?.name ?? "—"}</span>
+                Name:{" "}
+                <span className="font-medium">{activeUser?.name ?? "—"}</span>
               </p>
               <p className="text-sm text-gray-600">Status: Active</p>
             </div>
             <div>
-              <h4 className="font-semibold text-green-900 text-sm mb-2">Reminders</h4>
+              <h4 className="font-semibold text-green-900 text-sm mb-2">
+                Reminders
+              </h4>
               <ul className="text-sm text-gray-600 space-y-1 list-disc ml-4">
                 <li>Team meeting at 3 PM</li>
                 <li>Submit report by Friday</li>
