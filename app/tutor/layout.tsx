@@ -32,7 +32,7 @@ export default async function Layout({
           {/* <DevButton /> */}
         </div>
         {/* Page content here */}
-        <div className="flex flex-col grow items-center py-6">{children}</div>
+        <div className="flex flex-col grow items-center">{children}</div>
         <div className="">
           <Footer />
         </div>

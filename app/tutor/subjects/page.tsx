@@ -92,7 +92,7 @@ export default function TutorSubjects() {
   );
 
   return (
-    <div className="flex flex-col gap-6 w-10/12 text-neutral-800">
+    <div className="flex flex-col py-6 gap-6 w-10/12 text-neutral-800">
       {/* Header */}
       <div className="flex flex-row gap-4 flex-wrap justify-between items-center">
         <h1 className="text-2xl font-bold text-nowrap">Subject Offerings</h1>

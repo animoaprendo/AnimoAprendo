@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 import { Calendar, momentLocalizer } from "react-big-calendar";
 import type { View, Event as RBCEvent } from "react-big-calendar";
 import moment from "moment";
+// @ts-ignore
 import "react-big-calendar/lib/css/react-big-calendar.css";
 
 const localizer = momentLocalizer(moment);

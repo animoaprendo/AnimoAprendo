@@ -1,283 +1,402 @@
-import RatingGFX from "@/components/star-rating";
-import SubjectCardTemplate from "@/components/subject-card";
-import { StringToBoolean } from "class-variance-authority/dist/types";
-import Image from "next/image";
+"use client";
+import { useParams, useRouter } from "next/navigation";
+import React, { use, useState } from "react";
+import { ArrowLeft, Clock, Star } from "lucide-react";
+import Stepper, { Step } from "@/components/reactbits/stepper";
+import { PiPauseCircle, PiWarningBold } from "react-icons/pi";
 import Link from "next/link";
-import React from "react";
-import { FaArrowAltCircleLeft } from "react-icons/fa";
 
-interface CardInfo {
-  Title: string;
-  Image: string;
-  Description: string;
-  Rating: number;
-  ExtraInfo: { Day: string; Time: string }[];
-  TutorInfo: {
-    UserId: string;
-    Name: string;
-    Username: string;
-    Image: string;
-    Rank: number;
-    Rating: number;
-  };
-  Reviews: {
-    Image: string;
-    Name: string;
-    Username: string;
-    Rating: number;
-    Comment: string;
-  }[];
+interface Availability {
+  id: string;
+  day: string;
+  start: string;
+  end: string;
 }
 
-export default async function Page({
+interface CardInfo {
+  _id: { $oid: string };
+  userId: string;
+  subject: string;
+  description: string;
+  availability: Availability[];
+  banner: string;
+  status: string;
+}
+
+const mockOffers: CardInfo[] = [
+  {
+    _id: { $oid: "68e124f6ca2cd032c7132635" },
+    userId: "user_32v6ZOB8bP3oHl5kBPSDgvxc7eG",
+    subject: "Mathematics",
+    description:
+      "<p>Get help with algebra, geometry, and advanced calculus from an experienced tutor.</p>",
+    availability: [
+      { id: "1", day: "Monday", start: "08:00", end: "09:00" },
+      { id: "2", day: "Wednesday", start: "13:00", end: "14:00" },
+    ],
+    banner:
+      "https://9idxhts2vbwdh6hb.public.blob.vercel-storage.com/keikchoco2-O9gw3FUynxpw5S2mxxD61TTgm4E5ln.jpg",
+    status: "available",
+  },
+  {
+    _id: { $oid: "68e124f6ca2cd032c7132636" },
+    userId: "user_65ds9d7c8bP3oHl5kBPSDgvxc7eG",
+    subject: "Physics",
+    description:
+      "<p>Master motion, energy, and waves with practical examples and problem-solving sessions.</p>",
+    availability: [{ id: "1", day: "Tuesday", start: "10:00", end: "11:30" }],
+    banner:
+      "https://images.unsplash.com/photo-1503676260728-1c00da094a0b?q=80&w=1200",
+    status: "paused",
+  },
+];
+
+const mockReviews = [
+  {
+    id: 1,
+    name: "John Smith",
+    image: "https://i.pravatar.cc/100?img=1",
+    rating: 5,
+    comment: "Very patient and clear explanations! Highly recommend.",
+  },
+  {
+    id: 2,
+    name: "Emily Johnson",
+    image: "https://i.pravatar.cc/100?img=2",
+    rating: 4,
+    comment: "Helped me understand complex topics in a short time.",
+  },
+  {
+    id: 3,
+    name: "Michael Brown",
+    image: "https://i.pravatar.cc/100?img=3",
+    rating: 5,
+    comment: "Great tutor, really knows how to make learning fun!",
+  },
+  {
+    id: 4,
+    name: "Sarah Lee",
+    image: "https://i.pravatar.cc/100?img=4",
+    rating: 5,
+    comment: "Explains every detail clearly and makes sure you understand.",
+  },
+  {
+    id: 5,
+    name: "David Wilson",
+    image: "https://i.pravatar.cc/100?img=5",
+    rating: 4,
+    comment: "Really good tutor, would definitely book again.",
+  },
+  {
+    id: 6,
+    name: "Jessica Taylor",
+    image: "https://i.pravatar.cc/100?img=6",
+    rating: 5,
+    comment: "Very knowledgeable and kind. The sessions were great!",
+  },
+  {
+    id: 7,
+    name: "Chris Evans",
+    image: "https://i.pravatar.cc/100?img=7",
+    rating: 4,
+    comment: "Enjoyed the lessons and learned a lot. Thank you!",
+  },
+  {
+    id: 8,
+    name: "Alex Kim",
+    image: "https://i.pravatar.cc/100?img=8",
+    rating: 5,
+    comment: "The best tutor I’ve ever had. Excellent pacing.",
+  },
+  {
+    id: 9,
+    name: "Olivia Martinez",
+    image: "https://i.pravatar.cc/100?img=9",
+    rating: 4,
+    comment: "Very helpful and approachable!",
+  },
+  {
+    id: 10,
+    name: "Liam Chen",
+    image: "https://i.pravatar.cc/100?img=10",
+    rating: 5,
+    comment: "Learned so much in just a few sessions!",
+  },
+  {
+    id: 10,
+    name: "Liam Chen",
+    image: "https://i.pravatar.cc/100?img=10",
+    rating: 5,
+    comment: "Learned so much in just a few sessions!",
+  },
+  {
+    id: 10,
+    name: "Liam Chen",
+    image: "https://i.pravatar.cc/100?img=10",
+    rating: 5,
+    comment: "Learned so much in just a few sessions!",
+  },
+  {
+    id: 10,
+    name: "Liam Chen",
+    image: "https://i.pravatar.cc/100?img=10",
+    rating: 5,
+    comment: "Learned so much in just a few sessions!",
+  },
+  {
+    id: 10,
+    name: "Liam Chen",
+    image: "https://i.pravatar.cc/100?img=10",
+    rating: 5,
+    comment: "Learned so much in just a few sessions!",
+  },
+];
+
+export default function OfferDetailsPage({
   params,
 }: {
   params: Promise<{ slug: string }>;
 }) {
-  const NewOffers = [
-    {
-      Title: "S-ITCS111LA Introduction to Computing LAB",
-      Image:
-        "https://www.mooc.org/hubfs/applications-of-computer-programming.jpg",
-      Description:
-        "Idk description something na pwedeng ilagay nung tutor? maybe explaining what they know about this subject and such",
-      Rating: 2.5,
-      ExtraInfo: [
-        {
-          Day: "Mon",
-          Time: "7PM-8PM",
-        },
-        {
-          Day: "Tue",
-          Time: "7PM-8PM",
-        },
-        {
-          Day: "Wed",
-          Time: "7PM-8PM",
-        },
-      ],
-      TutorInfo: {
-        UserId: "",
-        Name: "Jeremiah Nueno",
-        Username: "keikchoco",
-        Image:
-          "https://img.clerk.com/eyJ0eXBlIjoicHJveHkiLCJzcmMiOiJodHRwczovL2ltYWdlcy5jbGVyay5kZXYvdXBsb2FkZWQvaW1nXzJ4SlpGNlRuZ0k0dU0yMThpeFpsTzNmSDJPMiJ9",
-        Rank: 1,
-        Rating: 4.5,
-      },
-      Reviews: [
-        {
-          Image:
-            "https://img.clerk.com/eyJ0eXBlIjoicHJveHkiLCJzcmMiOiJodHRwczovL2ltYWdlcy5jbGVyay5kZXYvdXBsb2FkZWQvaW1nXzJ3aVA4NGFxalFqSUNJa3h5ZjM2bjFKdU9oNCJ9",
-          Name: "Christian Peñano",
-          Username: "chrys",
-          Rating: 5.0,
-          Comment: "Best learning experience!",
-        },
-      ],
-    },
-    {
-      Title: "S-ITCP322 Capstone Project 1",
-      Image:
-        "https://di.ku.dk/Nyheder/2023/fremtidens-programmeringssprog-udvikles-i-danmark/programming_on_screen-1100x600.jpg",
-      Description:
-        "Lorem, ipsum dolor sit amet consectetur adipisicing elit. Minima dolores voluptatem optio pariatur, veritatis dolore. Voluptatem nihil facilis minus illum hic eum fugit! In tenetur, modi corrupti facere ea inventore?",
-      Rating: 5.0,
-      ExtraInfo: [
-        {
-          Day: "Thu",
-          Time: "7PM-8PM",
-        },
-        {
-          Day: "Fri",
-          Time: "7PM-8PM",
-        },
-        {
-          Day: "Sat",
-          Time: "7PM-8PM",
-        },
-        {
-          Day: "Sun",
-          Time: "7PM-8PM",
-        },
-      ],
-      TutorInfo: {
-        UserId: "",
-        Name: "Christian Peñano",
-        Username: "chrys",
-        Image:
-          "https://img.clerk.com/eyJ0eXBlIjoicHJveHkiLCJzcmMiOiJodHRwczovL2ltYWdlcy5jbGVyay5kZXYvdXBsb2FkZWQvaW1nXzJ3aVA4NGFxalFqSUNJa3h5ZjM2bjFKdU9oNCJ9",
-        Rank: 1,
-        Rating: 4.5,
-      },
-      Reviews: [
-        {
-          Image:
-            "https://scontent.fmnl8-4.fna.fbcdn.net/v/t39.30808-6/495224537_2969928999835726_5957479116127189212_n.jpg?_nc_cat=107&ccb=1-7&_nc_sid=6ee11a&_nc_ohc=_JkSiHL_U_gQ7kNvwGHMlhl&_nc_oc=AdmOf132lrQBFYqR4RHQiLgUAVjvvobNfG-2LdYukV67TUgB2tZHadD4JvJJoo73dG8&_nc_zt=23&_nc_ht=scontent.fmnl8-4.fna&_nc_gid=B4yWQdg8bcyQhyMmEWgupQ&oh=00_AfKHXBJ7hryFB4h9IRW-Qcgt5rsTwm050yxdLTYKR9t0WQ&oe=6833689D",
-          Name: "Yasmin Abad",
-          Username: "yas",
-          Rating: 5.0,
-          Comment: "Wonderful!",
-        },
-        {
-          Image:
-            "https://img.clerk.com/eyJ0eXBlIjoicHJveHkiLCJzcmMiOiJodHRwczovL2ltYWdlcy5jbGVyay5kZXYvdXBsb2FkZWQvaW1nXzJ4SlpGNlRuZ0k0dU0yMThpeFpsTzNmSDJPMiJ9",
-          Name: "Jeremiah Nueno",
-          Username: "keikchoco",
-          Rating: 4.5,
-          Comment:
-            "Lorem ipsum dolor sit amet consectetur adipisicing elit. Culpa accusantium maiores porro tenetur consequuntur. Nemo sed, ducimus fugiat suscipit temporibus necessitatibus earum maiores cumque. Ad quaerat nihil velit corrupti in!",
-        },
-      ],
-    },
-    {
-      Title:
-        "S-ITCS227LA Application Development and Emerging Technologies LAB",
-      Image:
-        "https://static1.howtogeekimages.com/wordpress/wp-content/uploads/2022/10/shutterstock_577183882.jpg",
-      Description:
-        "Lorem, ipsum dolor sit amet consectetur adipisicing elit. Minima dolores voluptatem optio pariatur, veritatis dolore. Voluptatem nihil facilis minus illum hic eum fugit! In tenetur, modi corrupti facere ea inventore?",
-      Rating: 0.0,
-      ExtraInfo: [
-        {
-          Day: "Mon",
-          Time: "7PM-8PM",
-        },
-        {
-          Day: "Wed",
-          Time: "7PM-8PM",
-        },
-      ],
-      TutorInfo: {
-        UserId: "",
-        Name: "Yasmin Abad",
-        Username: "yas",
-        Image:
-          "https://scontent.fmnl8-4.fna.fbcdn.net/v/t39.30808-6/495224537_2969928999835726_5957479116127189212_n.jpg?_nc_cat=107&ccb=1-7&_nc_sid=6ee11a&_nc_ohc=_JkSiHL_U_gQ7kNvwGHMlhl&_nc_oc=AdmOf132lrQBFYqR4RHQiLgUAVjvvobNfG-2LdYukV67TUgB2tZHadD4JvJJoo73dG8&_nc_zt=23&_nc_ht=scontent.fmnl8-4.fna&_nc_gid=B4yWQdg8bcyQhyMmEWgupQ&oh=00_AfKHXBJ7hryFB4h9IRW-Qcgt5rsTwm050yxdLTYKR9t0WQ&oe=6833689D",
-        Rank: 1,
-        Rating: 0.5,
-      },
-      Reviews: [
-        {
-          Image:
-            "https://img.clerk.com/eyJ0eXBlIjoicHJveHkiLCJzcmMiOiJodHRwczovL2ltYWdlcy5jbGVyay5kZXYvdXBsb2FkZWQvaW1nXzJ3aVA4NGFxalFqSUNJa3h5ZjM2bjFKdU9oNCJ9",
-          Name: "Christian Peñano",
-          Username: "chrys",
-          Rating: 0.5,
-          Comment: "Don't Recommend",
-        },
-      ],
-    },
-  ];
+  const { slug } = use(params);
+  const router = useRouter();
 
-  const { slug } = await params;
-  const id = typeof slug === "string" ? parseInt(slug) : 0;
-  const item = NewOffers[id];
+  // NEW: track how many reviews are visible
+  const [visibleCount, setVisibleCount] = useState(5);
+
+  const offer = mockOffers.find((offer) => offer._id.$oid === slug);
+
+  if (!offer) {
+    return (
+      <div className="flex flex-col items-center justify-center h-screen text-center text-green-900">
+        <p className="text-2xl font-bold">Offer not found</p>
+        <button
+          onClick={() => router.push("/browse")}
+          className="mt-4 btn btn-outline border-green-900 text-green-900 hover:bg-green-900 hover:text-white rounded-lg"
+        >
+          Go Back
+        </button>
+      </div>
+    );
+  }
+
+  if (offer.status === "paused") {
+    return (
+      <Stepper
+        initialStep={1}
+        stepCircleContainerClassName="bg-white/95"
+        disableStepIndicators={true}
+        footerClassName="hidden"
+      >
+        <Step>
+          <div className="flex flex-col items-center gap-8 mb-6">
+            <PiPauseCircle className="text-red-700 size-12 -mb-4" />
+            <div className="flex flex-col items-center gap-2">
+              <h1 className="text-center font-bold text-2xl">Offer Paused</h1>
+              <p className="text-lg text-center">
+                It looks like the tutor has paused this offer. Please check back
+                later or explore other available offers.
+              </p>
+            </div>
+            <Link
+              href={"/browse"}
+              className="bg-green-700 hover:bg-green-600 text-white/95 hover:scale-105 transition-all rounded-2xl shadow font-bold px-4 py-3"
+              replace={true}
+            >
+              Go Back
+            </Link>
+          </div>
+        </Step>
+      </Stepper>
+    );
+  }
+
+  const buttonLabel = offer.status === "available" ? "Chat Now" : "Inquire Now";
+  const visibleReviews = mockReviews.slice(0, visibleCount);
+
+  const handleShowMore = () => {
+    setVisibleCount((prev) => Math.min(prev + 5, mockReviews.length));
+  };
+
+  const handleShowLess = () => {
+    setVisibleCount(5);
+  };
 
   return (
-    <div className="flex flex-col items-center w-full pt-6">
-      
-      <section className="max-w-7xl">
-        <Link
-          href={"/tutor/subjects"}
-          className="flex flex-row items-center gap-2 text-xl text-green-700 font-semibold mr-auto"
+    <div className="min-h-screen bg-gradient-to-b text-green-900 w-full">
+      <div className="p-6 grid grid-cols-1 md:grid-cols-3 gap-10 max-w-[86rem] mx-auto">
+        <button
+          onClick={() => router.back()}
+          className="flex items-center gap-2 text-green-800 hover:text-green-900 hover:cursor-pointer col-span-full text-lg font-semibold"
         >
-          <FaArrowAltCircleLeft /> Back to Subjects
-        </Link>
-        <br />
-        <h1 className="text-2xl md:text-3xl font-bold pl-4">{item.Title}</h1>
-        <br />
-        <div className="flex flex-wrap gap-8 *:rounded-4xl *:overflow-hidden">
-          <div className="min-w-xl md:min-w-2xl grow-3 basis-0">
-            <figure className="h-96">
-              <Image
-                src={item.Image}
-                alt=""
-                width={500}
-                height={500}
-                className="w-full h-full object-cover"
-              />
-            </figure>
+          <ArrowLeft size={24} /> Back
+        </button>
 
-            <div className="p-8 text-2xl">
-              <div className="flex flex-row items-center">
-                <h3 className="font-bold">Course Rating:</h3>
-                <RatingGFX rating={item.Rating}/>
-              </div>
-              {item.Description}
-            </div>
-          </div>
-
-          <div className="min-w-48 flex flex-col grow-1 basis-0 gap-2 items-center p-4 shadow-xl bg-neutral-200 h-fit">
-            <img
-              src={item.TutorInfo.Image}
-              alt=""
-              className="rounded-full h-32 aspect-square object-cover border-green-700 border-4"
+        {/* Left/Main Content */}
+        <div className="flex flex-col gap-4 md:col-span-2">
+          <img
+            src={offer.banner}
+            alt={offer.subject}
+            className="w-full h-96 object-cover rounded-2xl shadow-md"
+          />
+          <div className="p-6 bg-white rounded-2xl shadow-lg">
+            <h1 className="text-3xl font-bold mb-2">{offer.subject}</h1>
+            <div
+              className="text-green-800 text-sm leading-relaxed mb-4"
+              dangerouslySetInnerHTML={{ __html: offer.description }}
             />
-            <RatingGFX rating={item.TutorInfo.Rating} />
-            <div className="flex flex-col items-center">
-              <h1 className="font-semibold">{item.TutorInfo.Name}</h1>
-              <h2 className="text-neutral-700">
-                @
-                <a href="#" className="hover:underline">
-                  {item.TutorInfo.Username}
-                </a>
-              </h2>
+            <div className="mt-4">
+              <h2 className="text-lg font-semibold mb-2">Availability</h2>
+              <div className="space-y-2">
+                {offer.availability.map((slot) => (
+                  <div
+                    key={slot.id}
+                    className="flex items-center gap-2 bg-green-50 p-2 rounded-lg"
+                  >
+                    <Clock size={16} className="text-green-700" />
+                    <span>
+                      {slot.day}: {slot.start} - {slot.end}
+                    </span>
+                  </div>
+                ))}
+              </div>
             </div>
-            <div className="badge bg-green-700 px-2 rounded text-white font-bold">
-              {item.TutorInfo.Rank}
-            </div>
-            <div className="flex flex-col gap-2 *:shadow-md *:px-6 *:py-2 *:rounded-2xl *:font-bold mt-10 w-full *:text-center">
-              <a href="" className="bg-green-700 text-neutral-50">
-                Book Now
-              </a>
-              <a href="" className="bg-orange-300 text-neutral-800">
-                View Profile
-              </a>
-            </div>
+            <Link
+              className={`btn mt-6 w-full py-3 rounded-xl text-white font-semibold transition ${
+              offer.status === "available"
+                ? "bg-green-700 hover:bg-green-800"
+                : "bg-gray-400 cursor-not-allowed"
+              }`}
+              href={
+              offer.status === "available"
+                ? `/chat/${offer.userId.replace(/^user_/, "")}`
+                : "#"
+              }
+              onClick={(e) => {
+              if (offer.status !== "available") e.preventDefault();
+              }}
+            >
+              {buttonLabel}
+            </Link>
           </div>
         </div>
-      </section>
 
-      <section className="flex flex-col gap-4 w-10/12 mt-20 max-w-7xl">
-        <h1 className="font-bold text-2xl">Reviews</h1>
-        <div className="flex flex-row flex-wrap gap-4 p-1 overflow-x-auto overflow-y-visible *:min-w-80 *:border *:border-neutral-400 *:rounded-2xl *:p-4 *:gap-4 w-3/4">
-          {item.Reviews.map((item, i) => (
-            <div className="flex flex-col w-full">
-              <div className="flex flex-row items-center gap-4">
+        {/* Right Sidebar */}
+        <div className="flex flex-col gap-6">
+          <div className="bg-white p-6 rounded-2xl shadow-lg">
+            <h2 className="font-bold text-lg mb-3">Tutor Information</h2>
+            <div className="flex items-center gap-4">
+              <img
+                src="https://i.pravatar.cc/100?img=12"
+                alt="Tutor"
+                className="w-16 h-16 rounded-full border-4 border-green-700"
+              />
+              <div>
+                <p className="font-semibold text-green-900">Jane Doe</p>
+                <p className="text-sm text-green-700">Mathematics Tutor</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white p-6 rounded-2xl shadow-lg">
+            <h2 className="font-bold text-lg mb-3">Reminders</h2>
+            <ul className="list-disc list-inside text-green-800 text-sm space-y-1">
+              <li>Confirm your schedule before booking.</li>
+              <li>Be prepared with topics you want to cover.</li>
+              <li>Respect the tutor’s available hours.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      {/* Reviews Section */}
+      <div className="max-w-7xl mx-auto mt-10 px-6">
+        <h2 className="text-2xl font-bold text-green-900 mb-6">⭐ Reviews</h2>
+        <div className="space-y-6">
+          {visibleReviews.map((review) => (
+            <div
+              key={review.id}
+              className="bg-white p-5 rounded-2xl shadow-md flex flex-col gap-3"
+            >
+              <div className="flex items-center gap-3">
                 <img
-                  src={item.Image}
-                  alt=""
-                  className="rounded-full aspect-square object-cover h-16"
+                  src={review.image}
+                  alt={review.name}
+                  className="w-12 h-12 rounded-full border-2 border-green-700"
                 />
-                <div className="font-semibold">
-                  <div>{item.Name}</div>
-                  <span className="font-normal text-neutral-600">
-                    @{item.Username}
-                  </span>
+                <div>
+                  <p className="font-semibold text-green-900">{review.name}</p>
+                  <div className="flex items-center">
+                    {[...Array(review.rating)].map((_, i) => (
+                      <Star
+                        key={i}
+                        size={16}
+                        className="text-yellow-500 fill-yellow-500"
+                      />
+                    ))}
+                  </div>
                 </div>
               </div>
-              <hr className="bg-neutral-400" />
-              <div className="flex flex-col gap-4">
-                <div className="flex flex-row items-center gap-2">
-                  <RatingGFX rating={item.Rating}/>
-                  <span className="font-semibold">{item.Rating}</span>
-                </div>
-                <div className="ml-2">{item.Comment}</div>
-              </div>
+              <p className="text-sm text-green-800 leading-relaxed">
+                {review.comment}
+              </p>
             </div>
           ))}
         </div>
-      </section>
 
-      <section className="flex flex-col gap-4 w-10/12 mt-20">
-        <h1 className="font-bold text-2xl">You may also like</h1>
-        <div className="flex gap-4 p-1 overflow-x-auto overflow-y-visible *:min-w-80">
-          {NewOffers.map((item: CardInfo, i) => {
-            return SubjectCardTemplate(item, i);
-          })}
+        {mockReviews.length > 5 && (
+          <div className="flex justify-center mt-6">
+            {visibleCount < mockReviews.length ? (
+              <button
+                onClick={handleShowMore}
+                className="text-green-800 font-semibold hover:underline"
+              >
+                See More
+              </button>
+            ) : (
+              <button
+                onClick={handleShowLess}
+                className="text-green-800 font-semibold hover:underline"
+              >
+                See Less
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Other Offers Section */}
+      <div className="max-w-7xl mx-auto mt-16 mb-10 px-6">
+        <h2 className="text-2xl font-bold text-green-900 mb-6">
+          📚 Other Offers
+        </h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          {mockOffers
+            .filter((o) => o._id.$oid !== offer._id.$oid)
+            .map((other) => (
+              <div
+                key={other._id.$oid}
+                onClick={() => router.push(`/browse/${other._id.$oid}`)}
+                className="cursor-pointer bg-white p-4 rounded-2xl shadow-md hover:scale-[1.02] transition-transform"
+              >
+                <img
+                  src={other.banner}
+                  alt={other.subject}
+                  className="w-full h-40 object-cover rounded-xl mb-3"
+                />
+                <h3 className="font-bold text-green-900 text-lg mb-1">
+                  {other.subject}
+                </h3>
+                <p
+                  className="text-sm text-green-800 line-clamp-2"
+                  dangerouslySetInnerHTML={{ __html: other.description }}
+                />
+                <button className="mt-3 w-full bg-green-700 hover:bg-green-800 text-white rounded-lg py-2 font-semibold">
+                  View Offer
+                </button>
+              </div>
+            ))}
         </div>
-      </section>
+      </div>
     </div>
   );
 }

@@ -1,5 +1,6 @@
 "use client";
 import { ArrowLeft, ArrowRight, Star } from "lucide-react";
+import Link from "next/link";
 import React, { useRef } from "react";
 
 interface CardInfo {
@@ -42,62 +43,6 @@ export default function Browse() {
       availability: [{ id: "2", day: "Wednesday", start: "10:00", end: "11:00" }],
       banner: "https://images.unsplash.com/photo-1524995997946-a1c2e315a42f",
       status: "available",
-    },{
-      _id: { $oid: "68e124f6ca2cd032c7132636" },
-      userId: "user_32v6ZOB8bP3oHl5kBPSDgvxc7eG",
-      subject: "English Literature",
-      description: "<p>Improve your literary analysis and writing skills with expert guidance.</p>",
-      availability: [{ id: "2", day: "Wednesday", start: "10:00", end: "11:00" }],
-      banner: "https://images.unsplash.com/photo-1524995997946-a1c2e315a42f",
-      status: "available",
-    },{
-      _id: { $oid: "68e124f6ca2cd032c7132636" },
-      userId: "user_32v6ZOB8bP3oHl5kBPSDgvxc7eG",
-      subject: "English Literature",
-      description: "<p>Improve your literary analysis and writing skills with expert guidance.</p>",
-      availability: [{ id: "2", day: "Wednesday", start: "10:00", end: "11:00" }],
-      banner: "https://images.unsplash.com/photo-1524995997946-a1c2e315a42f",
-      status: "available",
-    },{
-      _id: { $oid: "68e124f6ca2cd032c7132636" },
-      userId: "user_32v6ZOB8bP3oHl5kBPSDgvxc7eG",
-      subject: "English Literature",
-      description: "<p>Improve your literary analysis and writing skills with expert guidance.</p>",
-      availability: [{ id: "2", day: "Wednesday", start: "10:00", end: "11:00" }],
-      banner: "https://images.unsplash.com/photo-1524995997946-a1c2e315a42f",
-      status: "available",
-    },{
-      _id: { $oid: "68e124f6ca2cd032c7132636" },
-      userId: "user_32v6ZOB8bP3oHl5kBPSDgvxc7eG",
-      subject: "English Literature",
-      description: "<p>Improve your literary analysis and writing skills with expert guidance.</p>",
-      availability: [{ id: "2", day: "Wednesday", start: "10:00", end: "11:00" }],
-      banner: "https://images.unsplash.com/photo-1524995997946-a1c2e315a42f",
-      status: "available",
-    },{
-      _id: { $oid: "68e124f6ca2cd032c7132636" },
-      userId: "user_32v6ZOB8bP3oHl5kBPSDgvxc7eG",
-      subject: "English Literature",
-      description: "<p>Improve your literary analysis and writing skills with expert guidance.</p>",
-      availability: [{ id: "2", day: "Wednesday", start: "10:00", end: "11:00" }],
-      banner: "https://images.unsplash.com/photo-1524995997946-a1c2e315a42f",
-      status: "available",
-    },{
-      _id: { $oid: "68e124f6ca2cd032c7132636" },
-      userId: "user_32v6ZOB8bP3oHl5kBPSDgvxc7eG",
-      subject: "English Literature",
-      description: "<p>Improve your literary analysis and writing skills with expert guidance.</p>",
-      availability: [{ id: "2", day: "Wednesday", start: "10:00", end: "11:00" }],
-      banner: "https://images.unsplash.com/photo-1524995997946-a1c2e315a42f",
-      status: "available",
-    },{
-      _id: { $oid: "68e124f6ca2cd032c7132636" },
-      userId: "user_32v6ZOB8bP3oHl5kBPSDgvxc7eG",
-      subject: "English Literature",
-      description: "<p>Improve your literary analysis and writing skills with expert guidance.</p>",
-      availability: [{ id: "2", day: "Wednesday", start: "10:00", end: "11:00" }],
-      banner: "https://images.unsplash.com/photo-1524995997946-a1c2e315a42f",
-      status: "available",
     },
   ];
 
@@ -126,7 +71,7 @@ export default function Browse() {
   ];
 
   return (
-    <div className="flex flex-col gap-12 pt-6 w-10/12 h-full m-auto">
+    <div className="flex flex-col gap-12 py-6 w-10/12 h-full m-auto">
       {/* New Offers */}
       <section className="flex flex-col gap-4 w-full">
         <div className="flex justify-between items-center">
@@ -180,9 +125,9 @@ export default function Browse() {
                     </p>
                   ))}
                 </div>
-                <button className="btn mt-3 bg-green-700 text-white hover:bg-green-800 rounded-lg">
+                <Link href={`/browse/${item._id.$oid}`} className="btn mt-3 bg-green-700 text-white hover:bg-green-800 rounded-lg">
                   View Details
-                </button>
+                </Link>
               </div>
             </div>
           ))}

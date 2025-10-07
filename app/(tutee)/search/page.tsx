@@ -1,120 +1,139 @@
 "use client";
-import React, { useEffect, useState } from "react";
-import Image from "next/image";
-import { useQueryState } from "nuqs";
-import { Search, Filter, X } from "lucide-react";
-import SubjectCardTemplate from "@/components/subject-card";
 
-interface CardInfo {
-  Title: string;
-  Image: string;
-  Description: string;
-  Rating: number;
-  ExtraInfo: { Day: string; Time: string }[];
-  TutorInfo: {
-    UserId: string;
-    Name: string;
-    Image: string;
-    Rank: number;
-    Rating: number;
-  };
-  Reviews: {
-    Image: string;
-    Name: string;
-    Username: string;
-    Rating: number;
-    Comment: string;
-  }[];
+import React, { useEffect, useState } from "react";
+import Link from "next/link";
+import { useQueryState } from "nuqs";
+import { Search, Filter, X, SearchX } from "lucide-react";
+
+interface Availability {
+  id: string;
+  day: string;
+  start: string;
+  end: string;
 }
 
-export default function Browse() {
+interface CardInfo {
+  _id: { $oid: string };
+  userId?: string;
+  subject: string;
+  description: string;
+  banner: string;
+  status: "available" | "paused";
+  availability: Availability[];
+  rating: number;
+  tutor: {
+    name: string;
+    rank: number;
+  };
+}
+
+export default function SearchPage() {
   const [search, setSearch] = useQueryState("query", { defaultValue: "" });
+  const [sortBy, setSortBy] = useQueryState("sortBy", { defaultValue: "" });
+  const [day, setDay] = useQueryState("day", { defaultValue: "" });
+  const [rating, setRating] = useQueryState("rating", { defaultValue: "" });
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [results, setResults] = useState<CardInfo[]>([]);
 
-  useEffect(() => {
-    console.log("Search query:", search);
-  }, [search]);
-
-  // Placeholder results array
-  const NewOffers: CardInfo[] = [
+  const AllOffers: CardInfo[] = [
     {
-      Title: "Web Development Basics",
-      Image: "https://picsum.photos/300/200?random=1",
-      Description: "Learn HTML, CSS, and JavaScript from scratch.",
-      Rating: 4.5,
-      ExtraInfo: [{ Day: "Monday", Time: "10:00 AM" }],
-      TutorInfo: {
-        UserId: "T1",
-        Name: "John Doe",
-        Image: "https://i.pravatar.cc/100?img=1",
-        Rank: 1,
-        Rating: 4.7,
+      _id: {
+        $oid: "68e124f6ca2cd032c7132635",
       },
-      Reviews: [
+      userId: "user_32v6ZOB8bP3oHl5kBPSDgvxc7eG",
+      subject: "Mathematics",
+      description: "<p>aaaa</p>",
+      availability: [
         {
-          Image: "https://i.pravatar.cc/100?img=11",
-          Name: "Alice",
-          Username: "@alice",
-          Rating: 5,
-          Comment: "Great intro to web development!",
+          id: "c12293cf-c932-4c9a-8450-295ccffe9aee",
+          day: "Monday",
+          start: "08:00",
+          end: "09:00",
         },
       ],
+      banner:
+        "https://9idxhts2vbwdh6hb.public.blob.vercel-storage.com/keikchoco2-O9gw3FUynxpw5S2mxxD61TTgm4E5ln.jpg",
+      status: "available",
+      rating: 4.9,
+      tutor: {
+        name: "John Doe",
+        rank: 1,
+      },
     },
     {
-      Title: "Data Structures & Algorithms",
-      Image: "https://picsum.photos/300/200?random=2",
-      Description: "Master problem-solving with DSA in Java.",
-      Rating: 4.8,
-      ExtraInfo: [{ Day: "Wednesday", Time: "2:00 PM" }],
-      TutorInfo: {
-        UserId: "T2",
-        Name: "Jane Smith",
-        Image: "https://i.pravatar.cc/100?img=2",
-        Rank: 2,
-        Rating: 4.9,
-      },
-      Reviews: [
-        {
-          Image: "https://i.pravatar.cc/100?img=12",
-          Name: "Bob",
-          Username: "@bob",
-          Rating: 5,
-          Comment: "Challenging but rewarding!",
-        },
+      _id: { $oid: "2" },
+      subject: "Data Structures & Algorithms",
+      description: "Master problem-solving with DSA in Java.",
+      banner: "https://picsum.photos/300/200?random=2",
+      status: "available",
+      availability: [
+        { id: "a2", day: "Wednesday", start: "2:00 PM", end: "4:00 PM" },
       ],
+      rating: 4.8,
+      tutor: { name: "Jane Smith", rank: 2 },
     },
     {
-      Title: "Database Management Systems",
-      Image: "https://picsum.photos/300/200?random=3",
-      Description: "Learn MySQL, MongoDB, and database design.",
-      Rating: 4.6,
-      ExtraInfo: [{ Day: "Friday", Time: "4:00 PM" }],
-      TutorInfo: {
-        UserId: "T3",
-        Name: "Michael Lee",
-        Image: "https://i.pravatar.cc/100?img=3",
-        Rank: 3,
-        Rating: 4.6,
-      },
-      Reviews: [
-        {
-          Image: "https://i.pravatar.cc/100?img=13",
-          Name: "Charlie",
-          Username: "@charlie",
-          Rating: 4,
-          Comment: "Well structured lessons!",
-        },
+      _id: { $oid: "3" },
+      subject: "Database Management Systems",
+      description: "Learn MySQL, MongoDB, and database design.",
+      banner: "https://picsum.photos/300/200?random=3",
+      status: "paused",
+      availability: [
+        { id: "a3", day: "Friday", start: "4:00 PM", end: "6:00 PM" },
       ],
+      rating: 4.6,
+      tutor: { name: "Michael Lee", rank: 3 },
     },
   ];
 
+  useEffect(() => {
+    let filtered = [...AllOffers];
+
+    if (search.trim() !== "") {
+      const lowerSearch = search.toLowerCase();
+      filtered = filtered.filter(
+        (offer) =>
+          offer.subject.toLowerCase().includes(lowerSearch) ||
+          offer.tutor.name.toLowerCase().includes(lowerSearch)
+      );
+    }
+
+    if (day) {
+      filtered = filtered.filter((offer) =>
+        offer.availability.some(
+          (a) => a.day.toLowerCase() === day.toLowerCase()
+        )
+      );
+    }
+
+    if (rating) {
+      filtered = filtered.filter((offer) => offer.rating >= parseFloat(rating));
+    }
+
+    if (sortBy === "highest-rated") {
+      filtered.sort((a, b) => b.rating - a.rating);
+    } else if (sortBy === "tutor-rank") {
+      filtered.sort((a, b) => a.tutor.rank - b.tutor.rank);
+    } else if (sortBy === "most-recent") {
+      filtered.sort(() => Math.random() - 0.5); // placeholder
+    }
+
+    setResults(filtered);
+  }, [search, sortBy, day, rating]);
+
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+    const newQuery = (formData.get("query") as string) || "";
+    setSearch(newQuery);
+  };
+
   return (
-    <div className="flex flex-col gap-6 pt-6 w-11/12 lg:w-10/12 mx-auto">
-      {/* Controls Row: Search + Filters + Sort */}
+    <div className="flex flex-col gap-6 pt-6 w-11/12 lg:w-10/12 mx-auto max-w-[1600px]">
       <div className="flex flex-col lg:flex-row items-stretch gap-4 w-full">
         <form
+          onSubmit={handleSubmit}
           className="flex w-full lg:max-w-xl shadow-md rounded-xl overflow-hidden border border-gray-300"
-          action={"/search"}
         >
           <input
             type="text"
@@ -123,7 +142,10 @@ export default function Browse() {
             className="px-4 py-3 text-lg font-medium text-gray-800 grow focus:outline-none"
             defaultValue={search}
           />
-          <button className="bg-green-900 hover:bg-green-950 w-14 flex items-center justify-center">
+          <button
+            type="submit"
+            className="bg-green-900 hover:bg-green-950 w-14 flex items-center justify-center"
+          >
             <Search className="text-white" />
           </button>
         </form>
@@ -136,73 +158,92 @@ export default function Browse() {
           >
             <Filter size={16} /> Filters
           </button>
-
-          <select className="select select-sm border-gray-300">
-            <option>Sort by relevance</option>
-            <option>Highest Rated</option>
-            <option>Most Recent</option>
-            <option>Tutor Rank</option>
+          <select
+            className="select select-sm border-gray-300"
+            onChange={(e) => setSortBy(e.target.value)}
+            value={sortBy}
+          >
+            <option value="">Sort by relevance</option>
+            <option value="highest-rated">Highest Rated</option>
+            <option value="most-recent">Most Recent</option>
+            <option value="tutor-rank">Tutor Rank</option>
           </select>
         </div>
       </div>
 
-      {/* Results Header */}
       <div className="flex justify-between items-center">
         <h1 className="text-xl lg:text-2xl">
           Showing results for <strong>{search}</strong>{" "}
           <span className="text-gray-500 text-lg">
-            ({NewOffers.length} found)
+            ({results.length} found)
           </span>
         </h1>
       </div>
 
       <hr className="border-t border-gray-300" />
 
-      {/* Results Grid */}
-      {NewOffers.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-8">
-          {NewOffers.map((item: CardInfo, i) => {
-            return (
-              <div
-                key={i}
-                className="bg-white rounded-2xl shadow hover:shadow-xl hover:scale-[1.02] transition-transform"
-              >
-                {SubjectCardTemplate(item, i)}
+      {results.length > 0 ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-8 justify-items-center">
+          {results.map((item, i) => (
+            <div
+              key={i}
+              className="min-w-[280px] max-w-[300px] bg-white rounded-xl shadow-lg hover:shadow-xl hover:scale-101 transition-transform flex flex-col"
+            >
+              <div className="relative">
+                <img
+                  src={item.banner}
+                  alt={item.subject}
+                  className="w-full h-40 object-cover rounded-t-xl"
+                />
+                <span className="absolute top-3 right-3 bg-green-700 text-white text-xs font-semibold px-3 py-1 rounded-full">
+                  {item.status === "available" ? "Available" : "Paused"}
+                </span>
               </div>
-            );
-          })}
+              <div className="flex flex-col gap-2 p-4 h-full">
+                <h2 className="font-bold text-lg text-green-900">
+                  {item.subject}
+                </h2>
+                <div
+                  className="text-sm text-gray-700"
+                  dangerouslySetInnerHTML={{ __html: item.description }}
+                />
+                <div className="text-xs text-green-700 mt-auto">
+                  <p className="font-semibold">Availability:</p>
+                  {item.availability.map((a) => (
+                    <p key={a.id}>
+                      {a.day} • {a.start} - {a.end}
+                    </p>
+                  ))}
+                </div>
+                <Link
+                  href={`/browse/${item._id.$oid}`}
+                  className="btn mt-3 bg-green-700 text-white hover:bg-green-800 rounded-lg"
+                >
+                  View Details
+                </Link>
+              </div>
+            </div>
+          ))}
         </div>
       ) : (
         <div className="flex flex-col items-center justify-center py-20 text-center gap-6">
-          <Image
-            src="/images/no-results.png"
-            alt="No results"
-            width={180}
-            height={180}
-          />
+          <SearchX size={48} className="text-red-500" />
           <h2 className="text-2xl font-bold text-gray-700">
             No results for <span className="text-green-900">"{search}"</span>
           </h2>
           <p className="text-gray-500">
-            Try searching with a different course code, subject name, or check
-            trending offers below.
+            Try searching with a different course code or subject name.
           </p>
-          <button className="btn btn-accent">Browse Trending Offers</button>
         </div>
       )}
 
-      {/* Filters Drawer */}
       {filtersOpen && (
         <div className="fixed inset-0 z-90 flex">
-          {/* Overlay */}
           <div
             className="absolute inset-0 bg-black/50 backdrop-blur-sm z-40"
             onClick={() => setFiltersOpen(false)}
           />
-
-          {/* Drawer Panel */}
           <div className="ml-auto w-80 max-w-full h-full bg-white rounded-l-2xl shadow-2xl z-50 flex flex-col animate-slideIn">
-            {/* Header */}
             <div className="flex items-center justify-between p-4 border-b">
               <h2 className="text-lg font-bold text-green-900">Filters</h2>
               <button
@@ -213,44 +254,53 @@ export default function Browse() {
               </button>
             </div>
 
-            {/* Filter Content */}
             <div className="p-5 flex-1 overflow-y-auto flex flex-col gap-6">
-              {/* Day */}
               <div>
                 <h3 className="font-semibold mb-2">Day</h3>
-                <select className="select select-bordered w-full">
-                  <option>Any Day</option>
-                  <option>Monday</option>
-                  <option>Tuesday</option>
-                  <option>Wednesday</option>
-                  <option>Thursday</option>
-                  <option>Friday</option>
+                <select
+                  className="select select-bordered w-full"
+                  onChange={(e) => setDay(e.target.value)}
+                  value={day}
+                >
+                  <option value="">Any Day</option>
+                  <option value="monday">Monday</option>
+                  <option value="tuesday">Tuesday</option>
+                  <option value="wednesday">Wednesday</option>
+                  <option value="thursday">Thursday</option>
+                  <option value="friday">Friday</option>
                 </select>
               </div>
 
-              {/* Rating */}
               <div>
                 <h3 className="font-semibold mb-2">Minimum Rating</h3>
-                <select className="select select-bordered w-full">
-                  <option>Any</option>
-                  <option>4 ★ & up</option>
-                  <option>3 ★ & up</option>
-                  <option>2 ★ & up</option>
+                <select
+                  className="select select-bordered w-full"
+                  onChange={(e) => setRating(e.target.value)}
+                  value={rating}
+                >
+                  <option value="">Any</option>
+                  <option value="4">4 ★ & up</option>
+                  <option value="3">3 ★ & up</option>
+                  <option value="2">2 ★ & up</option>
                 </select>
               </div>
             </div>
 
-            {/* Footer */}
             <div className="p-4 border-t flex gap-3">
               <button
-                className="btn flex-1 btn-outline text-white bg-red-900 hover:bg-white hover:text-red-900 rounded-lg
-"
+                className="btn flex-1 btn-outline text-white bg-red-900 hover:bg-white hover:text-red-900 rounded-lg"
+                onClick={() => {
+                  setDay("");
+                  setRating("");
+                  setSortBy("");
+                  setSearch("");
+                }}
               >
                 Reset
               </button>
               <button
-                className="btn flex-1 btn-outline text-white bg-green-900 hover:bg-white hover:text-green-900 rounded-lg
-"
+                className="btn flex-1 btn-outline text-white bg-green-900 hover:bg-white hover:text-green-900 rounded-lg"
+                onClick={() => setFiltersOpen(false)}
               >
                 Apply
               </button>

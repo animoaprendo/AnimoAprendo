@@ -8,7 +8,7 @@ const isPublicRoute = createRouteMatcher([
   "/api/(.*)",
 ]);
 
-const isDefaultRoute = createRouteMatcher(["/", "/search(.*)"]);
+const isDefaultRoute = createRouteMatcher(["/", "/search(.*)", "/browse(.*)"]);
 const isTestingRoute = createRouteMatcher(["/testing(.*)"]);
 const isOnboardingRoute = createRouteMatcher(["/onboarding(.*)"]);
 const isOnlyTutorRoute = createRouteMatcher(["/tutor"]);

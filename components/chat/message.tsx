@@ -1,7 +1,14 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Search, Send, CornerDownRight, Info, CornerDownLeft, CornerUpLeft, InfoIcon } from "lucide-react";
+import {
+  Search,
+  Send,
+  CornerDownRight,
+  Info,
+  CornerUpLeft,
+  InfoIcon,
+} from "lucide-react";
 
 interface Message {
   id: number;
@@ -21,13 +28,14 @@ interface User {
   isTyping?: boolean;
 }
 
-export default function MessagingPage() {
+export default function MessagingPage({ userId }: { userId?: string }) {
   const [users, setUsers] = useState<User[]>([
     {
       id: 1,
       name: "Alex Johnson",
       lastMessage: "See you tomorrow!",
       unreadCount: 2,
+      isTyping: true,
     },
     {
       id: 2,
@@ -94,7 +102,7 @@ export default function MessagingPage() {
   );
 
   return (
-    <div className="p-4 h-[92vh] max-h-[92vh] bg-gray-100 -my-8 grid grid-cols-1 md:grid-cols-4 xl:grid-cols-5 gap-4 w-full relative overflow-hidden">
+    <div className="p-4 h-[92vh] max-h-[92vh] bg-gray-100 grid grid-cols-1 md:grid-cols-4 xl:grid-cols-5 gap-4 w-full relative overflow-hidden">
       {/* Left Column */}
       <div className="bg-white rounded-2xl shadow p-4 flex flex-col col-span-1 overflow-y-auto">
         <div className="flex items-center gap-2 mb-4">
@@ -128,12 +136,34 @@ export default function MessagingPage() {
                   </span>
                 )}
               </div>
-              <p className="text-xs text-gray-500 truncate">
-                {user.lastMessage}
-              </p>
-              {user.isTyping && (
-                <p className="text-xs text-green-600 mt-1 animate-pulse">
-                  Typing...
+
+              {user.isTyping ? (
+                <p className="text-xs text-green-600 mt-1 animate-pulse flex flex-row">
+                  Typing
+                  <div className="animate-bounce [animation-delay:0ms] [animation-iteration-count:infinite] [animation-timing-function:ease-in-out] [animation-name:bounce15]">
+                    .
+                  </div>
+                  <div className="animate-bounce [animation-delay:75ms] [animation-iteration-count:infinite] [animation-timing-function:ease-in-out] [animation-name:bounce15]">
+                    .
+                  </div>
+                  <div className="animate-bounce [animation-delay:150ms] [animation-iteration-count:infinite] [animation-timing-function:ease-in-out] [animation-name:bounce15]">
+                    .
+                  </div>
+                  <style jsx global>{`
+                    @keyframes bounce15 {
+                      0%,
+                      100% {
+                        transform: translateY(0);
+                      }
+                      50% {
+                        transform: translateY(-15%);
+                      }
+                    }
+                  `}</style>
+                </p>
+              ) : (
+                <p className="text-xs text-gray-500 truncate">
+                  {user.lastMessage}
                 </p>
               )}
             </div>
@@ -160,7 +190,10 @@ export default function MessagingPage() {
           className="flex-1 overflow-y-auto p-4 space-y-3"
         >
           {messages.map((msg) => (
-            <div className={`flex gap-2 w-full group ${msg.senderId === "2" ? "flex-row-reverse ml-auto" : "flex-row"}`} key={msg.id}>
+            <div
+              className={`flex gap-2 w-full group ${msg.senderId === "2" ? "flex-row-reverse ml-auto" : "flex-row"}`}
+              key={msg.id}
+            >
               <div
                 key={msg.id}
                 className={`max-w-9/12 p-3 rounded-2xl ${
@@ -218,6 +251,32 @@ export default function MessagingPage() {
           </div>
         )}
 
+        {activeUser && activeUser.isTyping && (
+                <p className="text-xs text-green-800 mt-1 flex flex-row gap-1 p-2">
+                  {activeUser.name} is typing
+                  <div className="animate-bounce [animation-delay:0ms] [animation-iteration-count:infinite] [animation-timing-function:ease-in-out] [animation-name:bounce15]">
+                    .
+                  </div>
+                  <div className="animate-bounce [animation-delay:75ms] [animation-iteration-count:infinite] [animation-timing-function:ease-in-out] [animation-name:bounce15]">
+                    .
+                  </div>
+                  <div className="animate-bounce [animation-delay:150ms] [animation-iteration-count:infinite] [animation-timing-function:ease-in-out] [animation-name:bounce15]">
+                    .
+                  </div>
+                  <style jsx global>{`
+                    @keyframes bounce15 {
+                      0%,
+                      100% {
+                        transform: translateY(0);
+                      }
+                      50% {
+                        transform: translateY(-15%);
+                      }
+                    }
+                  `}</style>
+                </p>
+              )}
+
         <div className="p-3 border-t border-black/30 flex items-center gap-2">
           <input
             type="text"
@@ -246,27 +305,26 @@ export default function MessagingPage() {
           <p className="text-sm text-gray-600">
             Name: <span className="font-medium">{activeUser?.name ?? "—"}</span>
           </p>
-          <p className="text-sm text-gray-600">CYS: <span className="font-medium">BIT43</span></p>
+          <p className="text-sm text-gray-600">
+            CYS: <span className="font-medium">BIT43</span>
+          </p>
         </div>
         <div>
-          <h4 className="font-semibold text-green-900 text-sm mb-2">
-            Inquiry
-          </h4>
-          <div
-              className="w-full bg-white rounded-xl shadow-lg transition-transform flex flex-col"
-            >
-              <div className="relative">
-                <img
-                  src={"https://9idxhts2vbwdh6hb.public.blob.vercel-storage.com/keikchoco2-O9gw3FUynxpw5S2mxxD61TTgm4E5ln.jpg"}
-                  alt={"Mathematics"}
-                  className="w-full h-24 object-cover rounded-t-xl"
-                />
-              </div>
-              <div className="flex flex-col gap-2 p-4">
-                <h2 className="font-bold text-lg text-green-900">Mathematics</h2>
-              </div>
+          <h4 className="font-semibold text-green-900 text-sm mb-2">Inquiry</h4>
+          <div className="w-full bg-white rounded-xl shadow-lg transition-transform flex flex-col">
+            <div className="relative">
+              <img
+                src={
+                  "https://9idxhts2vbwdh6hb.public.blob.vercel-storage.com/keikchoco2-O9gw3FUynxpw5S2mxxD61TTgm4E5ln.jpg"
+                }
+                alt={"Mathematics"}
+                className="w-full h-24 object-cover rounded-t-xl"
+              />
             </div>
-
+            <div className="flex flex-col gap-2 p-4">
+              <h2 className="font-bold text-lg text-green-900">Mathematics</h2>
+            </div>
+          </div>
         </div>
         <div>
           <h4 className="font-semibold text-green-900 text-sm mb-2">
@@ -275,16 +333,26 @@ export default function MessagingPage() {
           <ul className="text-sm space-y-1 *:bg-green-700 text-white/95 *:px-3 *:py-4 *:rounded-md overflow-y-auto max-h-[34rem] rounded-md">
             <li>
               <div className="flex flex-col gap-1">
-                <h1 className="font-bold flex flex-row items-center gap-2"><InfoIcon className="inline-block size-6"/> No quiz created</h1>
+                <h1 className="font-bold flex flex-row items-center gap-2">
+                  <InfoIcon className="inline-block size-6" /> No quiz created
+                </h1>
                 <p className="text-xs">You have not created any quiz yet.</p>
-                <button className="font-semibold py-2 mt-2 bg-white text-black hover:bg-white/80 hover:cursor-pointer transition-all rounded-lg">Make Quiz</button>
+                <button className="font-semibold py-2 mt-2 bg-white text-black hover:bg-white/80 hover:cursor-pointer transition-all rounded-lg">
+                  Make Quiz
+                </button>
               </div>
             </li>
             <li>
               <div className="flex flex-col gap-1">
-                <h1 className="font-bold flex flex-row items-center gap-2"><InfoIcon className="inline-block size-6"/> Appointment</h1>
-                <p className="text-xs">You have an appointment scheduled for tomorrow at 10 AM.</p>
-                <button className="font-semibold py-2 mt-2 bg-white text-black hover:bg-white/80 hover:cursor-pointer transition-all rounded-lg">Enter Meeting</button>
+                <h1 className="font-bold flex flex-row items-center gap-2">
+                  <InfoIcon className="inline-block size-6" /> Appointment
+                </h1>
+                <p className="text-xs">
+                  You have an appointment scheduled for tomorrow at 10 AM.
+                </p>
+                <button className="font-semibold py-2 mt-2 bg-white text-black hover:bg-white/80 hover:cursor-pointer transition-all rounded-lg">
+                  Enter Meeting
+                </button>
               </div>
             </li>
           </ul>

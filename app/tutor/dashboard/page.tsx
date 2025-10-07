@@ -38,7 +38,7 @@ export default async function Dashboard() {
   };
 
   return (
-    <div className="flex flex-col lg:flex-row gap-8 lg:gap-12 w-11/12 mx-auto text-neutral-800">
+    <div className="flex flex-col lg:flex-row py-6 gap-8 lg:gap-12 w-11/12 mx-auto text-neutral-800">
       {/* Left Panels */}
       <div className="flex flex-col gap-6 lg:w-3/12 *:px-5 *:py-4 *:border-neutral-400 *:border-2 *:rounded-2xl *:flex *:flex-col *:items-center">
         {/* Profile */}
