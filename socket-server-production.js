@@ -72,12 +72,37 @@ const allowedOrigins = [
   process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null,
   'http://localhost:3000',
   'http://localhost:3002',
-  'https://animoaprendo.vercel.app' // Replace with your actual Vercel URL
+  'https://animoaprendo.vercel.app',
+  'https://animoaprendo.com',
+  'https://www.animoaprendo.com',
+  // Add wildcard support for all animoaprendo subdomains
+  /^https:\/\/.*\.animoaprendo\.com$/,
+  /^https:\/\/animoaprendo\.com$/
 ].filter(Boolean);
 
 const io = new Server(httpServer, {
   cors: {
-    origin: allowedOrigins,
+    origin: (origin, callback) => {
+      // Allow requests with no origin (like mobile apps or curl requests)
+      if (!origin) return callback(null, true);
+      
+      // Check if origin is in allowed list or matches patterns
+      const isAllowed = allowedOrigins.some(allowed => {
+        if (typeof allowed === 'string') {
+          return allowed === origin;
+        } else if (allowed instanceof RegExp) {
+          return allowed.test(origin);
+        }
+        return false;
+      });
+      
+      if (isAllowed) {
+        callback(null, true);
+      } else {
+        console.log('CORS blocked origin:', origin);
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
     methods: ["GET", "POST"],
     credentials: true
   }
