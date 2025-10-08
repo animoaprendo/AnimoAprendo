@@ -11,7 +11,10 @@ export async function GET(request: NextRequest) {
     // Fetch all subjects/offerings with status "available"
     const offerings = await subjectsCollection
       .find({ status: 'available' })
-      .sort({ createdAt: -1 }) // Most recent first
+      .sort({ 
+        createdAt: -1, // Most recent first
+        _id: -1 // Fallback to ObjectId creation time if createdAt is missing
+      })
       .toArray();
 
     // Get collections for rating calculations

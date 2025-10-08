@@ -14,6 +14,7 @@ interface CardInfo {
   status: string;
   averageRating?: number;
   totalReviews?: number;
+  createdAt?: string;
   user?: {
     id: string;
     firstName?: string;
@@ -24,8 +25,18 @@ interface CardInfo {
   };
 }
 
+interface TrendingTutor {
+  id: string;
+  name: string;
+  subject: string;
+  rating: number;
+  image: string;
+  totalReviews: number;
+}
+
 export default function Browse() {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const newOffersScrollRef = useRef<HTMLDivElement>(null);
   const [offerings, setOfferings] = useState<CardInfo[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -38,7 +49,23 @@ export default function Browse() {
         const response = await getAllOfferings();
         
         if (response.success && response.data) {
-          setOfferings(response.data);
+          // Sort offerings by rating (highest first), then by creation date
+          const sortedOfferings = response.data.sort((a: CardInfo, b: CardInfo) => {
+            const aRating = a.averageRating || 0;
+            const bRating = b.averageRating || 0;
+            
+            // First sort by rating (descending)
+            if (bRating !== aRating) {
+              return bRating - aRating;
+            }
+            
+            // If ratings are equal, sort by creation date (newest first)
+            const aDate = new Date(a.createdAt || 0).getTime();
+            const bDate = new Date(b.createdAt || 0).getTime();
+            return bDate - aDate;
+          });
+          
+          setOfferings(sortedOfferings);
         } else {
           setError("Failed to load offerings");
         }
@@ -56,6 +83,15 @@ export default function Browse() {
   const scroll = (dir: "left" | "right") => {
     if (scrollRef.current) {
       scrollRef.current.scrollBy({
+        left: dir === "left" ? -300 : 300,
+        behavior: "smooth",
+      });
+    }
+  };
+
+  const scrollNewOffers = (dir: "left" | "right") => {
+    if (newOffersScrollRef.current) {
+      newOffersScrollRef.current.scrollBy({
         left: dir === "left" ? -300 : 300,
         behavior: "smooth",
       });
@@ -82,36 +118,69 @@ export default function Browse() {
     );
   }
 
-  const TrendingTutors = [
-    {
-      id: "TT1",
-      name: "Sarah Kim",
-      subject: "UI/UX Design",
-      rating: 4.9,
-      image: "https://i.pravatar.cc/150?img=4",
-    },
-    {
-      id: "TT2",
-      name: "David Park",
-      subject: "Cybersecurity",
-      rating: 4.8,
-      image: "https://i.pravatar.cc/150?img=5",
-    },
-    {
-      id: "TT3",
-      name: "Emma Wilson",
-      subject: "Mobile App Development",
-      rating: 4.7,
-      image: "https://i.pravatar.cc/150?img=6",
-    },
-  ];
+  // Get trending tutors from real data (top 6 highest rated tutors)
+  const getTrendingTutors = () => {
+    const tutorsMap = new Map();
+    
+    // Group offerings by tutor and calculate their best ratings
+    offerings.forEach(offering => {
+      if (offering.user && offering.averageRating && offering.averageRating > 0) {
+        const tutorId = offering.user.id;
+        const currentTutor = tutorsMap.get(tutorId);
+        
+        if (!currentTutor || offering.averageRating > currentTutor.rating) {
+          tutorsMap.set(tutorId, {
+            id: tutorId,
+            name: offering.user.displayName,
+            subject: offering.subject,
+            rating: offering.averageRating,
+            image: offering.user.imageUrl || "https://i.pravatar.cc/150?img=1",
+            totalReviews: offering.totalReviews || 0
+          });
+        }
+      }
+    });
+    
+    // Convert to array and sort by rating, then return top 6
+    return Array.from(tutorsMap.values())
+      .sort((a, b) => b.rating - a.rating)
+      .slice(0, 6);
+  };
+
+  const trendingTutors = getTrendingTutors();
+
+  // Get newest offers (first 10 created offerings)
+  const getNewestOffers = () => {
+    console.log('Total offerings:', offerings.length);
+    
+    // Sort by createdAt if available, otherwise use _id (ObjectId contains creation time)
+    return offerings
+      .sort((a, b) => {
+        // If both have createdAt, use that
+        if (a.createdAt && b.createdAt) {
+          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        }
+        // If only one has createdAt, prioritize it
+        if (a.createdAt && !b.createdAt) return -1;
+        if (!a.createdAt && b.createdAt) return 1;
+        
+        // If neither has createdAt, use _id (ObjectId creation time)
+        return b._id.localeCompare(a._id);
+      })
+      .slice(0, 10); // Show first 10 newest
+  };
+
+  const newestOffers = getNewestOffers();
 
   return (
     <div className="flex flex-col gap-12 py-6 w-10/12 h-full m-auto">
       {/* New Offers */}
       <section className="flex flex-col gap-4 w-full">
         <div className="flex justify-between items-center">
-          <h1 className="font-bold text-3xl text-green-900">🆕 New Offers</h1>
+          <div>
+            <h1 className="font-bold text-3xl text-green-900">⭐ Top Rated Offers</h1>
+            <p className="text-sm text-gray-600 mt-1">Highest rated tutoring offers</p>
+          </div>
           <div className="flex gap-2">
             <button
               onClick={() => scroll("left")}
@@ -150,7 +219,7 @@ export default function Browse() {
                   ⭐ {(item as any).averageRating > 0 ? (item as any).averageRating.toFixed(1) : "New"}
                 </div>
               </div>
-              <div className="flex flex-col gap-2 p-4">
+              <div className="flex flex-col gap-2 p-4 h-full">
                 <h2 className="font-bold text-lg text-green-900">
                   {item.subject}
                 </h2>
@@ -172,11 +241,17 @@ export default function Browse() {
                   </div>
                 )}
                 
-                <div
-                  className="text-sm text-gray-700"
-                  dangerouslySetInnerHTML={{ __html: item.description }}
-                />
-                <div className="text-xs text-green-700 mt-2">
+                <div className="text-sm text-gray-700 line-clamp-3 overflow-hidden">
+                  <div
+                    className="whitespace-pre-wrap break-words"
+                    dangerouslySetInnerHTML={{ 
+                      __html: item.description?.length > 50 
+                        ? item.description.substring(0, 50) + "..."
+                        : item.description || "No description available"
+                    }}
+                  />
+                </div>
+                <div className="text-xs text-green-700 mt-auto">
                   <p className="font-semibold">Availability:</p>
                   {item.availability.map((a) => (
                     <p key={a.id}>
@@ -196,19 +271,147 @@ export default function Browse() {
         </div>
       </section>
 
+      {/* New Offers */}
+      <section className="flex flex-col gap-6 w-full">
+        <div className="flex justify-between items-center">
+          <div>
+            <h1 className="font-bold text-3xl text-green-900">🆕 New Offers</h1>
+            <p className="text-sm text-gray-600 mt-1">Latest offerings from our tutors</p>
+          </div>
+          <div className="flex gap-2">
+            {newestOffers.length > 4 && (
+              <>
+                <button
+                  onClick={() => scrollNewOffers("left")}
+                  className="btn btn-outline border-green-700 text-green-700 hover:bg-green-700 hover:text-white rounded-lg"
+                >
+                  <ArrowLeft size={18} />
+                </button>
+                <button
+                  onClick={() => scrollNewOffers("right")}
+                  className="btn btn-outline border-green-700 text-green-700 hover:bg-green-700 hover:text-white rounded-lg"
+                >
+                  <ArrowRight size={18} />
+                </button>
+              </>
+            )}
+            <Link
+              href="/search"
+              className="btn btn-outline border-green-700 text-green-700 hover:bg-green-700 hover:text-white rounded-lg"
+            >
+              View All
+            </Link>
+          </div>
+        </div>
+
+        {newestOffers.length > 0 ? (
+          <div
+            ref={newOffersScrollRef}
+            className="flex gap-6 p-2 overflow-x-auto overflow-y-visible scrollbar-hide scroll-smooth"
+          >
+            {newestOffers.map((item: CardInfo) => (
+              <div
+                key={item._id}
+                className="min-w-[280px] max-w-[300px] bg-white rounded-xl shadow-lg hover:shadow-xl hover:scale-101 transition-transform flex flex-col"
+              >
+                <div className="relative">
+                  <img
+                    src={item.banner}
+                    alt={item.subject}
+                    className="w-full h-40 object-cover rounded-t-xl"
+                  />
+                  <span className="absolute top-3 right-3 bg-green-700 text-white text-xs font-semibold px-3 py-1 rounded-full">
+                    {item.status === "available" ? "Available" : "Unavailable"}
+                  </span>
+                  <div className="absolute top-3 left-3 bg-white/90 backdrop-blur-sm text-gray-800 text-xs font-semibold px-2 py-1 rounded-full">
+                    ⭐ {item.averageRating && item.averageRating > 0 ? item.averageRating.toFixed(1) : "New"}
+                  </div>
+                </div>
+                <div className="flex flex-col gap-2 p-4 h-full">
+                  <h2 className="font-bold text-lg text-green-900">
+                    {item.subject}
+                  </h2>
+                  
+                  {/* Tutor Information */}
+                  {item.user && (
+                    <div className="flex items-center gap-3 py-2 mb-2 border-b border-gray-100">
+                      <img
+                        src={item.user.imageUrl || "https://i.pravatar.cc/100?img=1"}
+                        alt={item.user.displayName}
+                        className="w-8 h-8 rounded-full object-cover border border-gray-200"
+                      />
+                      <div className="flex flex-col">
+                        <span className="text-sm font-semibold text-gray-800">
+                          {item.user.displayName}
+                        </span>
+                        <span className="text-xs text-gray-500">Tutor</span>
+                      </div>
+                    </div>
+                  )}
+                  
+                  <div className="text-sm text-gray-700 line-clamp-2 overflow-hidden">
+                    <div
+                      className="whitespace-pre-wrap break-words"
+                      dangerouslySetInnerHTML={{ 
+                        __html: item.description?.length > 80 
+                          ? item.description.substring(0, 80) + "..." 
+                          : item.description || "No description available"
+                      }}
+                    />
+                  </div>
+                  
+                  <div className="text-xs text-green-700 mt-auto bg-green-50 p-2 rounded-lg">
+                    <p className="font-semibold">Availability:</p>
+                    {item.availability.slice(0, 2).map((a) => (
+                      <p key={a.id}>
+                        {a.day} • {a.start} - {a.end}
+                      </p>
+                    ))}
+                    {item.availability.length > 2 && (
+                      <p className="text-gray-500">+{item.availability.length - 2} more slots</p>
+                    )}
+                  </div>
+                  
+                  <Link
+                    href={`/browse/${item._id}`}
+                    className="btn mt-3 bg-green-700 text-white hover:bg-green-800 rounded-lg"
+                  >
+                    View Details
+                  </Link>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-12 bg-white rounded-xl shadow-lg">
+            <p className="text-gray-600 text-lg mb-2">No new offers yet!</p>
+            <p className="text-gray-500">New tutoring offers will appear here.</p>
+          </div>
+        )}
+      </section>
+
       {/* Trending Tutors */}
       <section className="flex flex-col gap-6 w-full bg-white p-10 rounded-2xl shadow-lg">
         <div className="flex justify-between items-center">
-          <h1 className="font-bold text-3xl text-green-900">
-            🌟 Trending Tutors
-          </h1>
-          <button className="btn btn-outline border-green-700 text-green-700 hover:bg-green-700 hover:text-white rounded-lg">
-            View All
-          </button>
+          <div>
+            <h1 className="font-bold text-3xl text-green-900">
+              🌟 Trending Tutors
+            </h1>
+            <p className="text-sm text-gray-600 mt-1">Top-rated tutors from our community</p>
+          </div>
+          {trendingTutors.length > 0 && (
+            <Link
+              href="/search"
+              className="btn btn-outline border-green-700 text-green-700 hover:bg-green-700 hover:text-white rounded-lg"
+            >
+              View All
+            </Link>
+          )}
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-          {TrendingTutors.map((tutor) => (
+        {trendingTutors.length > 0 ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+            {trendingTutors.map((tutor: TrendingTutor) => (
             <div
               key={tutor.id}
               className="flex flex-col items-center gap-3 p-6 bg-gradient-to-br from-green-50 to-green-100 rounded-xl shadow-md hover:shadow-xl hover:scale-105 transition-transform"
@@ -223,15 +426,27 @@ export default function Browse() {
               <div className="flex items-center gap-1">
                 <Star className="text-yellow-500 fill-yellow-500" size={18} />
                 <span className="font-semibold text-green-900">
-                  {tutor.rating}
+                  {tutor.rating.toFixed(1)}
+                </span>
+                <span className="text-xs text-gray-500">
+                  ({tutor.totalReviews} reviews)
                 </span>
               </div>
-              <button className="btn bg-green-700 text-white hover:bg-green-800 rounded-lg">
+              <Link
+                href={`/browse/${offerings.find(o => o.user?.id === tutor.id)?._id}`}
+                className="btn bg-green-700 text-white hover:bg-green-800 rounded-lg"
+              >
                 View Profile
-              </button>
+              </Link>
             </div>
           ))}
-        </div>
+          </div>
+        ) : (
+          <div className="text-center py-12">
+            <p className="text-gray-600 text-lg mb-2">No trending tutors yet!</p>
+            <p className="text-gray-500">Tutors will appear here once they receive ratings.</p>
+          </div>
+        )}
       </section>
     </div>
   );

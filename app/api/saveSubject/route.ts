@@ -8,13 +8,21 @@ export async function POST(req: Request) {
   try {
     const client = await clientPromise;
     const db = client.db("main");
-    const data = await db.collection("subjects").insertOne(sendData);
+    
+    // Add timestamps to the subject data
+    const subjectWithTimestamps = {
+      ...sendData,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+    
+    const data = await db.collection("subjects").insertOne(subjectWithTimestamps);
 
     return NextResponse.json({ success: true, data }, { status: 200 });
   } catch (error) {
-    console.error("Error updating publicMetadata:", error);
+    console.error("Error saving subject:", error);
     return NextResponse.json(
-      { error: "Failed to update metadata" },
+      { error: "Failed to save subject" },
       { status: 500 }
     );
   }
@@ -27,18 +35,25 @@ export async function PATCH(req: Request) {
     const client = await clientPromise;
     const db = client.db("main");
     const { documentId, ...rest } = sendData;
+    
+    // Add updated timestamp to the update data
+    const updateDataWithTimestamp = {
+      ...rest,
+      updatedAt: new Date().toISOString()
+    };
+    
     const data = await db
       .collection("subjects")
       .updateOne(
         { _id: ObjectId.createFromHexString(documentId) },
-        { $set: rest }
+        { $set: updateDataWithTimestamp }
       );
 
     return NextResponse.json({ success: true, data }, { status: 200 });
   } catch (error) {
-    console.error("Error updating publicMetadata:", error);
+    console.error("Error updating subject:", error);
     return NextResponse.json(
-      { error: "Failed to update metadata" },
+      { error: "Failed to update subject" },
       { status: 500 }
     );
   }

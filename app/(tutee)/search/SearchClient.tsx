@@ -148,7 +148,7 @@ export default function SearchClient({ initialOfferings }: SearchClientProps) {
               Showing results for <strong>"{search}"</strong>{" "}
             </>
           ) : (
-            "All Available Subjects"
+            "All Available Subjects "
           )}
           <span className="text-gray-500 text-lg">
             ({results.length} found)
