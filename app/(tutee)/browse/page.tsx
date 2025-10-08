@@ -1,20 +1,57 @@
 "use client";
 import { ArrowLeft, ArrowRight, Star } from "lucide-react";
 import Link from "next/link";
-import React, { useRef } from "react";
+import React, { useRef, useState, useEffect } from "react";
+import { getAllOfferings } from "@/app/actions";
 
 interface CardInfo {
-  _id: { $oid: string };
+  _id: string;
   userId: string;
   subject: string;
   description: string;
   availability: { id: string; day: string; start: string; end: string }[];
   banner: string;
   status: string;
+  averageRating?: number;
+  totalReviews?: number;
+  user?: {
+    id: string;
+    firstName?: string;
+    lastName?: string;
+    username?: string;
+    imageUrl?: string;
+    displayName: string;
+  };
 }
 
 export default function Browse() {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const [offerings, setOfferings] = useState<CardInfo[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Fetch offerings from MongoDB on component mount
+  useEffect(() => {
+    const fetchOfferings = async () => {
+      try {
+        setLoading(true);
+        const response = await getAllOfferings();
+        
+        if (response.success && response.data) {
+          setOfferings(response.data);
+        } else {
+          setError("Failed to load offerings");
+        }
+      } catch (err) {
+        console.error("Error fetching offerings:", err);
+        setError("Failed to load offerings");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchOfferings();
+  }, []);
 
   const scroll = (dir: "left" | "right") => {
     if (scrollRef.current) {
@@ -25,26 +62,25 @@ export default function Browse() {
     }
   };
 
-  const NewOffers: CardInfo[] = [
-    {
-      _id: { $oid: "68e124f6ca2cd032c7132635" },
-      userId: "user_32v6ZOB8bP3oHl5kBPSDgvxc7eG",
-      subject: "Mathematics",
-      description: "<p>Master algebra, geometry, and more with interactive lessons.</p>",
-      availability: [{ id: "1", day: "Monday", start: "08:00", end: "09:00" }],
-      banner: "https://9idxhts2vbwdh6hb.public.blob.vercel-storage.com/keikchoco2-O9gw3FUynxpw5S2mxxD61TTgm4E5ln.jpg",
-      status: "available",
-    },
-    {
-      _id: { $oid: "68e124f6ca2cd032c7132636" },
-      userId: "user_32v6ZOB8bP3oHl5kBPSDgvxc7eG",
-      subject: "English Literature",
-      description: "<p>Improve your literary analysis and writing skills with expert guidance.</p>",
-      availability: [{ id: "2", day: "Wednesday", start: "10:00", end: "11:00" }],
-      banner: "https://images.unsplash.com/photo-1524995997946-a1c2e315a42f",
-      status: "available",
-    },
-  ];
+  // Loading state
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center h-screen text-center text-green-900">
+        <div className="loading loading-spinner loading-lg text-green-700"></div>
+        <p className="mt-4 text-lg">Loading tutoring offers...</p>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center h-screen text-center text-green-900">
+        <p className="text-2xl font-bold text-red-600">{error}</p>
+        <p className="text-gray-600 mt-2">Please try refreshing the page</p>
+      </div>
+    );
+  }
 
   const TrendingTutors = [
     {
@@ -96,7 +132,7 @@ export default function Browse() {
           ref={scrollRef}
           className="flex gap-6 p-2 overflow-x-auto overflow-y-visible scrollbar-hide scroll-smooth"
         >
-          {NewOffers.map((item, i) => (
+          {offerings.map((item, i) => (
             <div
               key={i}
               className="min-w-[280px] max-w-[300px] bg-white rounded-xl shadow-lg hover:shadow-xl hover:scale-101 transition-transform flex flex-col"
@@ -110,9 +146,32 @@ export default function Browse() {
                 <span className="absolute top-3 right-3 bg-green-700 text-white text-xs font-semibold px-3 py-1 rounded-full">
                   {item.status === "available" ? "Available" : "Unavailable"}
                 </span>
+                <div className="absolute top-3 left-3 bg-white/90 backdrop-blur-sm text-gray-800 text-xs font-semibold px-2 py-1 rounded-full">
+                  ⭐ {(item as any).averageRating > 0 ? (item as any).averageRating.toFixed(1) : "New"}
+                </div>
               </div>
               <div className="flex flex-col gap-2 p-4">
-                <h2 className="font-bold text-lg text-green-900">{item.subject}</h2>
+                <h2 className="font-bold text-lg text-green-900">
+                  {item.subject}
+                </h2>
+                
+                {/* Tutor Information */}
+                {item.user && (
+                  <div className="flex items-center gap-3 py-2 mb-2 border-b border-gray-100">
+                    <img
+                      src={item.user.imageUrl || "https://i.pravatar.cc/100?img=1"}
+                      alt={item.user.displayName}
+                      className="w-8 h-8 rounded-full object-cover border border-gray-200"
+                    />
+                    <div className="flex flex-col">
+                      <span className="text-sm font-semibold text-gray-800">
+                        {item.user.displayName}
+                      </span>
+                      <span className="text-xs text-gray-500">Tutor</span>
+                    </div>
+                  </div>
+                )}
+                
                 <div
                   className="text-sm text-gray-700"
                   dangerouslySetInnerHTML={{ __html: item.description }}
@@ -125,19 +184,24 @@ export default function Browse() {
                     </p>
                   ))}
                 </div>
-                <Link href={`/browse/${item._id.$oid}`} className="btn mt-3 bg-green-700 text-white hover:bg-green-800 rounded-lg">
+                <Link
+                  href={`/browse/${item._id}`}
+                  className="btn mt-3 bg-green-700 text-white hover:bg-green-800 rounded-lg"
+                >
                   View Details
                 </Link>
               </div>
             </div>
           ))}
-        </div> 
+        </div>
       </section>
 
       {/* Trending Tutors */}
       <section className="flex flex-col gap-6 w-full bg-white p-10 rounded-2xl shadow-lg">
         <div className="flex justify-between items-center">
-          <h1 className="font-bold text-3xl text-green-900">🌟 Trending Tutors</h1>
+          <h1 className="font-bold text-3xl text-green-900">
+            🌟 Trending Tutors
+          </h1>
           <button className="btn btn-outline border-green-700 text-green-700 hover:bg-green-700 hover:text-white rounded-lg">
             View All
           </button>
@@ -158,7 +222,9 @@ export default function Browse() {
               <p className="text-sm text-green-800">{tutor.subject}</p>
               <div className="flex items-center gap-1">
                 <Star className="text-yellow-500 fill-yellow-500" size={18} />
-                <span className="font-semibold text-green-900">{tutor.rating}</span>
+                <span className="font-semibold text-green-900">
+                  {tutor.rating}
+                </span>
               </div>
               <button className="btn bg-green-700 text-white hover:bg-green-800 rounded-lg">
                 View Profile

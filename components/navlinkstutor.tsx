@@ -7,6 +7,7 @@ import SwitchToTutee from "./ui/switchtotutee";
 import { Bars3Icon, XMarkIcon } from "@heroicons/react/24/outline";
 import ProfileImageSkeleton from "./ui/profile-skeleton";
 import Image from "next/image";
+import { ChatBubbleLeftIcon } from "@heroicons/react/24/solid";
 
 function NavLinksTutor() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -26,7 +27,13 @@ function NavLinksTutor() {
         </div>
 
         {/* Mobile Hamburger */}
-        <div className="flex lg:hidden">
+        <div className="flex gap-4 lg:hidden">
+          <Link
+            href="/tutor/chat"
+            className="text-sm font-semibold text-white/98 flex items-center gap-1"
+          >
+            <ChatBubbleLeftIcon className="size-6"/>
+          </Link>
           <button
             type="button"
             onClick={() => setMobileMenuOpen(true)}
@@ -66,7 +73,12 @@ function NavLinksTutor() {
           <ul className="p-2">
             <SwitchToTutee />
           </ul>
-
+          <Link
+            href="/tutor/chat"
+            className="text-sm font-semibold text-white/98 flex items-center gap-1"
+          >
+            <ChatBubbleLeftIcon className="size-6"/>
+          </Link>
           {/* Profile */}
           <div className="dropdown dropdown-end">
             <div
