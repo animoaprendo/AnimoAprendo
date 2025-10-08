@@ -12,24 +12,22 @@ export default function SwitchToTutor() {
   async function handleClick() {
     const res = await updateMetadata({ userId, role: "tutor" });
 
-    if(res.success) {
-        permanentRedirect("/tutor/dashboard")
+    if (res.success) {
+      permanentRedirect("/tutor/dashboard");
     }
   }
 
   return (
-    <li>
-      <Link
-        href="/tutor/dashboard"
-        onNavigate={(e) => {
-          console.log("Switching to tutor");
-          handleClick();
-          e.preventDefault();
-        }}
-        className="bg-gradient-to-r from-green-300 via-green-500 to-blue-400 inline-block text-transparent bg-clip-text font-bold text-sm text-center"
-      >
-        Switch To Tutor
-      </Link>
-    </li>
+    <Link
+      href="/tutor/dashboard"
+      onNavigate={(e) => {
+        console.log("Switching to tutor");
+        handleClick();
+        e.preventDefault();
+      }}
+      className="bg-gradient-to-r from-green-300 via-green-500 to-blue-400 inline-block text-transparent bg-clip-text font-bold text-sm text-center"
+    >
+      Switch To Tutor
+    </Link>
   );
 }

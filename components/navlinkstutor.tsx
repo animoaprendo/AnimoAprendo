@@ -7,6 +7,7 @@ import SwitchToTutee from "./ui/switchtotutee";
 import { Bars3Icon, XMarkIcon } from "@heroicons/react/24/outline";
 import ProfileImageSkeleton from "./ui/profile-skeleton";
 import Image from "next/image";
+import { ChatBubbleLeftIcon } from "@heroicons/react/24/solid";
 
 function NavLinksTutor() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -26,7 +27,13 @@ function NavLinksTutor() {
         </div>
 
         {/* Mobile Hamburger */}
-        <div className="flex lg:hidden">
+        <div className="flex gap-4 lg:hidden">
+          <Link
+            href="/tutor/chat"
+            className="text-sm font-semibold text-white/98 flex items-center gap-1"
+          >
+            <ChatBubbleLeftIcon className="size-6"/>
+          </Link>
           <button
             type="button"
             onClick={() => setMobileMenuOpen(true)}
@@ -39,25 +46,46 @@ function NavLinksTutor() {
 
         {/* Desktop Links */}
         <PopoverGroup className="hidden lg:flex lg:gap-x-4 items-center">
-          <Link href="/tutor/dashboard" className="text-sm font-semibold text-white/98">
+          <Link
+            href="/tutor/dashboard"
+            className="text-sm font-semibold text-white/98"
+          >
             Dashboard
           </Link>
-          <Link href="/tutor/subjects" className="text-sm font-semibold text-white/98">
+          <Link
+            href="/tutor/subjects"
+            className="text-sm font-semibold text-white/98"
+          >
             View Subjects
           </Link>
-          <Link href="/tutor/appointments" className="text-sm font-semibold text-white/98">
+          <Link
+            href="/tutor/appointments"
+            className="text-sm font-semibold text-white/98"
+          >
             View Appointments
           </Link>
-          <Link href="/tutor/history" className="text-sm font-semibold text-white/98">
+          <Link
+            href="/tutor/history"
+            className="text-sm font-semibold text-white/98"
+          >
             Tutoring History
           </Link>
           <ul className="p-2">
             <SwitchToTutee />
           </ul>
-
+          <Link
+            href="/tutor/chat"
+            className="text-sm font-semibold text-white/98 flex items-center gap-1"
+          >
+            <ChatBubbleLeftIcon className="size-6"/>
+          </Link>
           {/* Profile */}
           <div className="dropdown dropdown-end">
-            <div tabIndex={0} role="button" className="btn btn-ghost btn-circle avatar">
+            <div
+              tabIndex={0}
+              role="button"
+              className="btn btn-ghost btn-circle avatar"
+            >
               <div className="w-10 rounded-full">
                 <Suspense fallback={<ProfileImageSkeleton />}>
                   {isLoaded && user ? (
@@ -79,11 +107,9 @@ function NavLinksTutor() {
               className="menu menu-sm gap-3 dropdown-content bg-white rounded-box mt-3 w-52 p-2 shadow text-black z-50"
             >
               <p className="border-b px-2 pb-1">Welcome, {user?.username}</p>
-              <li>
-                <Link className="justify-between" href="/tutor/profile">
-                  Profile
-                </Link>
-              </li>
+              <Link className="justify-between" href="/tutor/profile">
+                Profile
+              </Link>
               <li>
                 <SignOutButton />
               </li>
@@ -93,7 +119,11 @@ function NavLinksTutor() {
       </nav>
 
       {/* Mobile Drawer */}
-      <Dialog open={mobileMenuOpen} onClose={setMobileMenuOpen} className="lg:hidden">
+      <Dialog
+        open={mobileMenuOpen}
+        onClose={setMobileMenuOpen}
+        className="lg:hidden"
+      >
         <div className="fixed inset-0 z-50" />
         <DialogPanel className="fixed inset-y-0 right-0 z-50 w-full max-w-sm bg-green-900 p-6 sm:ring-1 sm:ring-gray-900/10">
           <div className="flex items-center justify-between">
@@ -141,10 +171,10 @@ function NavLinksTutor() {
                 {/* Bottom actions */}
                 <div className="mt-auto flex flex-col gap-4 px-6">
                   <div className="mt-4">
-                  <ul className="border border-neutral-300 rounded-lg p-3 bg-white/5 text-center">
-                    <SwitchToTutee />
-                  </ul>
-                </div>
+                    <ul className="border border-neutral-300 rounded-lg p-3 bg-white/5 text-center">
+                      <SwitchToTutee />
+                    </ul>
+                  </div>
                   <Link
                     href="/tutor/profile"
                     className="block rounded-lg px-4 py-2 text-base font-semibold text-center text-white bg-blue-600 hover:bg-blue-700"

@@ -4,7 +4,11 @@ import Link from "next/link";
 import React, { Suspense, useState } from "react";
 import SwitchToTutor from "./ui/switchtotutor";
 import { Dialog, DialogPanel, PopoverGroup } from "@headlessui/react";
-import { Bars3Icon, XMarkIcon } from "@heroicons/react/24/outline";
+import {
+  Bars3Icon,
+  ChatBubbleLeftIcon,
+  XMarkIcon,
+} from "@heroicons/react/24/solid";
 import ProfileImageSkeleton from "./ui/profile-skeleton";
 import Image from "next/image";
 
@@ -26,7 +30,13 @@ function NavLinksTutee() {
         </div>
 
         {/* Mobile Hamburger */}
-        <div className="flex lg:hidden">
+        <div className="flex gap-4 lg:hidden">
+          <Link
+            href="/chat"
+            className="text-sm font-semibold text-white hover:text-gray-200 flex items-center gap-1"
+          >
+            <ChatBubbleLeftIcon className="size-6"/>
+          </Link>
           <button
             type="button"
             onClick={() => setMobileMenuOpen(true)}
@@ -63,7 +73,12 @@ function NavLinksTutee() {
           >
             History
           </Link>
-
+          <Link
+            href="/chat"
+            className="text-sm font-semibold text-white hover:text-gray-200 flex items-center gap-1"
+          >
+            <ChatBubbleLeftIcon className="size-6" />
+          </Link>
           {/* Profile Dropdown */}
           <div className="dropdown dropdown-end">
             <div
@@ -92,11 +107,9 @@ function NavLinksTutee() {
               tabIndex={0}
               className="menu menu-sm gap-3 dropdown-content bg-white rounded-box mt-3 w-56 p-3 shadow text-black z-50"
             >
-              <li className="border-b pb-2 mb-2">
-                <p className="text-sm">
-                  Welcome, <span className="font-medium">{user?.username}</span>
-                </p>
-              </li>
+              <p className="border-b px-2 pb-1">
+                Welcome, <span className="font-medium">{user?.username}</span>
+              </p>
 
               <li>
                 <Link href="/profile" className="font-semibold">
@@ -135,6 +148,7 @@ function NavLinksTutee() {
             <Link href="/" className="-m-1.5 p-1.5">
               <span className="font-semibold text-white">AnimoAprendo</span>
             </Link>
+            
             <button
               type="button"
               onClick={() => setMobileMenuOpen(false)}

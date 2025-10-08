@@ -43,7 +43,6 @@ export async function uploadBannerServer(file: File, username: string) {
     }
 
     const data: any = await response.json();
-    console.log(data)
     if(data.success) {
       return { success: true, data: data.data };
     } else {
@@ -181,7 +180,7 @@ export async function submitSubject({
           documentId,
           userId,
           ...sendData,
-          status: "pending",
+          status: "available",
         }),
       }
     );
@@ -194,12 +193,14 @@ export async function submitSubject({
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ userId, ...sendData, status: "pending" }),
+        body: JSON.stringify({ userId, ...sendData, status: "available" }),
       }
     );
     data = await response.json();
   }
 
+  // delay kasi gusto ko?
+  setTimeout(() => {}, 1000);
   if (data.success) {
     return { success: true, data: data.data };
   } else {
@@ -229,7 +230,7 @@ export async function resumeSubject({
       body: JSON.stringify({
         documentId,
         userId,
-        status: "approved",
+        status: "available",
       }),
     }
   );

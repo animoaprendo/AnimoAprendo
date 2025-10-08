@@ -85,7 +85,7 @@ export default function Landing() {
   }
 
   return (
-    <div className="pb-10 w-full flex flex-col items-center">
+    <div className="pb-10 w-full flex flex-col items-center select-none">
       {/* Hero Section */}
       <section className="w-full">
         <div
@@ -94,7 +94,7 @@ export default function Landing() {
             backgroundImage: "url(/images/DLSUD-rotonda.jpg)",
           }}
         >
-          <div className="hero-overlay bg-gradient-to-b from-green-900/40 to-black/70"></div>
+          <div className="hero-overlay bg-gradient-to-b from-green-900/40 to-black/70 "></div>
           <div className="hero-content !items-start !justify-start text-white/95 w-full">
             <div className="w-full">
               <TextType
@@ -243,6 +243,7 @@ export default function Landing() {
           {faq ? (
             faq.map((item, i) => (
               <div
+                key={i}
                 tabIndex={i}
                 className="collapse collapse-arrow bg-green-50 rounded-lg shadow border"
               >

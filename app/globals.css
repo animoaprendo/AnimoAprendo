@@ -116,3 +116,11 @@ hr {
 .mask-star-2.mask-full::before {
   width: 100%;
 }
+
+@keyframes slideInRight {
+  from { transform: translateX(100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+.animate-slideInRight {
+  animation: slideInRight 0.3s ease-out forwards;
+}

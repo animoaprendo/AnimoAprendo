@@ -1,0 +1,16 @@
+{
+  "name": "animoaprendo-socket-server",
+  "version": "1.0.0",
+  "description": "Socket.IO server for AnimoAprendo real-time messaging",
+  "main": "socket-server.js",
+  "scripts": {
+    "start": "node socket-server.js",
+    "dev": "node socket-server.js"
+  },
+  "dependencies": {
+    "socket.io": "^4.7.5"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
