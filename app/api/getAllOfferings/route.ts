@@ -51,6 +51,7 @@ export async function GET(request: NextRequest) {
           _id: offering._id.toString(),
           averageRating: averageRating > 0 ? Math.round(averageRating * 10) / 10 : 0, // Round to 1 decimal
           totalReviews: tutorReviews.length,
+          createdAt: offering.createdAt, // Include createdAt for sorting
           user: user ? {
             id: user.id || user._id,
             firstName: user.first_name || user.firstName,
@@ -65,7 +66,26 @@ export async function GET(request: NextRequest) {
       })
     );
 
-    return Response.json({ success: true, data: offeringsWithUsers });
+    // Sort offerings by rating (highest first, treating null/undefined as 0)
+    // Then by creation date (oldest first) for same ratings
+    const sortedOfferings = offeringsWithUsers.sort((a, b) => {
+      const aRating = a.averageRating || 0;
+      const bRating = b.averageRating || 0;
+      
+      // Primary sort: by rating (highest first)
+      if (bRating !== aRating) {
+        return bRating - aRating;
+      }
+      
+      // Secondary sort: by creation date (oldest first) for same ratings
+      const aDate = new Date(a.createdAt || a._id).getTime(); // Fallback to ObjectId if no createdAt
+      const bDate = new Date(b.createdAt || b._id).getTime();
+      return aDate - bDate; // oldest first
+    });
+
+
+
+    return Response.json({ success: true, data: sortedOfferings });
 
   } catch (error) {
     console.error('Error fetching all offerings:', error);

@@ -49,23 +49,9 @@ export default function Browse() {
         const response = await getAllOfferings();
         
         if (response.success && response.data) {
-          // Sort offerings by rating (highest first), then by creation date
-          const sortedOfferings = response.data.sort((a: CardInfo, b: CardInfo) => {
-            const aRating = a.averageRating || 0;
-            const bRating = b.averageRating || 0;
-            
-            // First sort by rating (descending)
-            if (bRating !== aRating) {
-              return bRating - aRating;
-            }
-            
-            // If ratings are equal, sort by creation date (newest first)
-            const aDate = new Date(a.createdAt || 0).getTime();
-            const bDate = new Date(b.createdAt || 0).getTime();
-            return bDate - aDate;
-          });
-          
-          setOfferings(sortedOfferings);
+          // Data is already sorted by the backend (rating desc, then createdAt asc for same ratings)
+
+          setOfferings(response.data);
         } else {
           setError("Failed to load offerings");
         }
@@ -151,10 +137,11 @@ export default function Browse() {
 
   // Get newest offers (first 10 created offerings)
   const getNewestOffers = () => {
-    console.log('Total offerings:', offerings.length);
+
     
+    // Create a copy of offerings before sorting to avoid mutating the original array
     // Sort by createdAt if available, otherwise use _id (ObjectId contains creation time)
-    return offerings
+    return [...offerings]
       .sort((a, b) => {
         // If both have createdAt, use that
         if (a.createdAt && b.createdAt) {
@@ -172,9 +159,16 @@ export default function Browse() {
 
   const newestOffers = getNewestOffers();
 
+  // Get top rated offers (first 10 from the already sorted array)
+  const getTopRatedOffers = () => {
+    return offerings.slice(0, 10); // Backend already sorted by rating desc, then createdAt asc
+  };
+
+  const topRatedOffers = getTopRatedOffers();
+
   return (
     <div className="flex flex-col gap-12 py-6 w-10/12 h-full m-auto">
-      {/* New Offers */}
+      {/* Top Rated */}
       <section className="flex flex-col gap-4 w-full">
         <div className="flex justify-between items-center">
           <div>
@@ -201,7 +195,7 @@ export default function Browse() {
           ref={scrollRef}
           className="flex gap-6 p-2 overflow-x-auto overflow-y-visible scrollbar-hide scroll-smooth"
         >
-          {offerings.map((item, i) => (
+          {topRatedOffers.map((item, i) => (
             <div
               key={i}
               className="min-w-[280px] max-w-[300px] bg-white rounded-xl shadow-lg hover:shadow-xl hover:scale-101 transition-transform flex flex-col"
@@ -419,7 +413,7 @@ export default function Browse() {
               <img
                 src={tutor.image}
                 alt={tutor.name}
-                className="w-24 h-24 rounded-full border-4 border-green-700"
+                className="w-24 h-24 rounded-full border-4 border-green-700 object-cover"
               />
               <h2 className="font-bold text-lg text-green-900">{tutor.name}</h2>
               <p className="text-sm text-green-800">{tutor.subject}</p>
