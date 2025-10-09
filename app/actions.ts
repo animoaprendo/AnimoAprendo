@@ -186,11 +186,15 @@ export async function getReviewsByOfferingId(offeringId: string) {
 export async function getAllOfferings() {
   try {
     const response = await fetch(
-      `${process.env.NEXT_PUBLIC_BASE_URL}/api/getAllOfferings`,
-      { method: "GET" }
+      `${process.env.NEXT_PUBLIC_BASE_URL}/api/getAllOfferings?t=${Date.now()}`,
+      { 
+        method: "GET",
+        cache: "no-cache"
+      }
     );
 
     const data = await response.json();
+
     return data;
   } catch (error) {
     console.error("Error fetching offerings:", error);
