@@ -2,6 +2,9 @@ import React from "react";
 import { getAllOfferings } from "@/app/actions";
 import SearchClient from "./SearchClient";
 
+// Force dynamic rendering since we fetch fresh data
+export const dynamic = 'force-dynamic';
+
 export default async function SearchPage() {
   const offeringsResponse = await getAllOfferings();
 

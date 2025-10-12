@@ -1,4 +1,4 @@
-import Footer from "@/components/footer";
+import ConditionalFooter from "@/components/ConditionalFooter";
 import { SignedIn } from "@clerk/nextjs";
 import { currentUser } from "@clerk/nextjs/server";
 import { permanentRedirect } from "next/navigation";
@@ -33,9 +33,7 @@ export default async function Layout({
         </div>
         {/* Page content here */}
         <div className="flex flex-col grow items-center">{children}</div>
-        <div className="">
-          <Footer />
-        </div>
+        <ConditionalFooter />
       </SignedIn>
     </>
   );

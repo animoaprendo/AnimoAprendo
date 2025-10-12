@@ -294,6 +294,62 @@ export async function sendMessage(messageData: {
   }
 }
 
+// Migrate old messages to mark them as seen
+export async function migrateSeenMessages(userId: string): Promise<{ success: boolean; data?: any; error?: string }> {
+  try {
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_BASE_URL}/api/chat/migrateSeen`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ userId }),
+      }
+    );
+
+    if (!response.ok) {
+      console.error('Server action: Migration API response not ok:', response.status, response.statusText);
+      const errorText = await response.text();
+      console.error('Migration API error response:', errorText);
+      return { success: false, error: `HTTP ${response.status}: ${errorText}` };
+    }
+
+    const data = await response.json();
+    return { success: true, data };
+  } catch (error) {
+    console.error('Server action: Error migrating messages:', error);
+    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+  }
+}
+
+// Mark messages as seen for a specific conversation
+export async function markMessagesAsSeen(userId: string, conversationUserId: string): Promise<{ success: boolean; data?: any; error?: string }> {
+  try {
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_BASE_URL}/api/chat/markSeen`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ userId, conversationUserId }),
+      }
+    );
+
+    if (!response.ok) {
+      console.error('Server action: Mark seen API response not ok:', response.status, response.statusText);
+      return { success: false, error: `HTTP ${response.status}` };
+    }
+
+    const data = await response.json();
+    return { success: true, data };
+  } catch (error) {
+    console.error('Server action: Error marking messages as seen:', error);
+    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+  }
+}
+
 // Update appointment status for an existing chat message
 export async function updateAppointmentStatus(params: {
   messageId: string;
