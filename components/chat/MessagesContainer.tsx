@@ -70,6 +70,7 @@ export default function MessagesContainer({
               onReply={onReply}
               onAppointmentResponse={onAppointmentResponse}
               userRole={userRole}
+              messages={messages}
             />
           ))
         )}

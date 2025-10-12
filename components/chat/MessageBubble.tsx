@@ -10,6 +10,7 @@ interface MessageBubbleProps {
   onReply: (messageId: string) => void;
   onAppointmentResponse?: (msg: Message, action: "accepted" | "declined" | "cancelled") => void;
   userRole: "tutee" | "tutor";
+  messages: Message[];
 }
 
 export default function MessageBubble({
@@ -18,7 +19,8 @@ export default function MessageBubble({
   pendingMessages,
   onReply,
   onAppointmentResponse,
-  userRole
+  userRole,
+  messages
 }: MessageBubbleProps) {
   const formatTimestamp = (timestamp: string) => {
     const date = new Date(timestamp);
@@ -43,6 +45,14 @@ export default function MessageBubble({
             : "bg-green-50 text-green-900"
         }`}
       >
+        {/* Reply To Message Display */}
+        {message.replyTo && (
+          <ReplyToMessage
+            replyToId={message.replyTo}
+            messages={messages}
+          />
+        )}
+        
         {message.type === "appointment" && message.appointment ? (
           <AppointmentMessage
             message={message}
@@ -160,6 +170,36 @@ function QuizResultMessage({ message }: { message: Message }) {
       >
         View Results
       </button>
+    </div>
+  );
+}
+
+function ReplyToMessage({ replyToId, messages }: { replyToId: string; messages: Message[] }) {
+  const repliedMessage = messages.find((msg) => getMessageId(msg) === replyToId);
+  
+  if (!repliedMessage) {
+    return null;
+  }
+
+  // Truncate long messages for the reply preview
+  const truncateMessage = (text: string, maxLength: number = 50) => {
+    return text.length > maxLength ? `${text.substring(0, maxLength)}...` : text;
+  };
+
+  return (
+    <div className="mb-2 p-2 bg-black/10 rounded-lg border-l-2 border-green-500">
+      <div className="text-xs opacity-70 mb-1">
+        Replying to:
+      </div>
+      <div className="text-sm">
+        {repliedMessage.type === "appointment" && repliedMessage.appointment ? (
+          <span>📅 Appointment: {repliedMessage.appointment.subject}</span>
+        ) : repliedMessage.type === "quiz-result" && repliedMessage.quizResult ? (
+          <span>📊 Quiz Result: Attempt {repliedMessage.quizResult.attempt}</span>
+        ) : (
+          <span>{truncateMessage(repliedMessage.message)}</span>
+        )}
+      </div>
     </div>
   );
 }
