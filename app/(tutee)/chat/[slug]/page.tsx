@@ -1,4 +1,4 @@
-import MessagingPage from '@/components/chat/message'
+import ChatContainer from '@/components/chat/ChatContainer'
 import React from 'react'
 import { currentUser } from "@clerk/nextjs/server";
 
@@ -14,7 +14,7 @@ export default async function TuteeChat ({
   const user = await currentUser();
 
   return (
-    <MessagingPage 
+    <ChatContainer 
       userId={user?.id || "test-user-id"} 
       recipientId={slug} 
       userRole="tutee" 

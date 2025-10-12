@@ -1,4 +1,4 @@
-import Footer from "@/components/footer";
+import ConditionalFooter from "@/components/ConditionalFooter";
 import NavLinksTutee from "@/components/navlinkstutee";
 import {
   ClerkProvider,
@@ -36,9 +36,7 @@ export default async function Layout({
         <div className="flex flex-col grow items-center pt-0">
           {children}
         </div>
-        <div className="">
-          <Footer />
-        </div>
+        <ConditionalFooter />
       </SignedOut>
 
       <SignedIn>
@@ -47,9 +45,7 @@ export default async function Layout({
         <div className="flex flex-col grow items-center pt-0">
           {children}
         </div>
-        <div className="">
-          <Footer />
-        </div>
+        <ConditionalFooter />
       </SignedIn>
     </>
   );

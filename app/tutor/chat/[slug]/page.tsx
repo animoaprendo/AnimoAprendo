@@ -1,4 +1,4 @@
-import MessagingPage from '@/components/chat/message'
+import ChatContainer from '@/components/chat/ChatContainer'
 import React from 'react'
 import { currentUser } from "@clerk/nextjs/server";
 
@@ -11,6 +11,6 @@ export default async function TutorChat ({
   const user = await currentUser();
 
   return (
-    <MessagingPage userId={user?.id} recipientId={slug} userRole="tutor" />
+    <ChatContainer userId={user?.id} recipientId={slug} userRole="tutor" />
   )
 }
