@@ -724,7 +724,7 @@ export default function ChatContainer({
   return (
     <div className="p-4 max-h-[93vh] h-full bg-gray-100 flex flex-col md:flex-row gap-4 w-full relative">
       {/* Desktop Layout - User List (hidden on mobile) */}
-      <div className="hidden min-w-[280px] lg:min-w-[350px] md:block">
+      <div className="hidden w-[280px] lg:w-[350px] md:block">
         <UserList
           users={users}
           activeUser={activeUser}
@@ -736,7 +736,7 @@ export default function ChatContainer({
       </div>
 
       {/* Mobile/Main Content Area */}
-      <div className="flex-1 max-h-[87.5vh] h-full flex flex-col bg-white rounded-lg shadow-md relative">
+      <div className="flex-1 max-h-[87.5vh] grow shrink-0 h-full flex flex-col bg-white rounded-lg shadow-md relative">
         <MessagesContainer
           messages={messages}
           activeUser={activeUser}
@@ -764,7 +764,7 @@ export default function ChatContainer({
       </div>
 
       {/* Right Column - Desktop Sidebar */}
-      <div className="hidden min-w-[350px] xl:block">
+      <div className="hidden w-[350px] xl:block">
         <ChatSidebar
           activeUser={activeUser}
           inquiry={inquiry}
