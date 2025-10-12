@@ -2,6 +2,7 @@
 
 import { Send, CornerUpLeft } from "lucide-react";
 import { Message, getMessageId } from "./types";
+import { useRef, useImperativeHandle, forwardRef } from "react";
 
 interface ChatInputProps {
   newMessage: string;
@@ -15,7 +16,11 @@ interface ChatInputProps {
   disabled?: boolean;
 }
 
-export default function ChatInput({
+export interface ChatInputRef {
+  focus: () => void;
+}
+
+const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(({
   newMessage,
   setNewMessage,
   activeUser,
@@ -25,7 +30,14 @@ export default function ChatInput({
   onSend,
   pendingMessages,
   disabled = false
-}: ChatInputProps) {
+}, ref) => {
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useImperativeHandle(ref, () => ({
+    focus: () => {
+      inputRef.current?.focus();
+    }
+  }));
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
       e.preventDefault();
@@ -81,6 +93,7 @@ export default function ChatInput({
 
       <div className="p-3 border-t border-black/30 flex items-center gap-2">
         <input
+          ref={inputRef}
           type="text"
           placeholder={
             activeUser ? "Aa" : "Select a conversation to start messaging"
@@ -116,4 +129,7 @@ export default function ChatInput({
       </div>
     </>
   );
-}
+});
+
+ChatInput.displayName = "ChatInput";
+export default ChatInput;

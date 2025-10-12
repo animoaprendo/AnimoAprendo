@@ -6,7 +6,7 @@ import { InfoIcon, Menu, X } from "lucide-react";
 // Import all our new components
 import UserList from "./UserList";
 import MessagesContainer from "./MessagesContainer";
-import ChatInput from "./ChatInput";
+import ChatInput, { ChatInputRef } from "./ChatInput";
 import ChatSidebar from "./ChatSidebar";
 import MobileSidebar from "./MobileSidebar";
 import AppointmentModal from "./AppointmentModal";
@@ -68,7 +68,7 @@ export default function ChatContainer({
   const [upcomingAppointments, setUpcomingAppointments] = useState<any[]>([]);
   const [appointmentsWithoutQuiz, setAppointmentsWithoutQuiz] = useState<any[]>([]);
 
-  const chatRef = useRef<HTMLInputElement>(null);
+  const chatInputRef = useRef<ChatInputRef>(null);
 
   // Custom hooks
   const { markMessagesAsSeen } = useChatSeenStatus(userId, isWindowFocused, allChats);
@@ -655,7 +655,7 @@ export default function ChatContainer({
 
   const handleReply = useCallback((messageId: string) => {
     setReplyTo(messageId);
-    chatRef.current?.focus();
+    chatInputRef.current?.focus();
   }, []);
 
   const handleAppointmentResponse = useCallback(async (msg: Message, action: "accepted" | "declined" | "cancelled") => {
@@ -770,6 +770,7 @@ export default function ChatContainer({
         />
         
         <ChatInput
+          ref={chatInputRef}
           newMessage={newMessage}
           setNewMessage={setNewMessage}
           activeUser={activeUser}
