@@ -312,16 +312,34 @@ export default function ChatContainer({
 
           const upcoming = result.appointments
             .filter((apt: any) => {
-              const isUpcoming = (apt.status === "accepted" || apt.status === "completed") && new Date(apt.datetimeISO) > now;
-              if (!isUpcoming) return false;
-
-              if (apt.status === "completed") {
+              // Show accepted appointments that are in the future (normal upcoming)
+              const isUpcoming = apt.status === "accepted" && new Date(apt.datetimeISO) > now;
+              
+              // Show accepted appointments with quizzes (for pre-session quiz)
+              const isAcceptedWithQuiz = apt.status === "accepted" && apt.quiz && apt.quiz.length > 0;
+              
+              // Show completed appointments with quizzes available for post-session quiz
+              const isCompletedWithQuiz = apt.status === "completed" && apt.quiz && apt.quiz.length > 0;
+              
+              if (isUpcoming) return true;
+              
+              if (isAcceptedWithQuiz || isCompletedWithQuiz) {
                 const quizAttempts = apt.quizAttempts || [];
-                const hasCompletedAttempt1 = quizAttempts.some((attempt: any) => attempt.attempt === 1);
-                const hasCompletedAttempt2 = quizAttempts.some((attempt: any) => attempt.attempt === 2);
-                if (hasCompletedAttempt1 && hasCompletedAttempt2) return false;
+                const hasCompletedAttempt1 = quizAttempts.some((attempt: any) => attempt.attempt === 1 && attempt.tuteeId === userId);
+                const hasCompletedAttempt2 = quizAttempts.some((attempt: any) => attempt.attempt === 2 && attempt.tuteeId === userId);
+                
+                // For accepted appointments: show if attempt 1 not completed
+                if (apt.status === "accepted") {
+                  return !hasCompletedAttempt1;
+                }
+                
+                // For completed appointments: show if attempt 1 is done but attempt 2 is not
+                if (apt.status === "completed") {
+                  return hasCompletedAttempt1 && !hasCompletedAttempt2;
+                }
               }
-              return true;
+              
+              return false;
             })
             .sort((a: any, b: any) => new Date(a.datetimeISO).getTime() - new Date(b.datetimeISO).getTime());
           

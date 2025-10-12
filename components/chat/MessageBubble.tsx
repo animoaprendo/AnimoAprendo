@@ -135,16 +135,31 @@ function AppointmentMessage({
 
 function QuizResultMessage({ message }: { message: Message }) {
   const quizResult = message.quizResult!;
-  const percentage = Math.round((quizResult.score / quizResult.totalQuestions) * 100);
   
   return (
-    <div className="space-y-2">
+    <div className="space-y-3">
       <div className="font-semibold">📊 Quiz Result</div>
       <div className="text-sm space-y-1">
         <p><strong>Attempt:</strong> {quizResult.attempt}</p>
-        <p><strong>Score:</strong> {quizResult.score}/{quizResult.totalQuestions} ({percentage}%)</p>
+        <p><strong>Score:</strong> {quizResult.score}% ({quizResult.totalQuestions} questions)</p>
         <p><strong>Completed:</strong> {new Date(quizResult.completedAt).toLocaleDateString()}</p>
       </div>
+      
+      {/* View Results Button */}
+      <button
+        onClick={() => {
+          const appointmentId = quizResult.appointmentId;
+          if (appointmentId) {
+            window.location.href = `/quiz?appointmentId=${appointmentId}&attempt=${quizResult.attempt}&viewResults=true`;
+          } else {
+            console.error('No appointment ID found for quiz result');
+          }
+        }}
+        className="px-3 py-2 bg-blue-500 hover:bg-blue-600 text-white text-sm font-medium rounded-lg transition-colors duration-200"
+        title="View detailed quiz results and answers"
+      >
+        View Results
+      </button>
     </div>
   );
 }

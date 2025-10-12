@@ -1,6 +1,7 @@
 "use client";
 
 import { User, Inquiry } from "./types";
+import { updateAppointmentCollectionStatus } from "@/app/actions";
 
 interface MobileSidebarProps {
   isOpen: boolean;
@@ -124,38 +125,167 @@ export default function MobileSidebar({
           <h4 className="font-semibold text-green-900 text-sm mb-2">
             Reminders
           </h4>
-          <ul className="text-sm space-y-1 *:bg-green-700 text-white/95 *:px-3 *:py-4 *:rounded-md overflow-y-auto max-h-[20rem] rounded-md">
-            {appointmentsWithoutQuiz.length > 0 && (
-              <li>
-                <div className="flex flex-col gap-1">
-                  <div className="font-medium text-yellow-200">
-                    ⚠️ Missing Quiz Content
+          
+          {/* Check if we have any reminders */}
+          {(appointmentsWithoutQuiz.length > 0 || upcomingAppointments.length > 0) ? (
+            <div className="space-y-2 overflow-y-auto max-h-[20rem]">
+              {/* Quiz Reminders Card */}
+              {upcomingAppointments.filter((apt: any) => apt.quiz && apt.quiz.length > 0).length > 0 && (
+                <div className="bg-blue-600 text-white/95 px-3 py-4 rounded-md">
+                  <div className="font-medium text-blue-100 mb-2">
+                    📝 Quiz Reminders
                   </div>
-                  <div className="text-xs opacity-90">
-                    You have {appointmentsWithoutQuiz.length} accepted appointment(s) without quiz content.
-                  </div>
-                  <div className="text-xs opacity-75">
-                    Please add quiz questions to your accepted appointments.
+                  <div className="space-y-3">
+                    {upcomingAppointments
+                      .filter((apt: any) => apt.quiz && apt.quiz.length > 0)
+                      .slice(0, 2)
+                      .map((apt: any, index: number) => (
+                        <MobileQuizReminder
+                          key={`quiz-${apt._id || index}`}
+                          appointment={apt}
+                          userId={userId}
+                          userRole={userRole}
+                        />
+                      ))}
                   </div>
                 </div>
-              </li>
-            )}
-            {upcomingAppointments.slice(0, 2).map((apt: any, index: number) => (
-              <MobileAppointmentReminder
-                key={apt._id || `apt-${index}`}
-                appointment={apt}
-                userId={userId}
-                userRole={userRole}
-              />
-            ))}
-          </ul>
-          {upcomingAppointments.length === 0 && appointmentsWithoutQuiz.length === 0 && (
+              )}
+
+              {/* Missing Quiz Content Card */}
+              {appointmentsWithoutQuiz.length > 0 && (
+                <div className="bg-yellow-600 text-white/95 px-3 py-4 rounded-md">
+                  <div className="font-medium text-yellow-100 mb-2">
+                    ⚠️ Missing Quiz Content
+                  </div>
+                  <div className="space-y-3">
+                    {appointmentsWithoutQuiz.map((appointment: any, index: number) => (
+                      <div key={appointment._id || `no-quiz-${index}`} className="flex flex-col gap-2">
+                        <div className="text-xs opacity-90">
+                          {appointment.subject || 'Appointment'} on {new Date(appointment.date).toLocaleDateString()}
+                        </div>
+                        <div className="text-xs opacity-75">
+                          {appointment.time} - Add quiz questions
+                        </div>
+                        <button
+                          onClick={() => window.location.href = `/tutor/quiz/edit?appointmentId=${appointment.messageId}`}
+                          className="mt-1 px-3 py-2 bg-yellow-500 hover:bg-yellow-600 text-yellow-900 text-sm font-medium rounded-lg transition-colors duration-200"
+                        >
+                          Create Quiz
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Regular Appointment Reminders Card - Show ALL appointments */}
+              {upcomingAppointments.length > 0 && (
+                <div className="bg-green-700 text-white/95 px-3 py-4 rounded-md">
+                  <div className="font-medium text-green-100 mb-2">
+                    📅 Appointment Reminders
+                  </div>
+                  <div className="space-y-3">
+                    {upcomingAppointments.slice(0, 2).map((apt: any, index: number) => (
+                      <MobileAppointmentReminder
+                        key={`apt-${apt._id || index}`}
+                        appointment={apt}
+                        userId={userId}
+                        userRole={userRole}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
             <p className="text-sm text-gray-500">
               No upcoming appointments
             </p>
           )}
         </div>
       </div>
+    </div>
+  );
+}
+
+function MobileQuizReminder({
+  appointment,
+  userId,
+  userRole
+}: {
+  appointment: any;
+  userId: string;
+  userRole: "tutee" | "tutor";
+}) {
+  const appointmentDate = new Date(appointment.datetimeISO);
+  const isToday = appointmentDate.toDateString() === new Date().toDateString();
+  const isTomorrow = appointmentDate.toDateString() === new Date(Date.now() + 24 * 60 * 60 * 1000).toDateString();
+
+  let dateText = appointmentDate.toLocaleDateString();
+  if (isToday) dateText = "today";
+  else if (isTomorrow) dateText = "tomorrow";
+
+  const timeText = appointmentDate.toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+
+  const hasQuiz = appointment.quiz && appointment.quiz.length > 0;
+  const isTutee = userId && appointment.tuteeId === userId;
+
+  const quizAttempts = appointment.quizAttempts || [];
+  const hasCompletedAttempt1 = quizAttempts.some(
+    (attempt: any) => attempt.attempt === 1 && attempt.tuteeId === userId
+  );
+  const hasCompletedAttempt2 = quizAttempts.some(
+    (attempt: any) => attempt.attempt === 2 && attempt.tuteeId === userId
+  );
+
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="font-medium text-xs">
+        {appointment.subject || "Tutoring Session"}
+      </div>
+      <div className="text-xs opacity-90">
+        {dateText} at {timeText}
+      </div>
+      
+      {/* Quiz Attempt 1: Available when appointment is accepted and has quiz */}
+      {appointment.status === "accepted" && isTutee && hasQuiz && !hasCompletedAttempt1 && (
+        <div className="space-y-2">
+          <div className="text-blue-200 text-xs">
+            📝 Pre-Session Quiz Available
+          </div>
+          <button
+            onClick={() => window.location.href = `/quiz?appointmentId=${appointment.messageId}&attempt=1`}
+            className="px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white text-xs font-medium rounded transition-colors duration-200"
+          >
+            Take Quiz (Attempt 1)
+          </button>
+        </div>
+      )}
+
+      {/* Quiz Attempt 2: Available when appointment is completed and attempt 1 is done */}
+      {appointment.status === "completed" && isTutee && hasQuiz && hasCompletedAttempt1 && !hasCompletedAttempt2 && (
+        <div className="space-y-2">
+          <div className="text-yellow-200 text-xs">
+            📝 Post-Session Quiz Available
+          </div>
+          <button
+            onClick={() => window.location.href = `/quiz?appointmentId=${appointment.messageId}&attempt=2`}
+            className="px-3 py-1 bg-green-500 hover:bg-green-600 text-white text-xs font-medium rounded transition-colors duration-200"
+          >
+            Take Quiz (Attempt 2)
+          </button>
+        </div>
+      )}
+
+      {/* Show completion status */}
+      {isTutee && hasQuiz && hasCompletedAttempt1 && hasCompletedAttempt2 && (
+        <div className="text-green-200 text-xs">
+          ✅ All quizzes completed
+        </div>
+      )}
     </div>
   );
 }
@@ -182,21 +312,68 @@ function MobileAppointmentReminder({
     minute: "2-digit",
   });
 
+  // Check if tutor can mark as complete
+  const isTutor = userId && appointment.tutorId === userId;
+  const hasQuiz = appointment.quiz && appointment.quiz.length > 0;
+  const quizAttempts = appointment.quizAttempts || [];
+  const hasCompletedAttempt1 = quizAttempts.some(
+    (attempt: any) => attempt.attempt === 1 && attempt.tuteeId === appointment.tuteeId
+  );
+  
+  // Tutor can mark as complete if: appointment is accepted, has quiz, and tutee completed attempt 1
+  const canMarkComplete = isTutor && 
+                         appointment.status === "accepted" && 
+                         hasQuiz && 
+                         hasCompletedAttempt1;
+
+  const handleMarkComplete = async () => {
+    try {
+      const result = await updateAppointmentCollectionStatus({
+        messageId: appointment.messageId,
+        status: 'completed',
+        userId: userId
+      });
+
+      if (result.success) {
+        // Refresh the page to update the UI
+        window.location.reload();
+      } else {
+        console.error('Failed to mark appointment as complete:', result.error);
+      }
+    } catch (error) {
+      console.error('Error marking appointment as complete:', error);
+    }
+  };
+
   return (
-    <li>
-      <div className="flex flex-col gap-2">
-        <div className="font-medium">
-          📅 {appointment.subject || "Tutoring Session"}
-        </div>
-        <div className="text-xs opacity-90">
-          {dateText} at {timeText}
-        </div>
-        {appointment.status === "accepted" && (
-          <div className="text-xs opacity-75">
-            Status: Accepted
-          </div>
-        )}
+    <div className="flex flex-col gap-2">
+      <div className="font-medium text-xs">
+        {appointment.subject || "Tutoring Session"}
       </div>
-    </li>
+      <div className="text-xs opacity-90">
+        {dateText} at {timeText}
+      </div>
+      
+      {appointment.status === "accepted" && (
+        <div className="text-xs opacity-75">
+          Status: Accepted
+        </div>
+      )}
+
+      {/* Mark as Complete Button for Tutors */}
+      {canMarkComplete && (
+        <div className="space-y-2">
+          <div className="text-green-200 text-xs">
+            ✅ Ready to complete session
+          </div>
+          <button
+            onClick={handleMarkComplete}
+            className="px-3 py-2 bg-green-500 hover:bg-green-600 text-white text-xs font-medium rounded transition-colors duration-200"
+          >
+            Mark as Complete
+          </button>
+        </div>
+      )}
+    </div>
   );
 }
