@@ -96,13 +96,8 @@ function AppointmentMessage({
         <p><strong>Subject:</strong> {appointment.subject}</p>
         <p><strong>Date:</strong> {date.toLocaleDateString()}</p>
         <p><strong>Time:</strong> {date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</p>
-        <p><strong>Mode:</strong> {appointment.mode}</p>
-        <p className={`font-medium ${
-          appointment.status === "accepted" ? "text-green-600" :
-          appointment.status === "declined" ? "text-red-600" :
-          appointment.status === "cancelled" ? "text-gray-600" :
-          "text-yellow-600"
-        }`}>
+        <p className="capitalize"><strong>Mode:</strong> {appointment.mode}</p>
+        <p className={`font-medium`}>
           <strong>Status:</strong> {appointment.status.charAt(0).toUpperCase() + appointment.status.slice(1)}
         </p>
       </div>
