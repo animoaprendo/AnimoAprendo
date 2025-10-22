@@ -165,7 +165,7 @@ function QuizResultMessage({ message }: { message: Message }) {
             console.error('No appointment ID found for quiz result');
           }
         }}
-        className="px-3 py-2 bg-blue-500 hover:bg-blue-600 text-white text-sm font-medium rounded-lg transition-colors duration-200"
+        className="px-3 py-2 bg-blue-500 hover:bg-blue-600 text-white text-sm font-medium rounded-lg transition-colors duration-200 w-full hover:cursor-pointer"
         title="View detailed quiz results and answers"
       >
         View Results
@@ -187,7 +187,7 @@ function ReplyToMessage({ replyToId, messages }: { replyToId: string; messages: 
   };
 
   return (
-    <div className="mb-2 p-2 bg-black/10 rounded-lg border-l-2 border-green-500">
+    <div className="mb-2 p-2 bg-black/5 rounded-lg border-l-2 border-green-500">
       <div className="text-xs opacity-70 mb-1">
         Replying to:
       </div>

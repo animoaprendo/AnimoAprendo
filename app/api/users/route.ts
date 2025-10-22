@@ -19,7 +19,6 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const userIds = searchParams.get('userIds');
     
-    
     if (!userIds) {
       return NextResponse.json({ error: 'userIds parameter is required' }, { status: 400 });
     }
