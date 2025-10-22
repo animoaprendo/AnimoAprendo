@@ -23,7 +23,6 @@ import {
   useUser,
 } from "@clerk/nextjs";
 import { Geist, Geist_Mono } from "next/font/google";
-import { permanentRedirect } from "next/navigation";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -40,8 +39,6 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const user = await currentUser();
-
   return (
     <ClerkProvider>
       <html lang="en" >
@@ -52,7 +49,7 @@ export default async function RootLayout({
           className={`${geistSans.variable} ${geistMono.variable} antialiased w-full min-h-screen m-auto flex flex-col overflow-x-hidden`}
         >
           <NuqsAdapter>
-            {user?.publicMetadata.isAdmin == true ? <AdminNavBR /> : null}
+            {/* <AdminNavBR /> */}
 
             {children}
           </NuqsAdapter>

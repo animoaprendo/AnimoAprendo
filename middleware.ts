@@ -12,17 +12,24 @@ const isDefaultRoute = createRouteMatcher(["/", "/search(.*)", "/browse(.*)"]);
 const isTestingRoute = createRouteMatcher(["/testing(.*)"]);
 const isOnboardingRoute = createRouteMatcher(["/onboarding(.*)"]);
 const isOnlyTutorRoute = createRouteMatcher(["/tutor"]);
+const isAdminRootRoute = createRouteMatcher(["/admin"]);
+const isAdminRoute = createRouteMatcher(["/admin/(.*)"]);
+const isSuperAdminRoute = createRouteMatcher(["/superadmin(.*)"]);
 
 export default clerkMiddleware(async (auth, req) => {
   const { sessionClaims, userId } = await auth();
   var metadata = sessionClaims?.publicMetadata as
     | {
         onboarded: boolean;
-        isAdmin: boolean;
+        isAdmin?: boolean;
+        adminRole?: string;
         role: string;
         accountType: string;
       }
     | undefined;
+
+  // Helper function to check if user is admin
+  const isAdmin = (metadata: any) => metadata?.isAdmin === true;
 
   // If accessing testing routes on production, return to home
   if (isTestingRoute(req)) {
@@ -32,31 +39,72 @@ export default clerkMiddleware(async (auth, req) => {
     return NextResponse.next();
   }
 
-  // If user is accessing onboarding when they are already onboarded or they are not logged in
+  // If user is accessing onboarding when they are already onboarded, are admin, or they are not logged in
   if (isOnboardingRoute(req)) {
-    if (!userId || metadata?.onboarded === true) {
+    if (!userId || metadata?.onboarded === true || isAdmin(metadata)) {
       return NextResponse.redirect(new URL("/", req.url));
     }
   }
 
-  // If user is logged in and not onboarded
+  // If user is logged in and not onboarded (but skip admins)
   if (
     (isPublicRoute(req) || isDefaultRoute(req)) &&
     metadata?.onboarded === false &&
+    !isAdmin(metadata) &&
     userId
   ) {
     return NextResponse.redirect(new URL("/onboarding", req.url));
   }
 
-  // If the user is logged in and trying to access the sign-in or sign-up page, redirect them to their dashboard/home page
-  if (isPublicRoute(req) && userId) {
-    if (metadata?.isAdmin == true) {
-      return NextResponse.redirect(new URL("/admin/dashboard", req.url));
+  // Redirect admin users to appropriate dashboard when accessing default/public routes
+  if (
+    (isDefaultRoute(req) || req.nextUrl.pathname === "/") &&
+    userId &&
+    isAdmin(metadata)
+  ) {
+    if (metadata?.adminRole === "superAdmin") {
+      return NextResponse.redirect(new URL("/superadmin/dashboard", req.url));
     }
-    if (metadata?.role === "tutee" && !metadata?.isAdmin) {
+    return NextResponse.redirect(new URL("/admin/dashboard", req.url));
+  }
+
+  // Protect admin routes - only allow admin users (includes all admin roles)
+  if (isAdminRoute(req) && userId) {
+    if (!isAdmin(metadata)) {
       return NextResponse.redirect(new URL("/", req.url));
     }
-    if (metadata?.role === "tutor" && !metadata?.isAdmin) {
+  }
+
+  // Protect superadmin routes - only allow superadmin users
+  if (isSuperAdminRoute(req) && userId) {
+    if (metadata?.adminRole !== "superAdmin") {
+      return NextResponse.redirect(new URL("/admin/dashboard", req.url));
+    }
+  }
+
+  // Handle /admin root route redirects
+  if (isAdminRootRoute(req)) {
+    if (userId && isAdmin(metadata)) {
+      // Admin user accessing /admin -> redirect to admin dashboard
+      return NextResponse.redirect(new URL("/admin/dashboard", req.url));
+    } else {
+      // Non-admin user accessing /admin -> redirect to landing page
+      return NextResponse.redirect(new URL("/", req.url));
+    }
+  }
+
+  // If the user is logged in and trying to access the sign-in or sign-up page, redirect them to their dashboard/home page
+  if (isPublicRoute(req) && userId) {
+    if (metadata?.adminRole === "superAdmin") {
+      return NextResponse.redirect(new URL("/superadmin/dashboard", req.url));
+    }
+    if (isAdmin(metadata)) {
+      return NextResponse.redirect(new URL("/admin/dashboard", req.url));
+    }
+    if (metadata?.role === "tutee" && !isAdmin(metadata)) {
+      return NextResponse.redirect(new URL("/", req.url));
+    }
+    if (metadata?.role === "tutor" && !isAdmin(metadata)) {
       return NextResponse.redirect(new URL("/tutor/dashboard", req.url));
     }
   }
@@ -66,9 +114,17 @@ export default clerkMiddleware(async (auth, req) => {
     return NextResponse.redirect(new URL("/sign-in", req.url));
   }
 
-  // If the user is logged in and trying to access a public route, redirect them to their dashboard/home page
+  // If non-authenticated user tries to access admin or superadmin routes
+  if ((isAdminRoute(req) || isSuperAdminRoute(req)) && !userId) {
+    return NextResponse.redirect(new URL("/sign-in", req.url));
+  }
+
+  // Alternative approach for default route redirects (currently handled above)
   // if (isDefaultRoute(req) && userId) {
-  //   if (metadata?.isAdmin == true) {
+  //   if (metadata?.adminRole === "superAdmin") {
+  //     return NextResponse.redirect(new URL("/superadmin/dashboard", req.url));
+  //   }
+  //   if (metadata?.isAdmin === true) {
   //     return NextResponse.redirect(new URL("/admin/dashboard", req.url));
   //   }
   //   if (metadata?.role === "tutor" && !metadata?.isAdmin) {

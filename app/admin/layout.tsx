@@ -1,65 +1,108 @@
-import Footer from '@/components/footer';
-import NavLinksTutee from '@/components/navlinkstutee';
+"use client";
+import { Geist, Geist_Mono } from "next/font/google";
+import { usePathname, useRouter } from "next/navigation";
+
+import AppSidebar from "@/components/app-sidebar";
 import {
-  ClerkProvider,
-  SignInButton,
-  SignUpButton,
-  SignedIn,
-  SignedOut,
-  UserButton,
-  useUser,
-} from '@clerk/nextjs'
-import Link from 'next/link';
-import { Geist, Geist_Mono } from 'next/font/google'
-import { currentUser } from '@clerk/nextjs/server'
-import { permanentRedirect } from 'next/navigation';
-import NavLinksAdmin from '@/components/navlinksadmin';
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
+import { Separator } from "@/components/ui/separator";
+import {
+  SidebarInset,
+  SidebarProvider,
+  SidebarTrigger,
+} from "@/components/ui/sidebar";
+import { useState, useEffect } from "react";
+import { useUser } from "@clerk/nextjs";
+import AlertFragment from "../tutor/alert";
 
+export default function Layout({ children }: { children: React.ReactNode }) {
+  const { isLoaded, isSignedIn, user } = useUser();
+  const router = useRouter();
+  const [open, setOpen] = useState(true);
 
-const geistSans = Geist({
-  variable: '--font-geist-sans',
-  subsets: ['latin'],
-})
+  // Handle redirect for non-admin users
+  useEffect(() => {
+    if (isLoaded && (!isSignedIn || user?.publicMetadata?.isAdmin !== true)) {
+      router.push("/");
+    }
+  }, [isLoaded, isSignedIn, user, router]);
 
-const geistMono = Geist_Mono({
-  variable: '--font-geist-mono',
-  subsets: ['latin'],
-})
+  // Serialize user data for AppSidebar
+  const userData = user
+    ? {
+        id: user.id,
+        firstName: user.firstName || "",
+        lastName: user.lastName || "",
+        username: user.username || "",
+        emailAddresses: user.emailAddresses?.map((email) => ({
+          emailAddress: email.emailAddress,
+        })),
+        imageUrl: user.imageUrl,
+        publicMetadata: user.publicMetadata,
+      }
+    : null;
+  const pathname = usePathname();
+  const pathSegments = pathname.split("/");
 
-export default async function Layout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  const user = await currentUser();
-  const userid = user?.id;
-
-  if (user?.publicMetadata.isAdmin !== true) {
-    permanentRedirect('/')
-  }
-  
   return (
-    <>
-      <SignedIn>
-            {/* Container */}
-            <div className='flex flex-row w-full min-h-screen'>
-              {/* Navbar */}
-              <div className='peer fixed z-9999'>
-                <NavLinksAdmin />
-              </div>
+    <SidebarProvider open={open} onOpenChange={setOpen}>
+      <AppSidebar userData={userData} />
+      <SidebarInset>
+        <header className="flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12">
+          <div className="flex items-center gap-2 px-4">
+            <SidebarTrigger className="-ml-1" />
+            <Separator
+              orientation="vertical"
+              className="mr-2 data-[orientation=vertical]:h-4"
+            />
+            <Breadcrumb>
+              <BreadcrumbList>
+                {pathSegments.map((segment, index) => {
+                  // Skip empty segments
+                  if (!segment) return null;
+                  if (index == 1) return null; // Skip "admin" segment
 
-              {/* Page Content */}
-              <div className='w-full ml-13 peer-hover:pl-48 transition-all duration-500'>
-                <div className='flex flex-wrap gap-2 p-5'>
-                  {children}
-                </div>
-              </div>
+                  if (index < pathSegments.length - 1) {
+                    return (
+                      <>
+                        <BreadcrumbLink
+                          key={index}
+                          href={`/${pathSegments.slice(1, index + 1).join("/")}`}
+                          className="capitalize"
+                        >
+                          {segment}
+                        </BreadcrumbLink>
+                        <BreadcrumbSeparator className="hidden md:block" />
+                      </>
+                    );
+                  } else {
+                    return (
+                      <BreadcrumbItem key={index}>
+                        <BreadcrumbPage className="capitalize">
+                          {segment}
+                        </BreadcrumbPage>
+                      </BreadcrumbItem>
+                    );
+                  }
+                })}
+              </BreadcrumbList>
+            </Breadcrumb>
+          </div>
+        </header>
 
-              <div className='fixed bg-black z-2 w-screen h-screen opacity-0 hidden peer-hover:opacity-20 peer-hover:block transition-opacity duration-1000'/>
-            </div>
-            
-          </SignedIn>
-    </>
-
+        <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
+          <div className="fixed bottom-0 right-0 m-4 z-4">
+            <AlertFragment />
+          </div>
+          {children}
+        </div>
+      </SidebarInset>
+    </SidebarProvider>
   );
 }

@@ -10,7 +10,7 @@ export type onboardingData = {
   yearLevel?: number;
 };
 
-export type Collections = "users" | "colleges" | "userData" | "faq" | "subjects" | "offerings" | "reviews" | "appointments";
+export type Collections = "users" | "colleges" | "userData" | "faq" | "subjects" | "offerings" | "reviews" | "appointments" | "subjectOptions";
 
 export async function finishOnboarding({
   accountType = "student",
