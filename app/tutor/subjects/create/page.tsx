@@ -124,7 +124,7 @@ export default function OfferAndQuizPage() {
                   transition={{ duration: 0.3 }}
                 >
                   {submitState === "saving" && (
-                    <div className="text-center">
+                    <div className="text-center flex flex-col items-center">
                       <DotLoader color="hsl(var(--primary))" size={40} />
                       <motion.h2
                         className="text-xl font-semibold mt-4 text-foreground"
@@ -140,7 +140,7 @@ export default function OfferAndQuizPage() {
                     </div>
                   )}
                   {submitState === "success" && (
-                    <div className="text-center">
+                    <div className="text-center flex flex-col items-center">
                       <CircleCheckBig animateOnView color="hsl(var(--primary))" size={50} />
                       <motion.h2
                         className="text-xl font-semibold mt-4 text-foreground"
@@ -156,7 +156,7 @@ export default function OfferAndQuizPage() {
                     </div>
                   )}
                   {submitState === "failed" && (
-                    <div className="text-center">
+                    <div className="text-center flex flex-col items-center">
                       <CircleX animateOnView color="hsl(var(--destructive))" size={50} />
                       <motion.h2
                         className="text-xl font-semibold mt-4 text-destructive"

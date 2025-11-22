@@ -88,9 +88,14 @@ export async function POST(request: NextRequest) {
       }
 
       newMessage.appointment = {
+        appointmentType: appointment.appointmentType || 'single',
+        endDate: appointment.endDate,
+        startDate: appointment.startDate || appointment.datetimeISO,
         datetimeISO: appointment.datetimeISO,
         mode: appointment.mode as 'online' | 'in-person',
         status: (appointment.status ?? 'pending') as 'pending' | 'accepted' | 'declined',
+        subject: appointment.subject,
+        offeringId: appointment.offeringId,
       };
 
       // Provide a default human-readable message for appointment

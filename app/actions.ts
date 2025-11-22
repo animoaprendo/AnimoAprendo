@@ -253,6 +253,9 @@ export async function sendMessage(messageData: {
   senderRole: 'tutee' | 'tutor';
   type?: 'text' | 'appointment' | 'quiz-result';
   appointment?: {
+    appointmentType?: 'single' | 'recurring';
+    endDate?: string;
+    startDate: string;
     datetimeISO: string;
     mode: 'online' | 'in-person';
     status?: 'pending' | 'accepted' | 'declined';

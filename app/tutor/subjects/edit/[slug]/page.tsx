@@ -27,6 +27,7 @@ export default function TutorViewSubject({
 }: {
   params: Promise<{ slug: string }>;
 }) {
+  const router = useRouter();
   const { slug } = use(params);
   const { user } = useUser();
   const userId = user?.id;
@@ -78,7 +79,7 @@ export default function TutorViewSubject({
       if (data.success) {
         setSubmitState("success");
         CreatePopup("Submitted", "success");
-        const router = useRouter();
+        
         router.replace("/tutor/subjects");
       } else {
         setSubmitState("failed");
@@ -115,6 +116,7 @@ export default function TutorViewSubject({
         CreatePopup("Unable to save, try again.", "error");
       }
 
+      console.log("Resetting save state");
       setTimeout(() => {
         setSaveState("default");
         setSubmitState("default");
@@ -125,7 +127,7 @@ export default function TutorViewSubject({
   return (
     <div className="container mx-auto py-6 px-4 lg:max-w-[100rem]">
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        <div className="lg:col-span-1">
+        <div className="lg:col-span-1 z-2">
           <Card className="sticky top-6 shadow-lg border-0 bg-gradient-to-br from-background to-muted/20">
             <AnimatePresence>
               {submitState !== "default" && (
@@ -137,7 +139,7 @@ export default function TutorViewSubject({
                   transition={{ duration: 0.3 }}
                 >
                   {submitState === "saving" && (
-                    <div className="text-center">
+                    <div className="text-center flex flex-col items-center">
                       <DotLoader color="hsl(var(--primary))" size={40} />
                       <motion.h2
                         className="text-xl font-semibold mt-4 text-foreground"
@@ -153,7 +155,7 @@ export default function TutorViewSubject({
                     </div>
                   )}
                   {submitState === "success" && (
-                    <div className="text-center">
+                    <div className="text-center flex flex-col items-center">
                       <CircleCheckBig animateOnView color="hsl(var(--primary))" size={50} />
                       <motion.h2
                         className="text-xl font-semibold mt-4 text-foreground"
@@ -169,7 +171,7 @@ export default function TutorViewSubject({
                     </div>
                   )}
                   {submitState === "failed" && (
-                    <div className="text-center">
+                    <div className="text-center flex flex-col items-center">
                       <CircleX animateOnView color="hsl(var(--destructive))" size={50} />
                       <motion.h2
                         className="text-xl font-semibold mt-4 text-destructive"

@@ -29,17 +29,21 @@ export default function AppointmentModal({
   setAppointmentType,
   appointmentEndDate,
   setAppointmentEndDate,
-  onSend
+  onSend,
 }: AppointmentModalProps) {
   if (!isOpen) return null;
 
   // Calculate minimum date (at least tomorrow to ensure 24-hour lead time)
   const getMinDate = () => {
     const now = new Date();
-    const tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+    const tomorrow = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      now.getDate() + 1
+    );
     const year = tomorrow.getFullYear();
-    const month = String(tomorrow.getMonth() + 1).padStart(2, '0');
-    const day = String(tomorrow.getDate()).padStart(2, '0');
+    const month = String(tomorrow.getMonth() + 1).padStart(2, "0");
+    const day = String(tomorrow.getDate()).padStart(2, "0");
     return `${year}-${month}-${day}`;
   };
 
@@ -48,13 +52,35 @@ export default function AppointmentModal({
     if (!appointmentDate) return getMinDate();
     const startDate = new Date(appointmentDate);
     const nextDay = new Date(startDate.getTime() + 24 * 60 * 60 * 1000);
-    return nextDay.toISOString().split('T')[0];
+    return nextDay.toISOString().split("T")[0];
   };
 
   const timeOptions = [
-    "08:00", "08:30", "09:00", "09:30", "10:00", "10:30", "11:00", "11:30",
-    "12:00", "12:30", "13:00", "13:30", "14:00", "14:30", "15:00", "15:30",
-    "16:00", "16:30", "17:00", "17:30", "18:00", "18:30", "19:00", "19:30", "20:00"
+    "08:00",
+    "08:30",
+    "09:00",
+    "09:30",
+    "10:00",
+    "10:30",
+    "11:00",
+    "11:30",
+    "12:00",
+    "12:30",
+    "13:00",
+    "13:30",
+    "14:00",
+    "14:30",
+    "15:00",
+    "15:30",
+    "16:00",
+    "16:30",
+    "17:00",
+    "17:30",
+    "18:00",
+    "18:30",
+    "19:00",
+    "19:30",
+    "20:00",
   ];
 
   return (
@@ -78,21 +104,21 @@ export default function AppointmentModal({
               />
             </div>
             <div>
-              <label className="block text-sm text-gray-600 mb-1">
-                Time
-              </label>
+              <label className="block text-sm text-gray-600 mb-1">Time</label>
               <select
                 value={appointmentTime}
                 onChange={(e) => setAppointmentTime(e.target.value)}
                 className="w-full border rounded-lg px-3 py-2"
               >
-                {timeOptions.map(time => (
-                  <option key={time} value={time}>{time}</option>
+                {timeOptions.map((time) => (
+                  <option key={time} value={time}>
+                    {time}
+                  </option>
                 ))}
               </select>
             </div>
           </div>
-          
+
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm text-gray-600 mb-1">Mode</label>
@@ -107,9 +133,11 @@ export default function AppointmentModal({
                 <option value="in-person">In-person</option>
               </select>
             </div>
-            
+
             <div>
-              <label className="block text-sm text-gray-600 mb-1">Session Type</label>
+              <label className="block text-sm text-gray-600 mb-1">
+                Session Type
+              </label>
               <select
                 value={appointmentType}
                 onChange={(e) =>

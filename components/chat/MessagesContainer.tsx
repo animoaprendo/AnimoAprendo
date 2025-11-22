@@ -12,7 +12,10 @@ interface MessagesContainerProps {
   userRole: "tutee" | "tutor";
   pendingMessages: Set<string>;
   onReply: (messageId: string) => void;
-  onAppointmentResponse: (msg: Message, action: "accepted" | "declined" | "cancelled") => void;
+  onAppointmentResponse: (
+    msg: Message,
+    action: "accepted" | "declined" | "cancelled"
+  ) => void;
   onOpenAppointmentModal: () => void;
   onShowSidebar: () => void;
   onShowUserListDrawer?: () => void;
@@ -32,10 +35,8 @@ export default function MessagesContainer({
   onShowSidebar,
   onShowUserListDrawer,
   users = [],
-  upcomingAppointments = []
+  upcomingAppointments = [],
 }: MessagesContainerProps) {
-  
-  // Empty function for call functionality - ready for implementation
   const handleStartCall = () => {
     // TODO: Implement call functionality
     console.log("Starting call with", activeUser?.name);
@@ -97,7 +98,7 @@ function MessagesHeader({
   onShowSidebar,
   onShowUserListDrawer,
   users = [],
-  upcomingAppointments = []
+  upcomingAppointments = [],
 }: {
   activeUser: User | null;
   userRole: "tutee" | "tutor";
@@ -108,16 +109,17 @@ function MessagesHeader({
   users?: any[];
   upcomingAppointments?: any[];
 }) {
-  
   // Check if there's an active appointment happening now (within 30 minutes window)
   const hasActiveAppointment = upcomingAppointments.some((apt: any) => {
     const appointmentTime = new Date(apt.datetimeISO);
     const now = new Date();
     const timeDiff = appointmentTime.getTime() - now.getTime();
     const minutesDiff = timeDiff / (1000 * 60);
-    
+
     // Appointment is active if it's within 30 minutes before or 2 hours after the scheduled time
-    return minutesDiff >= -60 && minutesDiff <= 120 && apt.status === "accepted";
+    return (
+      minutesDiff >= -60 && minutesDiff <= 120 && apt.status === "accepted"
+    );
   });
 
   const isCallButtonDisabled = !activeUser || !hasActiveAppointment;
@@ -133,12 +135,20 @@ function MessagesHeader({
             <Menu className="w-6 h-6 text-gray-600" />
             {users.some((u: any) => u.unreadCount > 0) && (
               <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                {users.reduce((total: number, u: any) => total + u.unreadCount, 0) > 99 ? '99+' : users.reduce((total: number, u: any) => total + u.unreadCount, 0)}
+                {users.reduce(
+                  (total: number, u: any) => total + u.unreadCount,
+                  0
+                ) > 99
+                  ? "99+"
+                  : users.reduce(
+                      (total: number, u: any) => total + u.unreadCount,
+                      0
+                    )}
               </span>
             )}
           </button>
         )}
-        
+
         {activeUser && (
           <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center overflow-hidden flex-shrink-0">
             {activeUser.imageUrl ? (
@@ -187,16 +197,18 @@ function MessagesHeader({
             </svg>
           </button>
         )}
-        
+
         {/* Call button - shows for both tutee and tutor */}
         {activeUser && (
           <button
             onClick={isCallButtonDisabled ? undefined : onStartCall}
             disabled={isCallButtonDisabled}
-            title={isCallButtonDisabled ? "No active appointment" : "Start call"}
+            title={
+              isCallButtonDisabled ? "No active appointment" : "Start call"
+            }
             className={`p-2 rounded-full transition-colors ${
-              isCallButtonDisabled 
-                ? "text-gray-400 cursor-not-allowed bg-gray-50" 
+              isCallButtonDisabled
+                ? "text-gray-400 cursor-not-allowed bg-gray-50"
                 : "text-green-700 hover:bg-green-100"
             }`}
           >
@@ -212,7 +224,7 @@ function MessagesHeader({
             </svg>
           </button>
         )}
-        
+
         <button
           onClick={onShowSidebar}
           className="xl:hidden p-2 text-green-700 hover:bg-green-100 rounded-full"
