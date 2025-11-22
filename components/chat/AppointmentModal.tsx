@@ -9,6 +9,10 @@ interface AppointmentModalProps {
   setAppointmentTime: (time: string) => void;
   appointmentMode: "online" | "in-person";
   setAppointmentMode: (mode: "online" | "in-person") => void;
+  appointmentType: "single" | "recurring";
+  setAppointmentType: (type: "single" | "recurring") => void;
+  appointmentEndDate: string;
+  setAppointmentEndDate: (date: string) => void;
   onSend: () => void;
 }
 
@@ -21,9 +25,31 @@ export default function AppointmentModal({
   setAppointmentTime,
   appointmentMode,
   setAppointmentMode,
+  appointmentType,
+  setAppointmentType,
+  appointmentEndDate,
+  setAppointmentEndDate,
   onSend
 }: AppointmentModalProps) {
   if (!isOpen) return null;
+
+  // Calculate minimum date (at least tomorrow to ensure 24-hour lead time)
+  const getMinDate = () => {
+    const now = new Date();
+    const tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+    const year = tomorrow.getFullYear();
+    const month = String(tomorrow.getMonth() + 1).padStart(2, '0');
+    const day = String(tomorrow.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  // Calculate minimum end date (day after start date)
+  const getMinEndDate = () => {
+    if (!appointmentDate) return getMinDate();
+    const startDate = new Date(appointmentDate);
+    const nextDay = new Date(startDate.getTime() + 24 * 60 * 60 * 1000);
+    return nextDay.toISOString().split('T')[0];
+  };
 
   const timeOptions = [
     "08:00", "08:30", "09:00", "09:30", "10:00", "10:30", "11:00", "11:30",
@@ -41,12 +67,13 @@ export default function AppointmentModal({
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm text-gray-600 mb-1">
-                Date
+                Start Date
               </label>
               <input
                 type="date"
                 value={appointmentDate}
                 onChange={(e) => setAppointmentDate(e.target.value)}
+                min={getMinDate()}
                 className="w-full border rounded-lg px-3 py-2"
               />
             </div>
@@ -65,19 +92,54 @@ export default function AppointmentModal({
               </select>
             </div>
           </div>
-          <div>
-            <label className="block text-sm text-gray-600 mb-1">Mode</label>
-            <select
-              value={appointmentMode}
-              onChange={(e) =>
-                setAppointmentMode(e.target.value as "online" | "in-person")
-              }
-              className="w-full border rounded-lg px-3 py-2"
-            >
-              <option value="online">Online</option>
-              <option value="in-person">In-person</option>
-            </select>
+          
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm text-gray-600 mb-1">Mode</label>
+              <select
+                value={appointmentMode}
+                onChange={(e) =>
+                  setAppointmentMode(e.target.value as "online" | "in-person")
+                }
+                className="w-full border rounded-lg px-3 py-2"
+              >
+                <option value="online">Online</option>
+                <option value="in-person">In-person</option>
+              </select>
+            </div>
+            
+            <div>
+              <label className="block text-sm text-gray-600 mb-1">Session Type</label>
+              <select
+                value={appointmentType}
+                onChange={(e) =>
+                  setAppointmentType(e.target.value as "single" | "recurring")
+                }
+                className="w-full border rounded-lg px-3 py-2"
+              >
+                <option value="single">Single Session</option>
+                <option value="recurring">Recurring Sessions</option>
+              </select>
+            </div>
           </div>
+
+          {appointmentType === "recurring" && (
+            <div>
+              <label className="block text-sm text-gray-600 mb-1">
+                End Date
+              </label>
+              <input
+                type="date"
+                value={appointmentEndDate}
+                onChange={(e) => setAppointmentEndDate(e.target.value)}
+                min={getMinEndDate()}
+                className="w-full border rounded-lg px-3 py-2"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Sessions will occur daily at the same time until this date
+              </p>
+            </div>
+          )}
         </div>
         <div className="flex justify-end gap-2 mt-6">
           <button

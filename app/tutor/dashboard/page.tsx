@@ -3,9 +3,14 @@ import { currentUser } from "@clerk/nextjs/server";
 import Image from "next/image";
 import Link from "next/link";
 import React from "react";
-import { CalendarDays, CheckCircle, Clock } from "lucide-react";
+import { CalendarDays, CheckCircle, Clock, User, Award, MapPin, Eye, TrendingUp } from "lucide-react";
 import { redirect, RedirectType } from "next/navigation";
 import { fetchAppointments, fetchUsers } from "@/app/actions";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Separator } from "@/components/ui/separator";
 
 export default async function Dashboard() {
   const user = await currentUser();
@@ -115,161 +120,193 @@ export default async function Dashboard() {
   }
 
   return (
-    <div className="flex flex-col lg:flex-row py-6 gap-8 lg:gap-12 w-11/12 mx-auto text-neutral-800">
-      {/* Left Panels */}
-      <div className="flex flex-col gap-6 lg:w-3/12 *:px-5 *:py-4 *:border-neutral-400 *:border-2 *:rounded-2xl *:flex *:flex-col *:items-center">
-        {/* Profile */}
-        <div className="flex flex-col gap-2 select-none">
-          <Image
-            src={user.imageUrl}
-            alt=""
-            width={500}
-            height={500}
-            className="object-cover w-[80px] rounded-full border-green-800 border-4 aspect-square"
-          />
+    <div className="container mx-auto py-6 px-4 space-y-6">
+      <div className="flex flex-col lg:flex-row gap-6">
+        {/* Sidebar */}
+        <div className="lg:w-80 space-y-6">
+          {/* Profile Card */}
+          <Card>
+            <CardContent className="p-6 text-center">
+              <Avatar className="w-20 h-20 mx-auto mb-4 border-4 border-primary/20">
+                <AvatarImage src={user.imageUrl} alt={user.fullName || ''} />
+                <AvatarFallback className="text-lg">
+                  <User className="w-8 h-8" />
+                </AvatarFallback>
+              </Avatar>
+              
+              <h2 className="text-xl font-semibold mb-2">{user.fullName}</h2>
+              <p className="text-muted-foreground mb-4">
+                @{user.username}
+              </p>
+              
+              <Button asChild className="w-full">
+                <Link href="/tutor/profile">
+                  <Eye className="w-4 h-4 mr-2" />
+                  View Profile
+                </Link>
+              </Button>
+            </CardContent>
+          </Card>
 
-          <h1 className="font-bold">{user.fullName}</h1>
-          <h2 className="text-neutral-600">
-            @
-            <a href="#" className="hover:underline">
-              {user.username}
-            </a>
-          </h2>
-
-          <Link
-            href={"/tutor/profile"}
-            className="bg-green-900 text-white w-full text-center py-2 rounded-lg hover:bg-green-800"
-          >
-            View Profile
-          </Link>
-        </div>
-
-        {/* Level Overview */}
-        <div className="flex flex-col gap-6 w-full select-none">
-          <h1 className="font-bold text-xl">Level Overview</h1>
-          <div className="flex flex-col gap-2 w-full text-neutral-600">
-            <div className="flex flex-row justify-between items-center">
-              <h1 className="text-lg font-semibold">My Level</h1>
-              <span className="text-neutral-800 font-bold ml-auto">
-                New Tutor
-              </span>
-            </div>
-            <div className="flex flex-row justify-between items-center">
-              <h1 className="text-lg font-semibold">Rating</h1>
-              <span>
+          {/* Level Overview Card */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Award className="w-5 h-5" />
+                Level Overview
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium">Current Level</span>
+                <Badge variant="secondary">New Tutor</Badge>
+              </div>
+              
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium">Rating</span>
                 <RatingGFX rating={5} />
-              </span>
-            </div>
-          </div>
-          <Link
-            href={"#"}
-            className="bg-green-900 text-white w-full text-center py-2 rounded-lg hover:bg-green-800"
-          >
-            View Progress
-          </Link>
+              </div>
+              
+              <Separator />
+              
+              <Button variant="outline" className="w-full" asChild>
+                <Link href="#">
+                  <TrendingUp className="w-4 h-4 mr-2" />
+                  View Progress
+                </Link>
+              </Button>
+            </CardContent>
+          </Card>
+
+          {/* Availability Card */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Clock className="w-5 h-5" />
+                Availability
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Manage your tutoring schedule and set your available hours for students to book sessions.
+              </p>
+              
+              <Button variant="outline" className="w-full" asChild>
+                <Link href="#">
+                  <CalendarDays className="w-4 h-4 mr-2" />
+                  Manage Schedule
+                </Link>
+              </Button>
+            </CardContent>
+          </Card>
         </div>
 
-        {/* Availability */}
-        <div className="flex flex-col gap-6 w-full">
-          <h1 className="font-bold text-xl select-none">Availability</h1>
-          <h2 className="text-neutral-600">
-            Lorem ipsum dolor sit amet conse adipisicing elit.
-          </h2>
-          <Link
-            href={"#"}
-            className="bg-green-900 text-white w-full text-center py-2 rounded-lg hover:bg-green-800 select-none"
-          >
-            View Availability
-          </Link>
-        </div>
-      </div>
+        {/* Main Content */}
+        <div className="flex-1 space-y-6">
+          {/* Welcome Section */}
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight mb-2">Welcome back, {user.fullName}!</h1>
+            <p className="text-muted-foreground text-lg">
+              Here's an overview of your tutoring activity and upcoming sessions.
+            </p>
+          </div>
+          
+          <Separator />
 
-      {/* Right Panels */}
-      <div className="flex flex-col gap-6 lg:w-9/12">
-        {/* Welcome */}
-        <div className="select-none">
-          <h1 className="text-2xl font-bold">Welcome, {user.fullName}</h1>
-          <h2 className="text-neutral-600">
-            Dashboard Description: (To Change)
-          </h2>
-        </div>
-        <hr className="bg-neutral-300" />
+          {/* Statistics Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            <Card>
+              <CardContent className="p-6 text-center">
+                <CalendarDays className="h-12 w-12 mx-auto mb-4 text-primary" />
+                <h3 className="text-3xl font-bold mb-2">{stats.totalAppointments}</h3>
+                <p className="text-sm text-muted-foreground">Total Appointments</p>
+              </CardContent>
+            </Card>
 
-        {/* Statistics Section */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 select-none">
-          <div className="bg-green-100 border border-green-300 rounded-xl p-6 flex flex-col items-center">
-            <CalendarDays className="h-10 w-10 text-green-800 mb-2" />
-            <h3 className="text-3xl font-bold text-green-900">
-              {stats.totalAppointments}
-            </h3>
-            <p className="text-neutral-600">Total Appointments</p>
+            <Card>
+              <CardContent className="p-6 text-center">
+                <CheckCircle className="h-12 w-12 mx-auto mb-4 text-green-600" />
+                <h3 className="text-3xl font-bold mb-2">{stats.completed}</h3>
+                <p className="text-sm text-muted-foreground">Completed Sessions</p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="p-6 text-center">
+                <Clock className="h-12 w-12 mx-auto mb-4 text-blue-600" />
+                <h3 className="text-3xl font-bold mb-2">{stats.upcoming}</h3>
+                <p className="text-sm text-muted-foreground">Upcoming Sessions</p>
+              </CardContent>
+            </Card>
           </div>
 
-          <div className="bg-blue-100 border border-blue-300 rounded-xl p-6 flex flex-col items-center">
-            <CheckCircle className="h-10 w-10 text-blue-800 mb-2" />
-            <h3 className="text-3xl font-bold text-blue-900">
-              {stats.completed}
-            </h3>
-            <p className="text-neutral-600">Completed</p>
-          </div>
-
-          <div className="bg-yellow-100 border border-yellow-300 rounded-xl p-6 flex flex-col items-center">
-            <Clock className="h-10 w-10 text-yellow-800 mb-2" />
-            <h3 className="text-3xl font-bold text-yellow-900">
-              {stats.upcoming}
-            </h3>
-            <p className="text-neutral-600">Upcoming</p>
-          </div>
-        </div>
-
-        <hr className="bg-neutral-300" />
-
-        {/* Active Bookings / Upcoming */}
-        <div>
-          <h1 className="text-xl font-bold mb-2 select-none">Upcoming Appointments</h1>
-          <div className="flex flex-col gap-4">
-            {upcomingAppointments.length > 0 ? (
-              upcomingAppointments.map((appt) => (
-                <div
-                  key={appt.id}
-                  className="border px-4 py-3 rounded-xl flex flex-col lg:flex-row items-center justify-between"
-                >
-                  <div>
-                    <div className="font-bold">{appt.tutee}</div>
-                    <div className="text-sm text-neutral-600">
-                      {appt.subject} | {appt.mode}
-                      {appt.status === 'completed' && (
-                        <span className="ml-2 px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs">
-                          Completed
-                        </span>
-                      )}
-                    </div>
-                    <div className="text-sm text-neutral-600">
-                      {appt.date} – {appt.time}
-                    </div>
+          {/* Upcoming Appointments */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <CalendarDays className="w-5 h-5" />
+                Upcoming Appointments
+              </CardTitle>
+              <CardDescription>
+                Your next scheduled tutoring sessions
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {upcomingAppointments.length > 0 ? (
+                  upcomingAppointments.map((appt) => (
+                    <Card key={appt.id} className="p-4">
+                      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <h4 className="font-semibold">{appt.tutee}</h4>
+                            {appt.status === 'completed' && (
+                              <Badge variant="secondary" className="text-xs">
+                                Completed
+                              </Badge>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                            <span>{appt.subject}</span>
+                            <Separator orientation="vertical" className="h-4" />
+                            <span className="flex items-center gap-1">
+                              <MapPin className="w-3 h-3" />
+                              {appt.mode}
+                            </span>
+                          </div>
+                          <p className="text-sm text-muted-foreground">
+                            {appt.date} • {appt.time}
+                          </p>
+                        </div>
+                        <Button asChild size="sm">
+                          <Link href="/tutor/appointments">
+                            <Eye className="w-4 h-4 mr-2" />
+                            View Details
+                          </Link>
+                        </Button>
+                      </div>
+                    </Card>
+                  ))
+                ) : hasError ? (
+                  <div className="text-center py-8">
+                    <CalendarDays className="h-12 w-12 mx-auto mb-4 text-destructive opacity-50" />
+                    <h3 className="font-medium text-destructive mb-2">Unable to load appointments</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Please refresh the page or try again later
+                    </p>
                   </div>
-                  <Link
-                    href="/tutor/appointments"
-                    className="bg-green-900 text-white py-2 px-4 rounded-xl hover:bg-green-800 mt-2 lg:mt-0 h-fit select-none"
-                  >
-                    View
-                  </Link>
-                </div>
-              ))
-            ) : hasError ? (
-              <div className="border px-4 py-6 rounded-xl text-center text-red-600">
-                <CalendarDays className="h-12 w-12 mx-auto mb-2 text-red-400" />
-                <p>Unable to load appointments</p>
-                <p className="text-sm">Please refresh the page or try again later</p>
+                ) : (
+                  <div className="text-center py-8">
+                    <CalendarDays className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
+                    <h3 className="font-medium mb-2">No upcoming appointments</h3>
+                    <p className="text-sm text-muted-foreground">
+                      New appointment requests will appear here
+                    </p>
+                  </div>
+                )}
               </div>
-            ) : (
-              <div className="border px-4 py-6 rounded-xl text-center text-neutral-600">
-                <CalendarDays className="h-12 w-12 mx-auto mb-2 text-neutral-400" />
-                <p>No upcoming appointments</p>
-                <p className="text-sm">New appointment requests will appear here</p>
-              </div>
-            )}
-          </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
     </div>

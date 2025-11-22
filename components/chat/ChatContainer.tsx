@@ -63,6 +63,8 @@ export default function ChatContainer({
   const [appointmentDate, setAppointmentDate] = useState<string>("");
   const [appointmentTime, setAppointmentTime] = useState<string>("08:00");
   const [appointmentMode, setAppointmentMode] = useState<"online" | "in-person">("online");
+  const [appointmentType, setAppointmentType] = useState<"single" | "recurring">("single");
+  const [appointmentEndDate, setAppointmentEndDate] = useState<string>("");
 
   // Appointment data
   const [upcomingAppointments, setUpcomingAppointments] = useState<any[]>([]);
@@ -302,7 +304,7 @@ export default function ChatContainer({
 
   // Fetch appointment data
   useEffect(() => {
-    if (!userId) return;
+    if (!userId || !activeUser) return;
 
     const fetchAppointmentData = async () => {
       try {
@@ -310,7 +312,20 @@ export default function ChatContainer({
         if (result.success && result.appointments) {
           const now = new Date();
 
-          const upcoming = result.appointments
+          // Get normalized IDs for the active user
+          const activeUserWithoutPrefix = activeUser.id.startsWith("user_") ? activeUser.id.replace("user_", "") : activeUser.id;
+          const activeUserWithPrefix = activeUser.id.startsWith("user_") ? activeUser.id : `user_${activeUser.id}`;
+          const activeUserVariations = [activeUser.id, activeUserWithoutPrefix, activeUserWithPrefix];
+
+          // Filter appointments to only include those involving the active chat user
+          const appointmentsWithActiveUser = result.appointments.filter((apt: any) => {
+            const isInvolvingActiveUser = activeUserVariations.some(variation => 
+              apt.tuteeId === variation || apt.tutorId === variation
+            );
+            return isInvolvingActiveUser;
+          });
+
+          const upcoming = appointmentsWithActiveUser
             .filter((apt: any) => {
               // Show accepted appointments that are in the future (normal upcoming)
               const isUpcoming = apt.status === "accepted" && new Date(apt.datetimeISO) > now;
@@ -345,7 +360,7 @@ export default function ChatContainer({
           
           setUpcomingAppointments(upcoming);
 
-          const appointmentsNeedingQuiz = result.appointments.filter(
+          const appointmentsNeedingQuiz = appointmentsWithActiveUser.filter(
             (apt: any) => apt.status === "accepted" && apt.tutorId === userId && (!apt.quiz || apt.quiz.length === 0)
           );
           setAppointmentsWithoutQuiz(appointmentsNeedingQuiz);
@@ -356,7 +371,7 @@ export default function ChatContainer({
     };
 
     fetchAppointmentData();
-  }, [userId, messages]);
+  }, [userId, activeUser, messages]);
 
   // Fetch chat data
   useEffect(() => {
@@ -767,6 +782,7 @@ export default function ChatContainer({
           onShowSidebar={() => setShowSidebar(true)}
           onShowUserListDrawer={openDrawer}
           users={users}
+          upcomingAppointments={upcomingAppointments}
         />
         
         <ChatInput
@@ -868,6 +884,10 @@ export default function ChatContainer({
         setAppointmentTime={setAppointmentTime}
         appointmentMode={appointmentMode}
         setAppointmentMode={setAppointmentMode}
+        appointmentType={appointmentType}
+        setAppointmentType={setAppointmentType}
+        appointmentEndDate={appointmentEndDate}
+        setAppointmentEndDate={setAppointmentEndDate}
         onSend={handleSendAppointment}
       />
     </div>

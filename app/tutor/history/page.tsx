@@ -2,14 +2,22 @@ import React from "react";
 import { fetchTutorHistory } from "@/app/actions";
 import { auth } from "@clerk/nextjs/server";
 import TutorHistoryClient from "./TutorHistoryClient";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { AlertCircle, ShieldAlert } from "lucide-react";
 
 const TutorHistory = async () => {
   const { userId } = await auth();
   
   if (!userId) {
     return (
-      <div className="w-10/12 m-auto mt-4 text-center">
-        <p className="text-red-600">Authentication required</p>
+      <div className="container mx-auto py-6 px-4">
+        <Card className="max-w-md mx-auto">
+          <CardContent className="pt-6 text-center">
+            <ShieldAlert className="w-12 h-12 mx-auto mb-4 text-destructive" />
+            <CardTitle className="mb-2 text-destructive">Authentication Required</CardTitle>
+            <CardDescription>Please sign in to view your tutoring history.</CardDescription>
+          </CardContent>
+        </Card>
       </div>
     );
   }
@@ -18,8 +26,14 @@ const TutorHistory = async () => {
 
   if (!historyResult.success) {
     return (
-      <div className="w-10/12 m-auto mt-4 text-center">
-        <p className="text-red-600">Error loading history: {historyResult.error}</p>
+      <div className="container mx-auto py-6 px-4">
+        <Card className="max-w-md mx-auto">
+          <CardContent className="pt-6 text-center">
+            <AlertCircle className="w-12 h-12 mx-auto mb-4 text-destructive" />
+            <CardTitle className="mb-2 text-destructive">Error Loading History</CardTitle>
+            <CardDescription>{historyResult.error}</CardDescription>
+          </CardContent>
+        </Card>
       </div>
     );
   }

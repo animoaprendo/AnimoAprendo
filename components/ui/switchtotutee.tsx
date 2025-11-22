@@ -4,6 +4,7 @@ import { updateMetadata } from "@/app/actions";
 import { useUser } from "@clerk/nextjs";
 import Link from "next/link";
 import { permanentRedirect } from "next/navigation";
+import { Button } from "@/components/ui/button";
 
 export default function SwitchToTutee() {
   const { user } = useUser();
@@ -18,18 +19,17 @@ export default function SwitchToTutee() {
   }
 
   return (
-    <li>
-      <Link
-        href="/"
-        onNavigate={(e) => {
-          console.log("Switching to tutee");
-          handleClick();
-          e.preventDefault();
-        }}
-        className="bg-gradient-to-r from-green-300 via-green-500 to-blue-400 inline-block text-transparent bg-clip-text font-extrabold"
-      >
-        Switch To Tutee
-      </Link>
-    </li>
+    <Button
+      variant="outline"
+      size="sm"
+      className="bg-gradient-to-r from-green-300 via-green-500 to-blue-400 text-transparent bg-clip-text font-bold border-0 hover:from-green-400 hover:via-green-600 hover:to-blue-500"
+      onClick={(e: React.MouseEvent) => {
+        console.log("Switching to tutee");
+        handleClick();
+        e.preventDefault();
+      }}
+    >
+      Switch To Tutee
+    </Button>
   );
 }
