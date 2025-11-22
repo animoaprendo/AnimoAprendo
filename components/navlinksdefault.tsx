@@ -41,7 +41,7 @@ export default function NavLinksGuest() {
                   Join our learning community and connect with expert tutors
                 </SheetDescription>
               </SheetHeader>
-              <div className="mt-6 space-y-4">
+              <div className="mt-6 space-y-4 mx-3">
                 <SignUpButton mode="modal">
                   <Button className="w-full">
                     <UserPlus className="w-4 h-4 mr-2" />

@@ -22,7 +22,7 @@ export default function SwitchToTutee() {
     <Button
       variant="outline"
       size="sm"
-      className="bg-gradient-to-r from-green-300 via-green-500 to-blue-400 text-transparent bg-clip-text font-bold border-0 hover:from-green-400 hover:via-green-600 hover:to-blue-500"
+      className="bg-gradient-to-r from-green-300 via-green-500 to-blue-400 text-transparent bg-clip-text font-bold border-0 hover:from-green-400 hover:via-green-600 hover:to-blue-500 w-full lg:w-fit"
       onClick={(e: React.MouseEvent) => {
         console.log("Switching to tutee");
         handleClick();

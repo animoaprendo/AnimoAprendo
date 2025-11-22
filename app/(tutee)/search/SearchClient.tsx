@@ -5,6 +5,13 @@ import Link from "next/link";
 import { useQueryState } from "nuqs";
 import { Search, Filter, X, SearchX } from "lucide-react";
 import { searchOfferings } from "@/app/actions";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 
 interface Availability {
   id: string;
@@ -98,51 +105,116 @@ export default function SearchClient({ initialOfferings }: SearchClientProps) {
   };
 
   return (
-    <div className="flex flex-col gap-6 pt-6 w-11/12 lg:w-10/12 mx-auto max-w-[1600px]">
+    <div className="flex flex-col gap-6 py-6 w-11/12 lg:w-10/12 mx-auto max-w-[1600px]">
       <div className="flex flex-col lg:flex-row items-stretch gap-4 w-full">
-        <form
-          onSubmit={handleSubmit}
-          className="flex w-full lg:max-w-xl shadow-md rounded-xl overflow-hidden border border-gray-300"
-        >
-          <input
-            type="text"
-            name="query"
-            placeholder="Search by course code or subject name"
-            className="px-4 py-3 text-lg font-medium text-gray-800 grow focus:outline-none"
-            defaultValue={search}
-          />
-          <button
-            type="submit"
-            className="bg-green-900 hover:bg-green-950 w-14 flex items-center justify-center disabled:opacity-50"
-            disabled={isLoading}
-          >
-            <Search className="text-white" />
-          </button>
-        </form>
+        <Card className="flex-1 lg:max-w-xl">
+          <form onSubmit={handleSubmit} className="flex">
+            <Input
+              type="text"
+              name="query"
+              placeholder="Search by course code or subject name"
+              className="rounded-r-none border-r-0 text-lg font-medium focus-visible:ring-0 focus-visible:ring-offset-0"
+              defaultValue={search}
+            />
+            <Button
+              type="submit"
+              className="bg-green-900 hover:bg-green-950 rounded-l-none px-4"
+              disabled={isLoading}
+            >
+              <Search className="h-5 w-5" />
+            </Button>
+          </form>
+        </Card>
 
         <div className="flex gap-3 items-center justify-end w-full lg:w-auto">
-          <button
-            type="button"
-            onClick={() => setFiltersOpen(true)}
-            className="btn btn-outline text-white bg-green-900 hover:bg-white hover:text-green-900 rounded-lg flex items-center gap-2"
-          >
-            <Filter size={16} /> Filters
-          </button>
-          <select
-            className="select select-sm border-gray-300"
-            onChange={(e) => setSortBy(e.target.value)}
-            value={sortBy}
-          >
-            <option value="">Sort by relevance</option>
-            <option value="highest-rated">Highest Rated</option>
-            <option value="most-recent">Most Recent</option>
-            <option value="tutor-rank">Tutor Experience</option>
-          </select>
+          <Sheet open={filtersOpen} onOpenChange={setFiltersOpen}>
+            <SheetTrigger asChild>
+              <Button
+                variant="default"
+                className="bg-green-900 hover:bg-green-950 text-white flex items-center gap-2"
+              >
+                <Filter size={16} /> Filters
+              </Button>
+            </SheetTrigger>
+            <SheetContent>
+              <SheetHeader>
+                <SheetTitle className="text-green-900">Filters</SheetTitle>
+              </SheetHeader>
+              <div className="py-6 flex flex-col gap-6 mx-3">
+                <div>
+                  <h3 className="font-semibold mb-2">Day</h3>
+                  <Select value={day || "any"} onValueChange={(value) => setDay(value === "any" ? "" : value)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Any Day" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="any">Any Day</SelectItem>
+                      <SelectItem value="monday">Monday</SelectItem>
+                      <SelectItem value="tuesday">Tuesday</SelectItem>
+                      <SelectItem value="wednesday">Wednesday</SelectItem>
+                      <SelectItem value="thursday">Thursday</SelectItem>
+                      <SelectItem value="friday">Friday</SelectItem>
+                      <SelectItem value="saturday">Saturday</SelectItem>
+                      <SelectItem value="sunday">Sunday</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <h3 className="font-semibold mb-2">Minimum Rating</h3>
+                  <Select value={rating || "any"} onValueChange={(value) => setRating(value === "any" ? "" : value)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Any Rating" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="any">Any Rating</SelectItem>
+                      <SelectItem value="4.5">4.5 ⭐ & up</SelectItem>
+                      <SelectItem value="4">4.0 ⭐ & up</SelectItem>
+                      <SelectItem value="3.5">3.5 ⭐ & up</SelectItem>
+                      <SelectItem value="3">3.0 ⭐ & up</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="flex gap-3 mt-6 mx-3">
+                <Button
+                  variant="destructive"
+                  className="flex-1"
+                  onClick={() => {
+                    setDay("");
+                    setRating("");
+                    setSortBy("");
+                    setSearch("");
+                  }}
+                >
+                  Reset
+                </Button>
+                <Button
+                  className="flex-1 bg-green-900 hover:bg-green-950"
+                  onClick={() => setFiltersOpen(false)}
+                >
+                  Apply
+                </Button>
+              </div>
+            </SheetContent>
+          </Sheet>
+          <Select value={sortBy || "relevance"} onValueChange={(value) => setSortBy(value === "relevance" ? "" : value)}>
+            <SelectTrigger className="w-[200px]">
+              <SelectValue placeholder="Sort by relevance" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="relevance">Sort by relevance</SelectItem>
+              <SelectItem value="highest-rated">Highest Rated</SelectItem>
+              <SelectItem value="most-recent">Most Recent</SelectItem>
+              <SelectItem value="tutor-rank">Tutor Experience</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
       <div className="flex justify-between items-center">
-        <h1 className="text-xl lg:text-2xl">
+        <h1 className="text-xl lg:text-2xl font-semibold text-green-900">
           {search ? (
             <>
               Showing results for <strong>"{search}"</strong>{" "}
@@ -150,48 +222,55 @@ export default function SearchClient({ initialOfferings }: SearchClientProps) {
           ) : (
             "All Available Subjects "
           )}
-          <span className="text-gray-500 text-lg">
-            ({results.length} found)
-          </span>
+          <Badge variant="secondary" className="ml-2">
+            {results.length} found
+          </Badge>
           {isLoading && (
-            <span className="ml-2 text-sm text-gray-400">Searching...</span>
+            <span className="ml-2 text-sm text-green-600">Searching...</span>
           )}
         </h1>
       </div>
 
-      <hr className="border-t border-gray-300" />
+      <Separator />
 
       {results.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-8 justify-items-center">
           {results.map((item) => (
-            <div
+            <Card
               key={item._id}
-              className="min-w-[280px] max-w-[300px] bg-white rounded-xl shadow-lg hover:shadow-xl hover:scale-101 transition-transform flex flex-col"
+              className="min-w-[280px] max-w-[300px] hover:shadow-xl hover:scale-105 transition-all duration-200 flex flex-col"
             >
               <div className="relative">
                 <img
                   src={item.banner || "https://picsum.photos/300/200?random=" + item._id}
                   alt={item.subject || item.title || "Subject"}
-                  className="w-full h-40 object-cover rounded-t-xl"
+                  className="w-full h-40 object-cover rounded-t-lg"
                   onError={(e) => {
                     (e.target as HTMLImageElement).src = `https://picsum.photos/300/200?random=${item._id}`;
                   }}
                 />
-                <span className="absolute top-3 right-3 bg-green-700 text-white text-xs font-semibold px-3 py-1 rounded-full">
+                <Badge 
+                  className={`absolute top-3 right-3 ${
+                    item.status === "available" ? "bg-green-700 hover:bg-green-700" : "bg-gray-600 hover:bg-gray-600"
+                  }`}
+                >
                   {item.status === "available" ? "Available" : "Paused"}
-                </span>
-                <div className="absolute top-3 left-3 bg-white/90 backdrop-blur-sm text-gray-800 text-xs font-semibold px-2 py-1 rounded-full">
+                </Badge>
+                <Badge 
+                  variant="secondary"
+                  className="absolute top-3 left-3 bg-white/90 backdrop-blur-sm text-gray-800"
+                >
                   ⭐ {getDisplayRating(item)}
-                </div>
+                </Badge>
               </div>
-              <div className="flex flex-col gap-2 p-4 h-full">
+              <CardContent className="flex flex-col gap-2 p-4 h-full">
                 <h2 className="font-bold text-lg text-green-900">
                   {item.subject || item.title || "Untitled Subject"}
                 </h2>
                 
-                <p className="text-sm text-gray-600 font-medium">
+                <Badge variant="outline" className="text-xs w-fit">
                   by {item.user?.displayName || "Unknown Tutor"}
-                </p>
+                </Badge>
                 
                 <div
                   className="text-sm text-gray-700 line-clamp-3"
@@ -200,118 +279,47 @@ export default function SearchClient({ initialOfferings }: SearchClientProps) {
                   }}
                 />
                 
-                <div className="text-xs text-green-700 mt-auto">
-                  <p className="font-semibold">Availability:</p>
-                  <p className="break-words">
-                    {formatAvailability(item.availability)}
-                  </p>
-                </div>
+                <Card className="text-xs text-green-700 mt-auto bg-green-50 border-green-200">
+                  <CardContent className="p-2">
+                    <p className="font-semibold mb-1">Availability:</p>
+                    <p className="break-words text-xs">
+                      {formatAvailability(item.availability)}
+                    </p>
+                  </CardContent>
+                </Card>
                 
-                <Link
-                  href={`/browse/${item._id}`}
-                  className="btn mt-3 bg-green-700 text-white hover:bg-green-800 rounded-lg"
-                >
-                  View Details
-                </Link>
-              </div>
-            </div>
+                <Button asChild className="mt-3 bg-green-700 hover:bg-green-800">
+                  <Link href={`/browse/${item._id}`}>
+                    View Details
+                  </Link>
+                </Button>
+              </CardContent>
+            </Card>
           ))}
         </div>
       ) : (
-        <div className="flex flex-col items-center justify-center py-20 text-center gap-6">
-          <SearchX size={48} className="text-red-500" />
-          <h2 className="text-2xl font-bold text-gray-700">
-            {search ? (
-              <>
-                No results for <span className="text-green-900">"{search}"</span>
-              </>
-            ) : (
-              "No subjects available"
-            )}
-          </h2>
-          <p className="text-gray-500">
-            {search 
-              ? "Try searching with a different course code or subject name."
-              : "Check back later for new tutoring subjects."
-            }
-          </p>
-        </div>
+        <Card className="py-20">
+          <CardContent className="flex flex-col items-center justify-center text-center gap-6">
+            <SearchX size={48} className="text-red-500" />
+            <h2 className="text-2xl font-bold text-gray-700">
+              {search ? (
+                <>
+                  No results for <span className="text-green-900">"{search}"</span>
+                </>
+              ) : (
+                "No subjects available"
+              )}
+            </h2>
+            <p className="text-gray-500">
+              {search 
+                ? "Try searching with a different course code or subject name."
+                : "Check back later for new tutoring subjects."
+              }
+            </p>
+          </CardContent>
+        </Card>
       )}
 
-      {filtersOpen && (
-        <div className="fixed inset-0 z-90 flex">
-          <div
-            className="absolute inset-0 bg-black/50 backdrop-blur-sm z-40"
-            onClick={() => setFiltersOpen(false)}
-          />
-          <div className="ml-auto w-80 max-w-full h-full bg-white rounded-l-2xl shadow-2xl z-50 flex flex-col animate-slideIn">
-            <div className="flex items-center justify-between p-4 border-b">
-              <h2 className="text-lg font-bold text-green-900">Filters</h2>
-              <button
-                onClick={() => setFiltersOpen(false)}
-                className="p-2 hover:bg-gray-100 rounded-full"
-              >
-                <X size={20} />
-              </button>
-            </div>
-
-            <div className="p-5 flex-1 overflow-y-auto flex flex-col gap-6">
-              <div>
-                <h3 className="font-semibold mb-2">Day</h3>
-                <select
-                  className="select select-bordered w-full"
-                  onChange={(e) => setDay(e.target.value)}
-                  value={day}
-                >
-                  <option value="">Any Day</option>
-                  <option value="monday">Monday</option>
-                  <option value="tuesday">Tuesday</option>
-                  <option value="wednesday">Wednesday</option>
-                  <option value="thursday">Thursday</option>
-                  <option value="friday">Friday</option>
-                  <option value="saturday">Saturday</option>
-                  <option value="sunday">Sunday</option>
-                </select>
-              </div>
-
-              <div>
-                <h3 className="font-semibold mb-2">Minimum Rating</h3>
-                <select
-                  className="select select-bordered w-full"
-                  onChange={(e) => setRating(e.target.value)}
-                  value={rating}
-                >
-                  <option value="">Any Rating</option>
-                  <option value="4.5">4.5 ⭐ & up</option>
-                  <option value="4">4.0 ⭐ & up</option>
-                  <option value="3.5">3.5 ⭐ & up</option>
-                  <option value="3">3.0 ⭐ & up</option>
-                </select>
-              </div>
-            </div>
-
-            <div className="p-4 border-t flex gap-3">
-              <button
-                className="btn flex-1 btn-outline text-white bg-red-900 hover:bg-white hover:text-red-900 rounded-lg"
-                onClick={() => {
-                  setDay("");
-                  setRating("");
-                  setSortBy("");
-                  setSearch("");
-                }}
-              >
-                Reset
-              </button>
-              <button
-                className="btn flex-1 btn-outline text-white bg-green-900 hover:bg-white hover:text-green-900 rounded-lg"
-                onClick={() => setFiltersOpen(false)}
-              >
-                Apply
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

@@ -3,6 +3,10 @@ import { ArrowLeft, ArrowRight, Star } from "lucide-react";
 import Link from "next/link";
 import React, { useRef, useState, useEffect } from "react";
 import { getAllOfferings } from "@/app/actions";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 interface CardInfo {
   _id: string;
@@ -169,51 +173,62 @@ export default function Browse() {
   return (
     <div className="flex flex-col gap-12 py-6 w-10/12 h-full m-auto">
       {/* Top Rated */}
-      <section className="flex flex-col gap-4 w-full">
-        <div className="flex justify-between items-center">
-          <div>
-            <h1 className="font-bold text-3xl text-green-900">⭐ Top Rated Offers</h1>
-            <p className="text-sm text-gray-600 mt-1">Highest rated tutoring offers</p>
+      <Card className="p-6">
+        <CardHeader className="p-0 mb-4">
+          <div className="flex justify-between items-center">
+            <div>
+              <h1 className="font-bold text-3xl text-green-900">⭐ Top Rated Offers</h1>
+              <p className="text-sm text-gray-600 mt-1">Highest rated tutoring offers</p>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                onClick={() => scroll("left")}
+                variant="outline"
+                size="icon"
+                className="border-green-700 text-green-700 hover:bg-green-700 hover:text-white"
+              >
+                <ArrowLeft size={18} />
+              </Button>
+              <Button
+                onClick={() => scroll("right")}
+                variant="outline"
+                size="icon"
+                className="border-green-700 text-green-700 hover:bg-green-700 hover:text-white"
+              >
+                <ArrowRight size={18} />
+              </Button>
+            </div>
           </div>
-          <div className="flex gap-2">
-            <button
-              onClick={() => scroll("left")}
-              className="btn btn-outline border-green-700 text-green-700 hover:bg-green-700 hover:text-white rounded-lg"
-            >
-              <ArrowLeft size={18} />
-            </button>
-            <button
-              onClick={() => scroll("right")}
-              className="btn btn-outline border-green-700 text-green-700 hover:bg-green-700 hover:text-white rounded-lg"
-            >
-              <ArrowRight size={18} />
-            </button>
-          </div>
-        </div>
+        </CardHeader>
 
         <div
           ref={scrollRef}
           className="flex gap-6 p-2 overflow-x-auto overflow-y-visible scrollbar-hide scroll-smooth"
         >
           {topRatedOffers.map((item, i) => (
-            <div
+            <Card
               key={i}
-              className="min-w-[280px] max-w-[300px] bg-white rounded-xl shadow-lg hover:shadow-xl hover:scale-101 transition-transform flex flex-col"
+              className="min-w-[280px] max-w-[300px] hover:shadow-xl hover:scale-101 transition-all duration-200 flex flex-col"
             >
               <div className="relative">
                 <img
                   src={item.banner}
                   alt={item.subject}
-                  className="w-full h-40 object-cover rounded-t-xl"
+                  className="w-full h-40 object-cover rounded-t-lg"
                 />
-                <span className="absolute top-3 right-3 bg-green-700 text-white text-xs font-semibold px-3 py-1 rounded-full">
+                <Badge 
+                  className="absolute top-3 right-3 bg-green-700 hover:bg-green-700"
+                >
                   {item.status === "available" ? "Available" : "Unavailable"}
-                </span>
-                <div className="absolute top-3 left-3 bg-white/90 backdrop-blur-sm text-gray-800 text-xs font-semibold px-2 py-1 rounded-full">
+                </Badge>
+                <Badge 
+                  variant="secondary"
+                  className="absolute top-3 left-3 bg-white/90 backdrop-blur-sm text-gray-800"
+                >
                   ⭐ {(item as any).averageRating > 0 ? (item as any).averageRating.toFixed(1) : "New"}
-                </div>
+                </Badge>
               </div>
-              <div className="flex flex-col gap-2 p-4 h-full">
+              <CardContent className="flex flex-col gap-2 p-4 h-full">
                 <h2 className="font-bold text-lg text-green-900">
                   {item.subject}
                 </h2>
@@ -221,11 +236,15 @@ export default function Browse() {
                 {/* Tutor Information */}
                 {item.user && (
                   <div className="flex items-center gap-3 py-2 mb-2 border-b border-gray-100">
-                    <img
-                      src={item.user.imageUrl || "https://i.pravatar.cc/100?img=1"}
-                      alt={item.user.displayName}
-                      className="w-8 h-8 rounded-full object-cover border border-gray-200"
-                    />
+                    <Avatar className="w-8 h-8">
+                      <AvatarImage 
+                        src={item.user.imageUrl || "https://i.pravatar.cc/100?img=1"} 
+                        alt={item.user.displayName} 
+                      />
+                      <AvatarFallback>
+                        {item.user.displayName?.charAt(0) || "T"}
+                      </AvatarFallback>
+                    </Avatar>
                     <div className="flex flex-col">
                       <span className="text-sm font-semibold text-gray-800">
                         {item.user.displayName}
@@ -245,58 +264,64 @@ export default function Browse() {
                     }}
                   />
                 </div>
-                <div className="text-xs text-green-700 mt-auto">
-                  <p className="font-semibold">Availability:</p>
-                  {item.availability.map((a) => (
-                    <p key={a.id}>
-                      {a.day} • {a.start} - {a.end}
-                    </p>
-                  ))}
-                </div>
-                <Link
-                  href={`/browse/${item._id}`}
-                  className="btn mt-3 bg-green-700 text-white hover:bg-green-800 rounded-lg"
-                >
-                  View Details
-                </Link>
-              </div>
-            </div>
+                <Card className="text-xs text-green-700 mt-auto bg-green-50 border-green-200">
+                  <CardContent className="p-2">
+                    <p className="font-semibold mb-1">Availability:</p>
+                    {item.availability.map((a) => (
+                      <p key={a.id} className="text-xs">
+                        {a.day} • {a.start} - {a.end}
+                      </p>
+                    ))}
+                  </CardContent>
+                </Card>
+                <Button asChild className="mt-3 bg-green-700 hover:bg-green-800">
+                  <Link href={`/browse/${item._id}`}>
+                    View Details
+                  </Link>
+                </Button>
+              </CardContent>
+            </Card>
           ))}
         </div>
-      </section>
+      </Card>
 
       {/* New Offers */}
-      <section className="flex flex-col gap-6 w-full">
-        <div className="flex justify-between items-center">
-          <div>
-            <h1 className="font-bold text-3xl text-green-900">🆕 New Offers</h1>
-            <p className="text-sm text-gray-600 mt-1">Latest offerings from our tutors</p>
+      <Card className="p-6">
+        <CardHeader className="p-0 mb-4">
+          <div className="flex justify-between items-center">
+            <div>
+              <h1 className="font-bold text-3xl text-green-900">🆕 New Offers</h1>
+              <p className="text-sm text-gray-600 mt-1">Latest offerings from our tutors</p>
+            </div>
+            <div className="flex gap-2">
+              {newestOffers.length > 4 && (
+                <>
+                  <Button
+                    onClick={() => scrollNewOffers("left")}
+                    variant="outline"
+                    size="icon"
+                    className="border-green-700 text-green-700 hover:bg-green-700 hover:text-white"
+                  >
+                    <ArrowLeft size={18} />
+                  </Button>
+                  <Button
+                    onClick={() => scrollNewOffers("right")}
+                    variant="outline"
+                    size="icon"
+                    className="border-green-700 text-green-700 hover:bg-green-700 hover:text-white"
+                  >
+                    <ArrowRight size={18} />
+                  </Button>
+                </>
+              )}
+              <Button asChild variant="outline" className="border-green-700 text-green-700 hover:bg-green-700 hover:text-white">
+                <Link href="/search">
+                  View All
+                </Link>
+              </Button>
+            </div>
           </div>
-          <div className="flex gap-2">
-            {newestOffers.length > 4 && (
-              <>
-                <button
-                  onClick={() => scrollNewOffers("left")}
-                  className="btn btn-outline border-green-700 text-green-700 hover:bg-green-700 hover:text-white rounded-lg"
-                >
-                  <ArrowLeft size={18} />
-                </button>
-                <button
-                  onClick={() => scrollNewOffers("right")}
-                  className="btn btn-outline border-green-700 text-green-700 hover:bg-green-700 hover:text-white rounded-lg"
-                >
-                  <ArrowRight size={18} />
-                </button>
-              </>
-            )}
-            <Link
-              href="/search"
-              className="btn btn-outline border-green-700 text-green-700 hover:bg-green-700 hover:text-white rounded-lg"
-            >
-              View All
-            </Link>
-          </div>
-        </div>
+        </CardHeader>
 
         {newestOffers.length > 0 ? (
           <div
@@ -304,9 +329,9 @@ export default function Browse() {
             className="flex gap-6 p-2 overflow-x-auto overflow-y-visible scrollbar-hide scroll-smooth"
           >
             {newestOffers.map((item: CardInfo) => (
-              <div
+              <Card
                 key={item._id}
-                className="min-w-[280px] max-w-[300px] bg-white rounded-xl shadow-lg hover:shadow-xl hover:scale-101 transition-transform flex flex-col"
+                className="min-w-[280px] max-w-[300px] hover:shadow-xl hover:scale-101 transition-all duration-200 flex flex-col"
               >
                 <div className="relative">
                   <img
@@ -314,14 +339,19 @@ export default function Browse() {
                     alt={item.subject}
                     className="w-full h-40 object-cover rounded-t-xl"
                   />
-                  <span className="absolute top-3 right-3 bg-green-700 text-white text-xs font-semibold px-3 py-1 rounded-full">
+                  <Badge 
+                    className="absolute top-3 right-3 bg-green-700 hover:bg-green-700"
+                  >
                     {item.status === "available" ? "Available" : "Unavailable"}
-                  </span>
-                  <div className="absolute top-3 left-3 bg-white/90 backdrop-blur-sm text-gray-800 text-xs font-semibold px-2 py-1 rounded-full">
+                  </Badge>
+                  <Badge 
+                    variant="secondary"
+                    className="absolute top-3 left-3 bg-white/90 backdrop-blur-sm text-gray-800"
+                  >
                     ⭐ {item.averageRating && item.averageRating > 0 ? item.averageRating.toFixed(1) : "New"}
-                  </div>
+                  </Badge>
                 </div>
-                <div className="flex flex-col gap-2 p-4 h-full">
+                <CardContent className="flex flex-col gap-2 p-4 h-full">
                   <h2 className="font-bold text-lg text-green-900">
                     {item.subject}
                   </h2>
@@ -329,11 +359,15 @@ export default function Browse() {
                   {/* Tutor Information */}
                   {item.user && (
                     <div className="flex items-center gap-3 py-2 mb-2 border-b border-gray-100">
-                      <img
-                        src={item.user.imageUrl || "https://i.pravatar.cc/100?img=1"}
-                        alt={item.user.displayName}
-                        className="w-8 h-8 rounded-full object-cover border border-gray-200"
-                      />
+                      <Avatar className="w-8 h-8">
+                        <AvatarImage 
+                          src={item.user.imageUrl || "https://i.pravatar.cc/100?img=1"} 
+                          alt={item.user.displayName} 
+                        />
+                        <AvatarFallback>
+                          {item.user.displayName?.charAt(0) || "T"}
+                        </AvatarFallback>
+                      </Avatar>
                       <div className="flex flex-col">
                         <span className="text-sm font-semibold text-gray-800">
                           {item.user.displayName}
@@ -354,69 +388,79 @@ export default function Browse() {
                     />
                   </div>
                   
-                  <div className="text-xs text-green-700 mt-auto bg-green-50 p-2 rounded-lg">
-                    <p className="font-semibold">Availability:</p>
-                    {item.availability.slice(0, 2).map((a) => (
-                      <p key={a.id}>
-                        {a.day} • {a.start} - {a.end}
-                      </p>
-                    ))}
-                    {item.availability.length > 2 && (
-                      <p className="text-gray-500">+{item.availability.length - 2} more slots</p>
-                    )}
-                  </div>
+                  <Card className="text-xs text-green-700 mt-auto bg-green-50 border-green-200">
+                    <CardContent className="p-2">
+                      <p className="font-semibold mb-1">Availability:</p>
+                      {item.availability.slice(0, 2).map((a) => (
+                        <p key={a.id} className="text-xs">
+                          {a.day} • {a.start} - {a.end}
+                        </p>
+                      ))}
+                      {item.availability.length > 2 && (
+                        <p className="text-gray-500 text-xs">+{item.availability.length - 2} more slots</p>
+                      )}
+                    </CardContent>
+                  </Card>
                   
-                  <Link
-                    href={`/browse/${item._id}`}
-                    className="btn mt-3 bg-green-700 text-white hover:bg-green-800 rounded-lg"
-                  >
-                    View Details
-                  </Link>
-                </div>
-              </div>
+                  <Button asChild className="mt-3 bg-green-700 hover:bg-green-800">
+                    <Link href={`/browse/${item._id}`}>
+                      View Details
+                    </Link>
+                  </Button>
+                </CardContent>
+              </Card>
             ))}
           </div>
         ) : (
-          <div className="text-center py-12 bg-white rounded-xl shadow-lg">
-            <p className="text-gray-600 text-lg mb-2">No new offers yet!</p>
-            <p className="text-gray-500">New tutoring offers will appear here.</p>
-          </div>
+          <Card className="text-center py-12">
+            <CardContent className="p-6">
+              <p className="text-gray-600 text-lg mb-2">No new offers yet!</p>
+              <p className="text-gray-500">New tutoring offers will appear here.</p>
+            </CardContent>
+          </Card>
         )}
-      </section>
+      </Card>
 
       {/* Trending Tutors */}
-      <section className="flex flex-col gap-6 w-full bg-white p-10 rounded-2xl shadow-lg">
-        <div className="flex justify-between items-center">
-          <div>
-            <h1 className="font-bold text-3xl text-green-900">
-              🌟 Trending Tutors
-            </h1>
-            <p className="text-sm text-gray-600 mt-1">Top-rated tutors from our community</p>
+      <Card className="p-10">
+        <CardHeader className="p-0 mb-6">
+          <div className="flex justify-between items-center">
+            <div>
+              <h1 className="font-bold text-3xl text-green-900">
+                🌟 Trending Tutors
+              </h1>
+              <p className="text-sm text-gray-600 mt-1">Top-rated tutors from our community</p>
+            </div>
+            {trendingTutors.length > 0 && (
+              <Button asChild variant="outline" className="border-green-700 text-green-700 hover:bg-green-700 hover:text-white">
+                <Link href="/search">
+                  View All
+                </Link>
+              </Button>
+            )}
           </div>
-          {trendingTutors.length > 0 && (
-            <Link
-              href="/search"
-              className="btn btn-outline border-green-700 text-green-700 hover:bg-green-700 hover:text-white rounded-lg"
-            >
-              View All
-            </Link>
-          )}
-        </div>
+        </CardHeader>
 
         {trendingTutors.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
             {trendingTutors.map((tutor: TrendingTutor) => (
-            <div
+            <Card
               key={tutor.id}
-              className="flex flex-col items-center gap-3 p-6 bg-gradient-to-br from-green-50 to-green-100 rounded-xl shadow-md hover:shadow-xl hover:scale-105 transition-transform"
+              className="flex flex-col items-center gap-3 p-6 bg-gradient-to-br from-green-50 to-green-100 hover:shadow-xl hover:scale-101 transition-all duration-200"
             >
-              <img
-                src={tutor.image}
-                alt={tutor.name}
-                className="w-24 h-24 rounded-full border-4 border-green-700 object-cover"
-              />
+              <Avatar className="w-24 h-24 border-4 border-green-700">
+                <AvatarImage 
+                  src={tutor.image} 
+                  alt={tutor.name} 
+                />
+                <AvatarFallback className="text-2xl bg-green-100">
+                  {tutor.name?.charAt(0) || "T"}
+                </AvatarFallback>
+              </Avatar>
               <h2 className="font-bold text-lg text-green-900">{tutor.name}</h2>
-              <p className="text-sm text-green-800">{tutor.subject}</p>
+              <Badge variant="secondary" className="text-sm text-green-800 bg-green-200">
+                {tutor.subject}
+              </Badge>
               <div className="flex items-center gap-1">
                 <Star className="text-yellow-500 fill-yellow-500" size={18} />
                 <span className="font-semibold text-green-900">
@@ -426,22 +470,23 @@ export default function Browse() {
                   ({tutor.totalReviews} reviews)
                 </span>
               </div>
-              <Link
-                href={`/browse/${offerings.find(o => o.user?.id === tutor.id)?._id}`}
-                className="btn bg-green-700 text-white hover:bg-green-800 rounded-lg"
-              >
-                View Profile
-              </Link>
-            </div>
+              <Button asChild className="bg-green-700 hover:bg-green-800">
+                <Link href={`/browse/${offerings.find(o => o.user?.id === tutor.id)?._id}`}>
+                  View Profile
+                </Link>
+              </Button>
+            </Card>
           ))}
           </div>
         ) : (
-          <div className="text-center py-12">
-            <p className="text-gray-600 text-lg mb-2">No trending tutors yet!</p>
-            <p className="text-gray-500">Tutors will appear here once they receive ratings.</p>
-          </div>
+          <Card className="text-center py-12">
+            <CardContent className="p-6">
+              <p className="text-gray-600 text-lg mb-2">No trending tutors yet!</p>
+              <p className="text-gray-500">Tutors will appear here once they receive ratings.</p>
+            </CardContent>
+          </Card>
         )}
-      </section>
+      </Card>
     </div>
   );
 }

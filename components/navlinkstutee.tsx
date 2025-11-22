@@ -53,7 +53,7 @@ function NavLinksTutee() {
                   Access your learning dashboard and find tutors
                 </SheetDescription>
               </SheetHeader>
-              <div className="mt-6 space-y-4">
+              <div className="mt-6 space-y-4 mx-3">
                 <div className="space-y-2">
                   <Button variant="ghost" className="w-full justify-start" asChild>
                     <Link href="/">
