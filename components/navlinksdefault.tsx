@@ -16,9 +16,7 @@ export default function NavLinksGuest() {
         {/* Logo */}
         <div className="flex items-center gap-2">
           <a href="/" className="flex items-center gap-2 font-bold text-xl text-white/98">
-            <GraduationCap className="w-6 h-6 text-white" />
             <span>AnimoAprendo</span>
-            <Badge variant="outline" className="text-xs text-white border-white/30">Learn</Badge>
           </a>
         </div>
 
