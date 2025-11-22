@@ -20,14 +20,17 @@ export default function UserList({
   setSearchTerm,
   onUserSelect,
   userId,
-  className = "bg-white h-full rounded-2xl shadow p-4 grow flex flex-col col-span-1 overflow-y-auto"
+  className = "bg-white h-full rounded-2xl shadow p-4 grow flex flex-col col-span-1 overflow-y-auto",
 }: UserListProps) {
   const filteredUsers = users
     .filter((u) => u.name.toLowerCase().includes(searchTerm.toLowerCase()))
     .sort((a, b) => {
       // Sort by most recent message time, fallback to unread count if no timestamps
       if (a.lastMessageTime && b.lastMessageTime) {
-        return new Date(b.lastMessageTime).getTime() - new Date(a.lastMessageTime).getTime();
+        return (
+          new Date(b.lastMessageTime).getTime() -
+          new Date(a.lastMessageTime).getTime()
+        );
       }
       // Fallback sorting: unread messages first, then by name
       if (a.unreadCount > 0 && b.unreadCount === 0) return -1;
@@ -66,7 +69,7 @@ function UserCard({
   user,
   isActive,
   onClick,
-  userId
+  userId,
 }: {
   user: User;
   isActive: boolean;
@@ -122,12 +125,15 @@ function UserCard({
       {user.isTyping ? (
         <TypingIndicator />
       ) : (
-        <p className={`text-xs truncate ${
-          user.unreadCount > 0 
-            ? "text-gray-800 font-semibold" 
-            : "text-gray-500"
-        }`}>
-          {user.lastMessageCreatorId === userId && "You: "}{user.lastMessage}
+        <p
+          className={`text-xs truncate ${
+            user.unreadCount > 0
+              ? "text-gray-800 font-semibold"
+              : "text-gray-500"
+          }`}
+        >
+          {user.lastMessageCreatorId === userId && "You: "}
+          {user.lastMessage}
         </p>
       )}
     </div>
@@ -149,7 +155,8 @@ function TypingIndicator() {
       </div>
       <style jsx global>{`
         @keyframes bounce15 {
-          0%, 100% {
+          0%,
+          100% {
             transform: translateY(0);
           }
           50% {
@@ -164,25 +171,31 @@ function TypingIndicator() {
 function formatTime(timestamp: string): string {
   const date = new Date(timestamp);
   const now = new Date();
-  
+
   // Check if it's today
   if (date.toDateString() === now.toDateString()) {
-    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+    return date.toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true,
+    });
   }
-  
+
   // Check if it's yesterday
   const yesterday = new Date(now);
   yesterday.setDate(yesterday.getDate() - 1);
   if (date.toDateString() === yesterday.toDateString()) {
-    return 'Yesterday';
+    return "Yesterday";
   }
-  
+
   // Check if it's within the last week
-  const daysDiff = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
+  const daysDiff = Math.floor(
+    (now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24)
+  );
   if (daysDiff < 7) {
-    return date.toLocaleDateString([], { weekday: 'short' });
+    return date.toLocaleDateString([], { weekday: "short" });
   }
-  
+
   // For older messages, show the date
-  return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
+  return date.toLocaleDateString([], { month: "short", day: "numeric" });
 }

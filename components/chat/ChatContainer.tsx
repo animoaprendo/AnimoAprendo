@@ -57,22 +57,35 @@ export default function ChatContainer({
   const [isDrawerAnimating, setIsDrawerAnimating] = useState(false);
   const [loading, setLoading] = useState(true);
   const [inquiry, setInquiry] = useState<Inquiry | null>(null);
-  
+
   // Appointment modal state
   const [showAppointmentModal, setShowAppointmentModal] = useState(false);
   const [appointmentDate, setAppointmentDate] = useState<string>("");
   const [appointmentTime, setAppointmentTime] = useState<string>("08:00");
-  const [appointmentMode, setAppointmentMode] = useState<"online" | "in-person">("online");
+  const [appointmentMode, setAppointmentMode] = useState<
+    "online" | "in-person"
+  >("online");
+  const [appointmentType, setAppointmentType] = useState<
+    "single" | "recurring"
+  >("single");
+  const [appointmentEndDate, setAppointmentEndDate] = useState<string>("");
 
   // Appointment data
   const [upcomingAppointments, setUpcomingAppointments] = useState<any[]>([]);
-  const [appointmentsWithoutQuiz, setAppointmentsWithoutQuiz] = useState<any[]>([]);
+  const [appointmentsWithoutQuiz, setAppointmentsWithoutQuiz] = useState<any[]>(
+    []
+  );
 
   const chatInputRef = useRef<ChatInputRef>(null);
 
   // Custom hooks
-  const { markMessagesAsSeen } = useChatSeenStatus(userId, isWindowFocused, allChats);
-  const { pendingMessages, handleSendMessage, clearPendingMessages } = useMessageManagement(userId, userRole);
+  const { markMessagesAsSeen } = useChatSeenStatus(
+    userId,
+    isWindowFocused,
+    allChats
+  );
+  const { pendingMessages, handleSendMessage, clearPendingMessages } =
+    useMessageManagement(userId, userRole);
 
   // Handle real-time messages
   const handleRealtimeMessage = useCallback(
@@ -83,14 +96,30 @@ export default function ChatContainer({
       const shouldShowMessage =
         activeUser &&
         newMessage.recipients.some((id) => {
-          const userIdWithoutPrefix = userId!.startsWith("user_") ? userId!.replace("user_", "") : userId!;
-          const userIdWithPrefix = userId!.startsWith("user_") ? userId! : `user_${userId!}`;
-          const activeUserWithoutPrefix = activeUser.id.startsWith("user_") ? activeUser.id.replace("user_", "") : activeUser.id;
-          const activeUserWithPrefix = activeUser.id.startsWith("user_") ? activeUser.id : `user_${activeUser.id}`;
+          const userIdWithoutPrefix = userId!.startsWith("user_")
+            ? userId!.replace("user_", "")
+            : userId!;
+          const userIdWithPrefix = userId!.startsWith("user_")
+            ? userId!
+            : `user_${userId!}`;
+          const activeUserWithoutPrefix = activeUser.id.startsWith("user_")
+            ? activeUser.id.replace("user_", "")
+            : activeUser.id;
+          const activeUserWithPrefix = activeUser.id.startsWith("user_")
+            ? activeUser.id
+            : `user_${activeUser.id}`;
 
-          const userInRecipients = [userId, userIdWithoutPrefix, userIdWithPrefix].includes(id);
+          const userInRecipients = [
+            userId,
+            userIdWithoutPrefix,
+            userIdWithPrefix,
+          ].includes(id);
           const activeUserInRecipients = newMessage.recipients.some((recipId) =>
-            [activeUser.id, activeUserWithoutPrefix, activeUserWithPrefix].includes(recipId)
+            [
+              activeUser.id,
+              activeUserWithoutPrefix,
+              activeUserWithPrefix,
+            ].includes(recipId)
           );
 
           return userInRecipients && activeUserInRecipients;
@@ -99,13 +128,23 @@ export default function ChatContainer({
       if (shouldShowMessage) {
         setMessages((prev) => {
           const messageId = getMessageId(newMessage);
-          const existingIndex = prev.findIndex((msg) => getMessageId(msg) === messageId);
+          const existingIndex = prev.findIndex(
+            (msg) => getMessageId(msg) === messageId
+          );
 
           let messageToAdd = newMessage;
 
           // If message is from active user and current user is not the creator, mark as seen immediately (only if window focused)
-          if (activeUser && newMessage.creatorId === activeUser.id && newMessage.creatorId !== userId && isWindowFocused) {
-            messageToAdd = { ...newMessage, seenBy: [...(newMessage.seenBy || []), userId] };
+          if (
+            activeUser &&
+            newMessage.creatorId === activeUser.id &&
+            newMessage.creatorId !== userId &&
+            isWindowFocused
+          ) {
+            messageToAdd = {
+              ...newMessage,
+              seenBy: [...(newMessage.seenBy || []), userId],
+            };
             markMessagesAsSeen(activeUser.id);
           }
 
@@ -116,22 +155,30 @@ export default function ChatContainer({
           } else {
             // Check if this is from the current user and we might have an optimistic version
             if (newMessage.creatorId === userId) {
-              const possibleOptimistic = prev.find(msg => 
-                msg.creatorId === userId &&
-                msg.message === newMessage.message &&
-                Math.abs(new Date(msg.createdAt).getTime() - new Date(newMessage.createdAt).getTime()) < 10000
+              const possibleOptimistic = prev.find(
+                (msg) =>
+                  msg.creatorId === userId &&
+                  msg.message === newMessage.message &&
+                  Math.abs(
+                    new Date(msg.createdAt).getTime() -
+                      new Date(newMessage.createdAt).getTime()
+                  ) < 10000
               );
-              
+
               if (possibleOptimistic) {
-                const updated = prev.map(msg => 
-                  getMessageId(msg) === getMessageId(possibleOptimistic) ? messageToAdd : msg
+                const updated = prev.map((msg) =>
+                  getMessageId(msg) === getMessageId(possibleOptimistic)
+                    ? messageToAdd
+                    : msg
                 );
                 return updated;
               }
             }
-            
+
             return [...prev, messageToAdd].sort(
-              (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+              (a, b) =>
+                new Date(a.createdAt).getTime() -
+                new Date(b.createdAt).getTime()
             );
           }
         });
@@ -140,7 +187,9 @@ export default function ChatContainer({
       // Always add to allChats for conversation list or update existing
       setAllChats((prev) => {
         const messageId = getMessageId(newMessage);
-        const existingIndex = prev.findIndex((msg) => getMessageId(msg) === messageId);
+        const existingIndex = prev.findIndex(
+          (msg) => getMessageId(msg) === messageId
+        );
 
         if (existingIndex >= 0) {
           const updated = [...prev];
@@ -152,11 +201,15 @@ export default function ChatContainer({
       });
 
       // Update users list with new message and unread count, or add new user if it's a new conversation
-      setUsers(prev => {
+      setUsers((prev) => {
         // Check if message involves current user
-        const userIdWithoutPrefix = userId!.startsWith("user_") ? userId!.replace("user_", "") : userId!;
-        const userIdWithPrefix = userId!.startsWith("user_") ? userId! : `user_${userId!}`;
-        const isMessageForCurrentUser = newMessage.recipients.some(id => 
+        const userIdWithoutPrefix = userId!.startsWith("user_")
+          ? userId!.replace("user_", "")
+          : userId!;
+        const userIdWithPrefix = userId!.startsWith("user_")
+          ? userId!
+          : `user_${userId!}`;
+        const isMessageForCurrentUser = newMessage.recipients.some((id) =>
           [userId, userIdWithoutPrefix, userIdWithPrefix].includes(id)
         );
 
@@ -168,14 +221,21 @@ export default function ChatContainer({
         const messageCreatorId = newMessage.creatorId;
         const messageCreatorVariations = [
           messageCreatorId,
-          messageCreatorId.startsWith("user_") ? messageCreatorId.replace("user_", "") : `user_${messageCreatorId}`,
-          messageCreatorId.startsWith("user_") ? messageCreatorId : `user_${messageCreatorId}`
+          messageCreatorId.startsWith("user_")
+            ? messageCreatorId.replace("user_", "")
+            : `user_${messageCreatorId}`,
+          messageCreatorId.startsWith("user_")
+            ? messageCreatorId
+            : `user_${messageCreatorId}`,
         ];
 
-        const existingUserIndex = prev.findIndex(user => 
-          messageCreatorVariations.some(variation => 
-            user.id === variation || 
-            (user.id.startsWith("user_") ? user.id.replace("user_", "") : `user_${user.id}`) === variation
+        const existingUserIndex = prev.findIndex((user) =>
+          messageCreatorVariations.some(
+            (variation) =>
+              user.id === variation ||
+              (user.id.startsWith("user_")
+                ? user.id.replace("user_", "")
+                : `user_${user.id}`) === variation
           )
         );
 
@@ -183,31 +243,42 @@ export default function ChatContainer({
           // Update existing user
           return prev.map((user, index) => {
             if (index === existingUserIndex) {
-              const isMessageFromThisUser = messageCreatorVariations.some(variation => 
-                user.id === variation || 
-                (user.id.startsWith("user_") ? user.id.replace("user_", "") : `user_${user.id}`) === variation
+              const isMessageFromThisUser = messageCreatorVariations.some(
+                (variation) =>
+                  user.id === variation ||
+                  (user.id.startsWith("user_")
+                    ? user.id.replace("user_", "")
+                    : `user_${user.id}`) === variation
               );
 
               if (isMessageFromThisUser && newMessage.creatorId !== userId) {
-                const isMessageSeen = newMessage.seenBy && newMessage.seenBy.includes(userId);
+                const isMessageSeen =
+                  newMessage.seenBy && newMessage.seenBy.includes(userId);
                 const isActiveConversation = activeUser?.id === user.id;
                 const isWindowFocused = !document.hidden && document.hasFocus();
-                
-                const shouldIncrementUnread = !(isActiveConversation && isWindowFocused) && !isMessageSeen;
-                
+
+                const shouldIncrementUnread =
+                  !(isActiveConversation && isWindowFocused) && !isMessageSeen;
+
                 return {
                   ...user,
                   lastMessage: newMessage.message,
                   lastMessageTime: newMessage.createdAt,
                   lastMessageCreatorId: newMessage.creatorId,
-                  unreadCount: shouldIncrementUnread ? user.unreadCount + 1 : user.unreadCount
+                  unreadCount: shouldIncrementUnread
+                    ? user.unreadCount + 1
+                    : user.unreadCount,
                 };
-              } else if (isMessageFromThisUser && newMessage.creatorId === userId && activeUser?.id === user.id) {
-                return { 
-                  ...user, 
+              } else if (
+                isMessageFromThisUser &&
+                newMessage.creatorId === userId &&
+                activeUser?.id === user.id
+              ) {
+                return {
+                  ...user,
                   lastMessage: newMessage.message,
                   lastMessageTime: newMessage.createdAt,
-                  lastMessageCreatorId: newMessage.creatorId
+                  lastMessageCreatorId: newMessage.creatorId,
                 };
               }
             }
@@ -215,8 +286,10 @@ export default function ChatContainer({
           });
         } else if (newMessage.creatorId !== userId) {
           // New conversation started by someone else - add new user to the list
-          const normalizedCreatorId = messageCreatorId.startsWith("user_") ? messageCreatorId : `user_${messageCreatorId}`;
-          
+          const normalizedCreatorId = messageCreatorId.startsWith("user_")
+            ? messageCreatorId
+            : `user_${messageCreatorId}`;
+
           const newUser: User = {
             id: normalizedCreatorId,
             name: `User ${messageCreatorId.slice(-4)}`, // Temporary name
@@ -230,26 +303,42 @@ export default function ChatContainer({
           // Fetch real user data in the background
           const fetchUserData = async () => {
             try {
-              const mongoUserId = messageCreatorId.startsWith("user_") ? messageCreatorId.replace("user_", "") : messageCreatorId;
+              const mongoUserId = messageCreatorId.startsWith("user_")
+                ? messageCreatorId.replace("user_", "")
+                : messageCreatorId;
               const userResult = await fetchUsers([mongoUserId]);
-              
-              if (userResult.success && userResult.data.users && userResult.data.users.length > 0) {
+
+              if (
+                userResult.success &&
+                userResult.data.users &&
+                userResult.data.users.length > 0
+              ) {
                 const userData = userResult.data.users[0];
-                
-                setUsers(currentUsers => currentUsers.map(user => 
-                  user.id === normalizedCreatorId ? {
-                    ...user,
-                    name: userData.displayName || `${userData.firstName || ""} ${userData.lastName || ""}`.trim() || user.name,
-                    firstName: userData.firstName,
-                    lastName: userData.lastName,
-                    username: userData.username,
-                    emailAddress: userData.emailAddress,
-                    imageUrl: userData.imageUrl,
-                  } : user
-                ));
+
+                setUsers((currentUsers) =>
+                  currentUsers.map((user) =>
+                    user.id === normalizedCreatorId
+                      ? {
+                          ...user,
+                          name:
+                            userData.displayName ||
+                            `${userData.firstName || ""} ${userData.lastName || ""}`.trim() ||
+                            user.name,
+                          firstName: userData.firstName,
+                          lastName: userData.lastName,
+                          username: userData.username,
+                          emailAddress: userData.emailAddress,
+                          imageUrl: userData.imageUrl,
+                        }
+                      : user
+                  )
+                );
               }
             } catch (error) {
-              console.error("Error fetching user data for new conversation:", error);
+              console.error(
+                "Error fetching user data for new conversation:",
+                error
+              );
             }
           };
 
@@ -266,7 +355,11 @@ export default function ChatContainer({
   );
 
   // Set up Socket.IO connection
-  const { socket, isConnected } = useSocket(userId, userRole, handleRealtimeMessage);
+  const { socket, isConnected } = useSocket(
+    userId,
+    userRole,
+    handleRealtimeMessage
+  );
 
   // Track window focus
   useEffect(() => {
@@ -276,9 +369,9 @@ export default function ChatContainer({
         markMessagesAsSeen(activeUser.id);
       }
     };
-    
+
     const handleBlur = () => setIsWindowFocused(false);
-    
+
     const handleVisibilityChange = () => {
       const isFocused = !document.hidden;
       setIsWindowFocused(isFocused);
@@ -287,22 +380,22 @@ export default function ChatContainer({
       }
     };
 
-    window.addEventListener('focus', handleFocus);
-    window.addEventListener('blur', handleBlur);
-    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener("focus", handleFocus);
+    window.addEventListener("blur", handleBlur);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
 
     setIsWindowFocused(!document.hidden && document.hasFocus());
 
     return () => {
-      window.removeEventListener('focus', handleFocus);
-      window.removeEventListener('blur', handleBlur);
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener("focus", handleFocus);
+      window.removeEventListener("blur", handleBlur);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, [activeUser, markMessagesAsSeen]);
 
   // Fetch appointment data
   useEffect(() => {
-    if (!userId) return;
+    if (!userId || !activeUser) return;
 
     const fetchAppointmentData = async () => {
       try {
@@ -310,43 +403,83 @@ export default function ChatContainer({
         if (result.success && result.appointments) {
           const now = new Date();
 
-          const upcoming = result.appointments
+          // Get normalized IDs for the active user
+          const activeUserWithoutPrefix = activeUser.id.startsWith("user_")
+            ? activeUser.id.replace("user_", "")
+            : activeUser.id;
+          const activeUserWithPrefix = activeUser.id.startsWith("user_")
+            ? activeUser.id
+            : `user_${activeUser.id}`;
+          const activeUserVariations = [
+            activeUser.id,
+            activeUserWithoutPrefix,
+            activeUserWithPrefix,
+          ];
+
+          // Filter appointments to only include those involving the active chat user
+          const appointmentsWithActiveUser = result.appointments.filter(
+            (apt: any) => {
+              const isInvolvingActiveUser = activeUserVariations.some(
+                (variation) =>
+                  apt.tuteeId === variation || apt.tutorId === variation
+              );
+              return isInvolvingActiveUser;
+            }
+          );
+
+          const upcoming = appointmentsWithActiveUser
             .filter((apt: any) => {
               // Show accepted appointments that are in the future (normal upcoming)
-              const isUpcoming = apt.status === "accepted" && new Date(apt.datetimeISO) > now;
-              
+              const isUpcoming =
+                apt.status === "accepted" && new Date(apt.datetimeISO) > now;
+
               // Show accepted appointments with quizzes (for pre-session quiz)
-              const isAcceptedWithQuiz = apt.status === "accepted" && apt.quiz && apt.quiz.length > 0;
-              
+              const isAcceptedWithQuiz =
+                apt.status === "accepted" && apt.quiz && apt.quiz.length > 0;
+
               // Show completed appointments with quizzes available for post-session quiz
-              const isCompletedWithQuiz = apt.status === "completed" && apt.quiz && apt.quiz.length > 0;
-              
+              const isCompletedWithQuiz =
+                apt.status === "completed" && apt.quiz && apt.quiz.length > 0;
+
               if (isUpcoming) return true;
-              
+
               if (isAcceptedWithQuiz || isCompletedWithQuiz) {
                 const quizAttempts = apt.quizAttempts || [];
-                const hasCompletedAttempt1 = quizAttempts.some((attempt: any) => attempt.attempt === 1 && attempt.tuteeId === userId);
-                const hasCompletedAttempt2 = quizAttempts.some((attempt: any) => attempt.attempt === 2 && attempt.tuteeId === userId);
-                
+                const hasCompletedAttempt1 = quizAttempts.some(
+                  (attempt: any) =>
+                    attempt.attempt === 1 && attempt.tuteeId === userId
+                );
+                const hasCompletedAttempt2 = quizAttempts.some(
+                  (attempt: any) =>
+                    attempt.attempt === 2 && attempt.tuteeId === userId
+                );
+
                 // For accepted appointments: show if attempt 1 not completed
                 if (apt.status === "accepted") {
                   return !hasCompletedAttempt1;
                 }
-                
+
                 // For completed appointments: show if attempt 1 is done but attempt 2 is not
                 if (apt.status === "completed") {
                   return hasCompletedAttempt1 && !hasCompletedAttempt2;
                 }
               }
-              
+
               return false;
             })
-            .sort((a: any, b: any) => new Date(a.datetimeISO).getTime() - new Date(b.datetimeISO).getTime());
-          
+            .sort(
+              (a: any, b: any) =>
+                new Date(a.datetimeISO).getTime() -
+                new Date(b.datetimeISO).getTime()
+            );
+
           setUpcomingAppointments(upcoming);
 
-          const appointmentsNeedingQuiz = result.appointments.filter(
-            (apt: any) => apt.status === "accepted" && apt.tutorId === userId && (!apt.quiz || apt.quiz.length === 0)
+          const appointmentsNeedingQuiz = appointmentsWithActiveUser.filter(
+            (apt: any) =>
+              apt.status === "accepted" &&
+              apt.tutorId === userId &&
+              (!apt.quiz || apt.quiz.length === 0)
           );
           setAppointmentsWithoutQuiz(appointmentsNeedingQuiz);
         }
@@ -356,7 +489,7 @@ export default function ChatContainer({
     };
 
     fetchAppointmentData();
-  }, [userId, messages]);
+  }, [userId, activeUser, messages]);
 
   // Fetch chat data
   useEffect(() => {
@@ -386,37 +519,52 @@ export default function ChatContainer({
           const allOtherUserIds = new Set<string>();
 
           data.chats.forEach((chat: Message) => {
-            const userIdWithoutPrefix = userId.startsWith("user_") ? userId.replace("user_", "") : userId;
-            const userIdWithPrefix = userId.startsWith("user_") ? userId : `user_${userId}`;
+            const userIdWithoutPrefix = userId.startsWith("user_")
+              ? userId.replace("user_", "")
+              : userId;
+            const userIdWithPrefix = userId.startsWith("user_")
+              ? userId
+              : `user_${userId}`;
 
             const otherUsers = chat.recipients.filter(
-              (id) => id !== userId && id !== userIdWithoutPrefix && id !== userIdWithPrefix
+              (id) =>
+                id !== userId &&
+                id !== userIdWithoutPrefix &&
+                id !== userIdWithPrefix
             );
 
             otherUsers.forEach((otherUserId) => {
-              const normalizedId = otherUserId.startsWith("user_") ? otherUserId : `user_${otherUserId}`;
+              const normalizedId = otherUserId.startsWith("user_")
+                ? otherUserId
+                : `user_${otherUserId}`;
               allOtherUserIds.add(otherUserId);
 
               if (!userMap.has(normalizedId)) {
-                const messagesFromOtherUser = data.chats.filter((msg: Message) => 
-                  msg.creatorId !== userId && 
-                  msg.recipients.includes(otherUserId) && 
-                  msg.recipients.includes(userId)
+                const messagesFromOtherUser = data.chats.filter(
+                  (msg: Message) =>
+                    msg.creatorId !== userId &&
+                    msg.recipients.includes(otherUserId) &&
+                    msg.recipients.includes(userId)
                 );
-                
-                const unreadMessages = messagesFromOtherUser.filter((msg: Message) => 
-                  !msg.seenBy || !msg.seenBy.includes(userId)
+
+                const unreadMessages = messagesFromOtherUser.filter(
+                  (msg: Message) => !msg.seenBy || !msg.seenBy.includes(userId)
                 );
-                
+
                 const unreadCount = unreadMessages.length;
 
                 // Find the most recent message involving this user and current user
-                const conversationMessages = data.chats.filter((msg: Message) => 
-                  msg.recipients.includes(otherUserId) && 
-                  msg.recipients.includes(userId)
+                const conversationMessages = data.chats.filter(
+                  (msg: Message) =>
+                    msg.recipients.includes(otherUserId) &&
+                    msg.recipients.includes(userId)
                 );
-                const mostRecentMessage = conversationMessages.reduce((latest: Message, current: Message) => 
-                  new Date(current.createdAt) > new Date(latest.createdAt) ? current : latest, conversationMessages[0]
+                const mostRecentMessage = conversationMessages.reduce(
+                  (latest: Message, current: Message) =>
+                    new Date(current.createdAt) > new Date(latest.createdAt)
+                      ? current
+                      : latest,
+                  conversationMessages[0]
                 );
 
                 userMap.set(normalizedId, {
@@ -439,12 +587,17 @@ export default function ChatContainer({
 
             if (userResult.success && userResult.data.users) {
               userResult.data.users.forEach((user: UserData) => {
-                const normalizedId = user.id.startsWith("user_") ? user.id : `user_${user.id}`;
+                const normalizedId = user.id.startsWith("user_")
+                  ? user.id
+                  : `user_${user.id}`;
                 if (userMap.has(normalizedId)) {
                   const existingUser = userMap.get(normalizedId)!;
                   userMap.set(normalizedId, {
                     ...existingUser,
-                    name: user.displayName || `${user.firstName || ""} ${user.lastName || ""}`.trim() || existingUser.name,
+                    name:
+                      user.displayName ||
+                      `${user.firstName || ""} ${user.lastName || ""}`.trim() ||
+                      existingUser.name,
                     firstName: user.firstName,
                     lastName: user.lastName,
                     username: user.username,
@@ -473,7 +626,11 @@ export default function ChatContainer({
             recipient = usersList.find((user) => user.id === idWithPrefix);
           }
 
-          if (recipient && !recipient.name.startsWith("User ") && recipient.name !== "Loading user...") {
+          if (
+            recipient &&
+            !recipient.name.startsWith("User ") &&
+            recipient.name !== "Loading user..."
+          ) {
             setUsers(usersList);
             setActiveUser(recipient);
           } else {
@@ -487,13 +644,22 @@ export default function ChatContainer({
             };
 
             try {
-              const mongoUserId = recipientId.startsWith("user_") ? recipientId.replace("user_", "") : recipientId;
+              const mongoUserId = recipientId.startsWith("user_")
+                ? recipientId.replace("user_", "")
+                : recipientId;
               const userResult = await fetchUsers([mongoUserId]);
-              if (userResult.success && userResult.data.users && userResult.data.users.length > 0) {
+              if (
+                userResult.success &&
+                userResult.data.users &&
+                userResult.data.users.length > 0
+              ) {
                 const userData = userResult.data.users[0];
                 const updatedUser = {
                   ...placeholderUser,
-                  name: userData.displayName || `${userData.firstName || ""} ${userData.lastName || ""}`.trim() || placeholderUser.name,
+                  name:
+                    userData.displayName ||
+                    `${userData.firstName || ""} ${userData.lastName || ""}`.trim() ||
+                    placeholderUser.name,
                   firstName: userData.firstName,
                   lastName: userData.lastName,
                   username: userData.username,
@@ -530,25 +696,42 @@ export default function ChatContainer({
   // Filter messages for active user
   useEffect(() => {
     if (activeUser && allChats.length > 0) {
-      const userIdWithoutPrefix = userId!.startsWith("user_") ? userId!.replace("user_", "") : userId!;
-      const userIdWithPrefix = userId!.startsWith("user_") ? userId! : `user_${userId!}`;
-      const activeUserWithoutPrefix = activeUser.id.startsWith("user_") ? activeUser.id.replace("user_", "") : activeUser.id;
-      const activeUserWithPrefix = activeUser.id.startsWith("user_") ? activeUser.id : `user_${activeUser.id}`;
+      const userIdWithoutPrefix = userId!.startsWith("user_")
+        ? userId!.replace("user_", "")
+        : userId!;
+      const userIdWithPrefix = userId!.startsWith("user_")
+        ? userId!
+        : `user_${userId!}`;
+      const activeUserWithoutPrefix = activeUser.id.startsWith("user_")
+        ? activeUser.id.replace("user_", "")
+        : activeUser.id;
+      const activeUserWithPrefix = activeUser.id.startsWith("user_")
+        ? activeUser.id
+        : `user_${activeUser.id}`;
 
       const conversationMessages = allChats
         .filter((chat) => {
           const hasActiveUser = chat.recipients.some(
-            (id) => id === activeUser.id || id === activeUserWithoutPrefix || id === activeUserWithPrefix
+            (id) =>
+              id === activeUser.id ||
+              id === activeUserWithoutPrefix ||
+              id === activeUserWithPrefix
           );
           const hasCurrentUser = chat.recipients.some(
-            (id) => id === userId || id === userIdWithoutPrefix || id === userIdWithPrefix
+            (id) =>
+              id === userId ||
+              id === userIdWithoutPrefix ||
+              id === userIdWithPrefix
           );
           return hasActiveUser && hasCurrentUser;
         })
-        .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+        .sort(
+          (a, b) =>
+            new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+        );
 
       setMessages(conversationMessages);
-      
+
       if (conversationMessages.length > 0 && isWindowFocused) {
         markMessagesAsSeen(activeUser.id);
       }
@@ -615,9 +798,9 @@ export default function ChatContainer({
   // Event handlers
   const handleUserSelect = useCallback((user: User) => {
     setActiveUser(user);
-    setUsers(prev => prev.map(u => 
-      u.id === user.id ? { ...u, unreadCount: 0 } : u
-    ));
+    setUsers((prev) =>
+      prev.map((u) => (u.id === user.id ? { ...u, unreadCount: 0 } : u))
+    );
     // Close mobile drawer when user is selected
     closeDrawer();
   }, []);
@@ -639,7 +822,7 @@ export default function ChatContainer({
 
   const handleSend = useCallback(async () => {
     if (!activeUser) return;
-    
+
     await handleSendMessage(
       newMessage,
       activeUser,
@@ -658,33 +841,42 @@ export default function ChatContainer({
     chatInputRef.current?.focus();
   }, []);
 
-  const handleAppointmentResponse = useCallback(async (msg: Message, action: "accepted" | "declined" | "cancelled") => {
-    try {
-      const messageId = getMessageId(msg);
-      const result = await updateAppointmentStatus({
-        messageId,
-        status: action,
-        actorId: userId!,
-      });
+  const handleAppointmentResponse = useCallback(
+    async (msg: Message, action: "accepted" | "declined" | "cancelled") => {
+      try {
+        const messageId = getMessageId(msg);
+        const result = await updateAppointmentStatus({
+          messageId,
+          status: action,
+          actorId: userId!,
+        });
 
-      if (result.success) {
-        console.log("Appointment status updated:", result.data);
+        if (result.success) {
+          console.log("Appointment status updated:", result.data);
+        }
+      } catch (error) {
+        console.error("Error updating appointment status:", error);
       }
-    } catch (error) {
-      console.error("Error updating appointment status:", error);
-    }
-  }, [userId]);
+    },
+    [userId]
+  );
 
   const handleSendAppointment = useCallback(async () => {
     if (!activeUser || !userId || !appointmentDate || !appointmentTime) return;
-    
+
     const dt = new Date(`${appointmentDate}T${appointmentTime}`);
     const datetimeISO = dt.toISOString();
 
     try {
-      const appointmentMessage = `Appointment request for ${dt.toLocaleDateString("en-US", {
-        weekday: "long", year: "numeric", month: "long", day: "numeric",
-      })} at ${dt.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })} (${appointmentMode})`;
+      const appointmentMessage = `Appointment request for ${dt.toLocaleDateString(
+        "en-US",
+        {
+          weekday: "long",
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+        }
+      )} at ${dt.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })} (${appointmentMode})`;
 
       const result = await sendMessage({
         creatorId: userId,
@@ -694,6 +886,12 @@ export default function ChatContainer({
         senderRole: userRole,
         type: "appointment",
         appointment: {
+          appointmentType,
+          endDate:
+            appointmentType === "recurring" && appointmentEndDate
+              ? new Date(appointmentEndDate).toISOString()
+              : undefined,
+          startDate: new Date(appointmentDate).toISOString(),
           datetimeISO,
           mode: appointmentMode,
           status: "pending",
@@ -708,7 +906,18 @@ export default function ChatContainer({
     } catch (error) {
       console.error("Error sending appointment:", error);
     }
-  }, [activeUser, userId, appointmentDate, appointmentTime, appointmentMode, userRole, inquiry, offeringId]);
+  }, [
+    activeUser,
+    userId,
+    appointmentDate,
+    appointmentTime,
+    appointmentMode,
+    userRole,
+    inquiry,
+    offeringId,
+    appointmentType,
+    appointmentEndDate,
+  ]);
 
   // Loading state
   if (loading) {
@@ -729,11 +938,16 @@ export default function ChatContainer({
           <div className="mb-4">
             <InfoIcon className="w-16 h-16 text-gray-400 mx-auto mb-4" />
           </div>
-          <h3 className="text-xl font-semibold text-gray-700 mb-2">No conversations yet</h3>
+          <h3 className="text-xl font-semibold text-gray-700 mb-2">
+            No conversations yet
+          </h3>
           <p className="text-gray-500 mb-4">
-            You haven't started any conversations. When you send or receive messages, they'll appear here.
+            You haven't started any conversations. When you send or receive
+            messages, they'll appear here.
           </p>
-          <div className="text-sm text-gray-400">Start by browsing tutors and sending them a message!</div>
+          <div className="text-sm text-gray-400">
+            Start by browsing tutors and sending them a message!
+          </div>
         </div>
       </div>
     );
@@ -754,7 +968,7 @@ export default function ChatContainer({
       </div>
 
       {/* Mobile/Main Content Area */}
-      <div className="flex-1 max-h-[87.5vh] grow shrink-0 h-full flex flex-col bg-white rounded-lg shadow-md relative">
+      <div className="flex-1  grow shrink-0 h-full flex flex-col bg-white rounded-lg shadow-md relative">
         <MessagesContainer
           messages={messages}
           activeUser={activeUser}
@@ -767,8 +981,9 @@ export default function ChatContainer({
           onShowSidebar={() => setShowSidebar(true)}
           onShowUserListDrawer={openDrawer}
           users={users}
+          upcomingAppointments={upcomingAppointments}
         />
-        
+
         <ChatInput
           ref={chatInputRef}
           newMessage={newMessage}
@@ -795,30 +1010,42 @@ export default function ChatContainer({
       </div>
 
       {/* Mobile User List Drawer */}
-      <div className={`fixed inset-0 z-40 md:hidden ${showUserListDrawer || isDrawerAnimating ? 'block' : 'hidden'}`}>
+      <div
+        className={`fixed inset-0 z-40 md:hidden ${showUserListDrawer || isDrawerAnimating ? "block" : "hidden"}`}
+      >
         {/* Backdrop */}
-        <div 
+        <div
           className={`absolute inset-0 bg-black/50 ${
-            showUserListDrawer 
-              ? (isDrawerAnimating ? 'animate-backdropFadeOut' : 'animate-backdropFadeIn')
-              : 'animate-backdropFadeOut'
+            showUserListDrawer
+              ? isDrawerAnimating
+                ? "animate-backdropFadeOut"
+                : "animate-backdropFadeIn"
+              : "animate-backdropFadeOut"
           }`}
           onClick={closeDrawer}
         />
-        
+
         {/* Drawer */}
-        <div className={`absolute left-0 top-0 h-full w-80 max-w-[80vw] bg-white z-50 shadow-2xl ${
-          showUserListDrawer 
-            ? (isDrawerAnimating ? 'animate-slideOutLeft' : 'animate-slideInLeft')
-            : 'animate-slideOutLeft'
-        }`}>
+        <div
+          className={`absolute left-0 top-0 h-full w-80 max-w-[80vw] bg-white z-50 shadow-2xl ${
+            showUserListDrawer
+              ? isDrawerAnimating
+                ? "animate-slideOutLeft"
+                : "animate-slideInLeft"
+              : "animate-slideOutLeft"
+          }`}
+        >
           {/* Drawer Header */}
-          <div className={`flex items-center justify-between p-4 border-b border-gray-200 ${
-            showUserListDrawer && !isDrawerAnimating 
-              ? 'animate-contentFadeInUp animate-stagger-1' 
-              : 'opacity-0'
-          }`}>
-            <h2 className="text-lg font-semibold text-gray-900">Conversations</h2>
+          <div
+            className={`flex items-center justify-between p-4 border-b border-gray-200 ${
+              showUserListDrawer && !isDrawerAnimating
+                ? "animate-contentFadeInUp animate-stagger-1"
+                : "opacity-0"
+            }`}
+          >
+            <h2 className="text-lg font-semibold text-gray-900">
+              Conversations
+            </h2>
             <button
               onClick={closeDrawer}
               className="p-2 hover:bg-gray-100 rounded-lg transition-all duration-200 hover:scale-105 active:scale-95 hover:rotate-90"
@@ -826,13 +1053,15 @@ export default function ChatContainer({
               <X className="w-6 h-6 text-gray-600" />
             </button>
           </div>
-          
+
           {/* Drawer Content */}
-          <div className={`h-full pb-16 ${
-            showUserListDrawer && !isDrawerAnimating 
-              ? 'animate-contentFadeInUp animate-stagger-2' 
-              : 'opacity-0'
-          }`}>
+          <div
+            className={`h-full pb-16 ${
+              showUserListDrawer && !isDrawerAnimating
+                ? "animate-contentFadeInUp animate-stagger-2"
+                : "opacity-0"
+            }`}
+          >
             <UserList
               users={users}
               activeUser={activeUser}
@@ -868,6 +1097,10 @@ export default function ChatContainer({
         setAppointmentTime={setAppointmentTime}
         appointmentMode={appointmentMode}
         setAppointmentMode={setAppointmentMode}
+        appointmentType={appointmentType}
+        setAppointmentType={setAppointmentType}
+        appointmentEndDate={appointmentEndDate}
+        setAppointmentEndDate={setAppointmentEndDate}
         onSend={handleSendAppointment}
       />
     </div>

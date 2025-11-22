@@ -7,6 +7,11 @@ import { PiPauseCircle, PiWarningBold } from "react-icons/pi";
 import Link from "next/link";
 import { getOfferingById, getReviewsByOfferingId, createInquiry } from "@/app/actions";
 import { useUser } from "@clerk/nextjs";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Separator } from "@/components/ui/separator";
 
 interface Availability {
   id: string;
@@ -104,7 +109,7 @@ export default function OfferDetailsPage({
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center h-screen text-center text-green-900">
-        <div className="loading loading-spinner loading-lg text-green-700"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-700"></div>
         <p className="mt-4 text-lg">Loading offering details...</p>
       </div>
     );
@@ -115,12 +120,13 @@ export default function OfferDetailsPage({
     return (
       <div className="flex flex-col items-center justify-center h-screen text-center text-green-900">
         <p className="text-2xl font-bold">{error || "Offer not found"}</p>
-        <button
+        <Button
           onClick={() => router.push("/browse")}
-          className="mt-4 btn btn-outline border-green-900 text-green-900 hover:bg-green-900 hover:text-white rounded-lg"
+          variant="outline"
+          className="mt-4 border-green-900 text-green-900 hover:bg-green-900 hover:text-white"
         >
           Go Back
-        </button>
+        </Button>
       </div>
     );
   }
@@ -208,226 +214,264 @@ export default function OfferDetailsPage({
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b text-green-900 w-full">
-      <div className="p-6 grid grid-cols-1 md:grid-cols-3 gap-10 max-w-[86rem] mx-auto">
-        <button
+    <div className="min-h-screen bg-gradient-to-b text-green-900 w-screen">
+      <div className="p-4 md:p-6 grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6 lg:gap-10 max-w-7xl mx-auto">
+        <Button
           onClick={() => router.back()}
-          className="flex items-center gap-2 text-green-800 hover:text-green-900 hover:cursor-pointer col-span-full text-lg font-semibold"
+          variant="ghost"
+          className="flex items-center gap-2 text-green-800 hover:text-green-900 col-span-full text-lg font-semibold justify-start p-0 h-auto mb-2"
         >
           <ArrowLeft size={24} /> Back
-        </button>
+        </Button>
 
         {/* Left/Main Content */}
-        <div className="flex flex-col gap-4 md:col-span-2">
+        <div className="flex flex-col gap-4 lg:col-span-2">
           <img
             src={offer.banner}
             alt={offer.subject}
-            className="w-full h-96 object-cover rounded-2xl shadow-md"
+            className="w-full h-48 sm:h-64 md:h-80 lg:h-96 object-cover rounded-lg shadow-md"
           />
-          <div className="p-6 bg-white rounded-2xl shadow-lg">
-            <h1 className="text-3xl font-bold mb-2">{offer.subject}</h1>
-            <div 
-              className="text-gray-700 mb-4"
-              dangerouslySetInnerHTML={{ __html: offer.description }}
-            />
-            
-            {/* Tutor Info */}
-            {offer.user && (
-              <div className="flex items-center justify-between mb-4 p-3 bg-gray-50 rounded-lg">
-                <div className="flex items-center gap-3">
-                  <img
-                    src={offer.user.imageUrl || "https://i.pravatar.cc/100?img=1"}
-                    alt={offer.user.displayName}
-                    className="w-12 h-12 rounded-full object-cover"
-                  />
-                  <div>
-                    <h3 className="font-semibold text-lg">{offer.user.displayName}</h3>
-                    <p className="text-gray-600 text-sm">Tutor</p>
-                  </div>
-                </div>
-                {offer.averageRating && offer.averageRating > 0 && (
-                  <div className="flex items-center gap-1 bg-white px-3 py-1 rounded-full">
-                    <Star size={16} className="text-yellow-500 fill-yellow-500" />
-                    <span className="font-semibold">{offer.averageRating.toFixed(1)}</span>
-                    <span className="text-gray-500 text-sm">({offer.totalReviews || reviews.length})</span>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Availability */}
-            <div className="mb-4">
-              <h3 className="text-xl font-semibold mb-3 flex items-center gap-2">
-                <Clock size={20} />
-                Availability
-              </h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {offer.availability.map((slot) => (
-                  <div
-                    key={slot.id}
-                    className="flex justify-between items-center p-3 bg-green-50 rounded-lg border border-green-200"
-                  >
-                    <span className="font-medium">{slot.day}</span>
-                    <span className="text-green-700 font-semibold">
-                      {slot.start} - {slot.end}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Reviews Section */}
-          <div className="p-6 bg-white rounded-2xl shadow-lg">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold flex items-center gap-2">
-                <Star size={24} className="text-yellow-500" />
-                Reviews ({reviews.length})
-              </h2>
-              {reviews.length > 0 && (
-                <div className="flex items-center gap-2">
-                  <div className="flex">
-                    {[1, 2, 3, 4, 5].map((star) => (
-                      <Star
-                        key={star}
-                        size={20}
-                        className={`${
-                          star <= Math.round(averageRating)
-                            ? "text-yellow-500 fill-yellow-500"
-                            : "text-gray-300"
-                        }`}
-                      />
-                    ))}
-                  </div>
-                  <span className="text-lg font-semibold">
-                    {averageRating.toFixed(1)}
-                  </span>
-                </div>
-              )}
-            </div>
-
-            {reviews.length === 0 ? (
-              <p className="text-gray-600 text-center py-8">
-                No reviews yet. Be the first to review this tutor!
-              </p>
-            ) : (
-              <div className="space-y-4">
-                {visibleReviews.map((review) => (
-                  <div
-                    key={review._id}
-                    className="p-4 border border-gray-200 rounded-lg"
-                  >
-                    <div className="flex items-start gap-3">
-                      <img
-                        src={review.reviewer.imageUrl || "https://i.pravatar.cc/100?img=1"}
-                        alt={review.reviewer.displayName}
-                        className="w-10 h-10 rounded-full object-cover"
-                      />
-                      <div className="flex-1">
-                        <div className="flex items-center justify-between mb-2">
-                          <h4 className="font-semibold">{review.reviewer.displayName}</h4>
-                          <div className="flex items-center gap-1">
-                            <div className="flex">
-                              {[1, 2, 3, 4, 5].map((star) => (
-                                <Star
-                                  key={star}
-                                  size={16}
-                                  className={`${
-                                    star <= review.rating
-                                      ? "text-yellow-500 fill-yellow-500"
-                                      : "text-gray-300"
-                                  }`}
-                                />
-                              ))}
-                            </div>
-                            <span className="text-sm text-gray-500 ml-2">
-                              {formatTimestamp(review.createdAt)}
-                            </span>
-                          </div>
-                        </div>
-                        <p className="text-gray-700">{review.comment}</p>
+          <Card>
+            <CardContent className="p-6">
+              <h1 className="text-3xl font-bold mb-2">{offer.subject}</h1>
+              <div 
+                className="text-gray-700 mb-4 whitespace-pre-wrap break-words"
+                dangerouslySetInnerHTML={{ __html: offer.description }}
+              />
+              
+              {/* Tutor Info */}
+              {offer.user && (
+                <Card className="mb-4 bg-gray-50">
+                  <CardContent className="flex items-center justify-between p-3">
+                    <div className="flex items-center gap-3">
+                      <Avatar className="w-12 h-12">
+                        <AvatarImage
+                          src={offer.user.imageUrl || "https://i.pravatar.cc/100?img=1"}
+                          alt={offer.user.displayName}
+                        />
+                        <AvatarFallback>
+                          {offer.user.displayName?.charAt(0) || "T"}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <h3 className="font-semibold text-lg">{offer.user.displayName}</h3>
+                        <Badge variant="secondary" className="text-xs">Tutor</Badge>
                       </div>
                     </div>
-                  </div>
-                ))}
+                    {offer.averageRating && offer.averageRating > 0 && (
+                      <Badge variant="secondary" className="flex items-center gap-1 bg-white">
+                        <Star size={16} className="text-yellow-500 fill-yellow-500" />
+                        <span className="font-semibold">{offer.averageRating.toFixed(1)}</span>
+                        <span className="text-gray-500 text-sm">({offer.totalReviews || reviews.length})</span>
+                      </Badge>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
 
-                {/* Show More/Less buttons */}
-                {reviews.length > 5 && (
-                  <div className="flex justify-center gap-4 mt-6">
-                    {visibleCount < reviews.length && (
-                      <button
-                        onClick={handleShowMore}
-                        className="px-4 py-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors"
-                      >
-                        Show More Reviews
-                      </button>
-                    )}
-                    {visibleCount > 5 && (
-                      <button
-                        onClick={handleShowLess}
-                        className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
-                      >
-                        Show Less
-                      </button>
-                    )}
-                  </div>
+              {/* Availability */}
+              <div className="mb-4">
+                <h3 className="text-xl font-semibold mb-3 flex items-center gap-2">
+                  <Clock size={20} />
+                  Availability
+                </h3>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                  {offer.availability.map((slot) => (
+                    <Card
+                      key={slot.id}
+                      className="bg-green-50 border-green-200"
+                    >
+                      <CardContent className="flex flex-row justify-between items-start sm:items-center p-3 gap-1 sm:gap-0">
+                        <span className="font-medium text-sm md:text-base">{slot.day}</span>
+                        <Badge className="bg-green-700 hover:bg-green-700 text-xs md:text-sm">
+                          {slot.start} - {slot.end}
+                        </Badge>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Reviews Section */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl md:text-2xl font-bold flex items-center gap-2">
+                  <Star size={20} className="md:size-6 text-yellow-500" />
+                  Reviews ({reviews.length})
+                </h2>
+                {reviews.length > 0 && (
+                  <Badge variant="secondary" className="flex items-center gap-2">
+                    <div className="flex">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <Star
+                          key={star}
+                          size={16}
+                          className={`${
+                            star <= Math.round(averageRating)
+                              ? "text-yellow-500 fill-yellow-500"
+                              : "text-gray-300"
+                          }`}
+                        />
+                      ))}
+                    </div>
+                    <span className="font-semibold">
+                      {averageRating.toFixed(1)}
+                    </span>
+                  </Badge>
                 )}
               </div>
-            )}
-          </div>
+            </CardHeader>
+
+            <CardContent>
+              {reviews.length === 0 ? (
+                <p className="text-gray-600 text-center py-8">
+                  No reviews yet. Be the first to review this tutor!
+                </p>
+              ) : (
+                <div className="space-y-4">
+                  {visibleReviews.map((review) => (
+                    <Card
+                      key={review._id}
+                      className="border border-gray-200"
+                    >
+                      <CardContent className="p-4">
+                        <div className="flex items-start gap-3">
+                          <Avatar className="w-10 h-10">
+                            <AvatarImage
+                              src={review.reviewer.imageUrl || "https://i.pravatar.cc/100?img=1"}
+                              alt={review.reviewer.displayName}
+                            />
+                            <AvatarFallback>
+                              {review.reviewer.displayName?.charAt(0) || "U"}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="flex-1">
+                            <div className="flex items-center justify-between mb-2">
+                              <h4 className="font-semibold">{review.reviewer.displayName}</h4>
+                              <div className="flex items-center gap-2">
+                                <div className="flex">
+                                  {[1, 2, 3, 4, 5].map((star) => (
+                                    <Star
+                                      key={star}
+                                      size={16}
+                                      className={`${
+                                        star <= review.rating
+                                          ? "text-yellow-500 fill-yellow-500"
+                                          : "text-gray-300"
+                                      }`}
+                                    />
+                                  ))}
+                                </div>
+                                <Badge variant="outline" className="text-xs">
+                                  {formatTimestamp(review.createdAt)}
+                                </Badge>
+                              </div>
+                            </div>
+                            <p className="text-gray-700">{review.comment}</p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+
+                  {/* Show More/Less buttons */}
+                  {reviews.length > 5 && (
+                    <div className="flex justify-center gap-4 mt-6">
+                      {visibleCount < reviews.length && (
+                        <Button
+                          onClick={handleShowMore}
+                          variant="outline"
+                          className="bg-green-100 text-green-700 hover:bg-green-200 border-green-300"
+                        >
+                          Show More Reviews
+                        </Button>
+                      )}
+                      {visibleCount > 5 && (
+                        <Button
+                          onClick={handleShowLess}
+                          variant="outline"
+                          className="bg-gray-100 text-gray-700 hover:bg-gray-200"
+                        >
+                          Show Less
+                        </Button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
 
         {/* Right Sidebar */}
         <div className="flex flex-col gap-6">
           {/* Action Card */}
-          <div className="p-6 bg-white rounded-2xl shadow-lg sticky top-6">
-            <div className="text-center mb-4">
-              <p className="text-gray-600 mb-2">Ready to get help with {offer.subject}?</p>
-              <button
-                onClick={handleChatNow}
-                className="w-full btn bg-green-700 hover:bg-green-600 text-white border-none rounded-xl text-lg font-semibold"
-              >
-                {buttonLabel}
-              </button>
-            </div>
-            
-            {/* Status indicator */}
-            <div className="flex items-center justify-center gap-2 text-sm">
-              <div className={`w-2 h-2 rounded-full ${
-                offer.status === 'available' ? 'bg-green-500' : 'bg-yellow-500'
-              }`}></div>
-              <span className="capitalize text-gray-600">{offer.status}</span>
-            </div>
-          </div>
+          <Card className="lg:sticky lg:top-20">
+            <CardContent className="p-4 md:p-6">
+              <div className="text-center mb-4">
+                <p className="text-gray-600 mb-2 text-sm md:text-base">Ready to get help with {offer.subject}?</p>
+                <Button
+                  onClick={handleChatNow}
+                  className="w-full bg-green-700 hover:bg-green-600 text-white text-base md:text-lg font-semibold h-10 md:h-12"
+                >
+                  {buttonLabel}
+                </Button>
+              </div>
+              
+              <Separator className="my-4" />
+              
+              {/* Status indicator */}
+              <div className="flex items-center justify-center gap-2 capitalize">
+                <div className={`w-2 h-2 rounded-full ${
+                  offer.status === 'available' ? 'bg-green-500' : 'bg-yellow-500'
+                }`}></div>
+                <Badge 
+                  variant={offer.status === 'available' ? 'default' : 'secondary'}
+                  className={offer.status === 'available' ? 'bg-green-700 hover:bg-green-700' : ''}
+                >
+                  {offer.status}
+                </Badge>
+              </div>
+            </CardContent>
+          </Card>
 
           {/* Quick Info */}
-          <div className="p-6 bg-white rounded-2xl shadow-lg">
-            <h3 className="text-xl font-semibold mb-4">Quick Info</h3>
-            <div className="space-y-3">
-              <div className="flex justify-between">
+          <Card>
+            <CardHeader className="pb-3">
+              <h3 className="text-lg md:text-xl font-semibold">Quick Info</h3>
+            </CardHeader>
+            <CardContent className="space-y-3 p-4 md:p-6">
+              <div className="flex justify-between items-center">
                 <span className="text-gray-600">Subject:</span>
-                <span className="font-semibold">{offer.subject}</span>
+                <Badge variant="secondary">{offer.subject}</Badge>
               </div>
-              <div className="flex justify-between">
+              <div className="flex justify-between items-center capitalize">
                 <span className="text-gray-600">Status:</span>
-                <span className={`font-semibold capitalize ${
-                  offer.status === 'available' ? 'text-green-600' : 'text-yellow-600'
-                }`}>
+                <Badge 
+                  variant={offer.status === 'available' ? 'default' : 'secondary'}
+                  className={offer.status === 'available' ? 'bg-green-700 hover:bg-green-700' : 'bg-yellow-600 hover:bg-yellow-600'}
+                >
                   {offer.status}
-                </span>
+                </Badge>
               </div>
-              <div className="flex justify-between">
+              <div className="flex justify-between items-center">
                 <span className="text-gray-600">Available Slots:</span>
-                <span className="font-semibold">{offer.availability.length}</span>
+                <Badge variant="outline">{offer.availability.length}</Badge>
               </div>
               {reviews.length > 0 && (
-                <div className="flex justify-between">
+                <div className="flex justify-between items-center">
                   <span className="text-gray-600">Rating:</span>
-                  <span className="font-semibold">{averageRating.toFixed(1)}/5</span>
+                  <Badge variant="secondary" className="flex items-center gap-1">
+                    <Star size={12} className="text-yellow-500 fill-yellow-500" />
+                    {averageRating.toFixed(1)}/5
+                  </Badge>
                 </div>
               )}
-            </div>
-          </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
     </div>

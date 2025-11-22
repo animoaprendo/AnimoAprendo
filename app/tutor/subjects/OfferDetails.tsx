@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect, forwardRef } from "react";
 import dynamic from "next/dynamic";
 import Image from "next/image";
-import { Trash2 } from "lucide-react";
+import { Trash2, Upload, Eye, Edit, Plus, Clock, Calendar, CheckCircle2, XCircle } from "lucide-react";
 import ReactQuill from "react-quill-new";
 // @ts-ignore
 import "react-quill-new/dist/quill.snow.css";
@@ -13,6 +13,12 @@ import { useUser } from "@clerk/nextjs";
 import { ClipLoader, MoonLoader, RiseLoader } from "react-spinners";
 import { CircleCheckBig } from "@/components/animate-ui/icons/circle-check-big";
 import { CircleX } from "@/components/animate-ui/icons/circle-x";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
 
 const QuillEditor = dynamic(
   async () => {
@@ -121,193 +127,295 @@ export default function OfferDetails({
   };
 
   return (
-    <div className="flex flex-col gap-6 md:w-11/12 mx-auto py-6">
+    <div className="space-y-6">
       <div className="flex justify-between items-center flex-wrap gap-4">
-        <h2 className="text-2xl font-bold text-green-900">
-          📘 Create a Tutoring Offer
-        </h2>
-        <button
-          className="px-4 py-2 bg-blue-600 text-white rounded-lg w-full lg:w-fit"
+        <div>
+          <h2 className="text-2xl font-bold tracking-tight">Subject Details</h2>
+          <p className="text-muted-foreground">Configure your tutoring offer settings and availability</p>
+        </div>
+        <Button
+          variant={isPreview ? "outline" : "secondary"}
           onClick={() => setIsPreview(!isPreview)}
+          className="w-full sm:w-auto"
         >
-          {isPreview ? "Switch to Edit Mode" : "Preview Offer"}
-        </button>
+          {isPreview ? (
+            <>
+              <Edit className="w-4 h-4 mr-2" />
+              Edit Mode
+            </>
+          ) : (
+            <>
+              <Eye className="w-4 h-4 mr-2" />
+              Preview
+            </>
+          )}
+        </Button>
       </div>
 
       {!isPreview ? (
         <div className="space-y-6">
-          <div>
-            <label className="block mb-1 font-semibold">Subject Name</label>
-            <select
-              className="w-full border p-2 rounded-lg"
-              value={subject}
-              onChange={(e) => setSubject(e.target.value)}
-            >
-              <option value="">Select a subject</option>
-              {SUBJECTS.map((s) => (
-                <option key={s}>{s}</option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="block mb-1 font-semibold">Subject Image</label>
-            <input
-              type="file"
-              accept="image/*"
-              className="w-full border p-2 rounded-lg"
-              onChange={(e) =>
-                e.target.files?.[0] && uploadBanner(e.target.files[0])
-              }
-            />
-            {submitState !== "default" && (
-              <>
-                {submitState === "saving" && (
-                  <div className="flex items-center gap-2 mt-2 font-semibold text-green-900">
-                    <ClipLoader color="#0d542b" size={20} />
-                    <p className="animate-pulse">Uploading</p>
-                  </div>
-                )}
-                {submitState === "success" && (
-                  <div className="flex items-center gap-2 mt-2 font-semibold text-green-900">
-                    <CircleCheckBig animateOnView color="#0d542b" size={20} />
-                    <p>Success</p>
-                  </div>
-                )}
-                {submitState === "failed" && (
-                  <div className="flex items-center gap-2 mt-2 font-semibold text-red-600">
-                    <CircleX animateOnView color="#ff0613" size={20} />
-                    <p>Failed</p>
-                  </div>
-                )}
-              </>
-            )}
-            {banner && (
-              <img
-                src={banner}
-                alt="Subject Preview"
-                className="mt-3 max-h-40 rounded-lg object-cover"
-              />
-            )}
-          </div>
-
-          <QuillEditor
-            ref={quillRef}
-            theme="snow"
-            value={description}
-            onChange={setDescription}
-            className="text-black rounded-md h-40"
-          />
-
-          <div className="mt-20 sm:mt-16">
-            <label className="block mb-2 font-semibold">
-              Weekly Availability
-            </label>
-            <div className="space-y-4">
-              {availability.map((slot) => (
-                <div
-                  key={slot.id}
-                  className="border p-3 rounded-lg space-y-2 bg-gray-50"
-                >
-                  <div className="flex flex-row flex-wrap lg:flex-nowrap sm:flex-row gap-3 items-center">
-                    <select
-                      value={slot.day}
-                      onChange={(e) =>
-                        handleUpdateSlot(slot.id, "day", e.target.value)
-                      }
-                      className="border p-2 rounded-lg w-full"
-                    >
-                      {DAYS.map((day) => (
-                        <option key={day}>{day}</option>
-                      ))}
-                    </select>
-                    <select
-                      value={slot.start}
-                      onChange={(e) =>
-                        handleUpdateSlot(slot.id, "start", e.target.value)
-                      }
-                      className="border p-2 rounded-lg"
-                    >
-                      {TIME_OPTIONS.map((t) => (
-                        <option key={t.value} value={t.value}>
-                          {t.label}
-                        </option>
-                      ))}
-                    </select>
-                    <span>to</span>
-                    <select
-                      value={slot.end}
-                      onChange={(e) =>
-                        handleUpdateSlot(slot.id, "end", e.target.value)
-                      }
-                      className="border p-2 rounded-lg"
-                    >
-                      {TIME_OPTIONS.map((t) => (
-                        <option key={t.value} value={t.value}>
-                          {t.label}
-                        </option>
-                      ))}
-                    </select>
-                    <button
-                      className="flex items-center gap-1 px-3 py-1 rounded-lg text-white bg-red-500 hover:bg-red-600 aspect-square lg:aspect-auto"
-                      onClick={() => handleRemoveSlot(slot.id)}
-                    >
-                      <Trash2 size={16} />
-                      <span className="hidden lg:block">Remove</span>
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-            <button
-              onClick={handleAddSlot}
-              className="mt-3 px-4 py-2 bg-green-600 text-white rounded-lg"
-            >
-              + Add Availability
-            </button>
-          </div>
-        </div>
-      ) : (
-        <div className="flex flex-col lg:flex-row gap-8">
-          <div className="flex-1 rounded-2xl overflow-hidden shadow-lg bg-white">
-            <figure className="h-72 w-full">
-              <Image
-                src={
-                  banner || "https://placehold.co/1200x1200.png?text=No+Image"
-                }
-                alt={subject}
-                width={600}
-                height={300}
-                className="w-full h-full object-cover"
-                unoptimized
-              />
-            </figure>
-            <div className="p-6 space-y-4">
-              <h1 className="text-2xl md:text-3xl font-bold text-green-900">
-                {subject || "—"}
-              </h1>
-              <div
-                className="prose prose-sm max-w-none text-gray-700 [&_li[data-list='ordered']]:list-decimal [&_li[data-list='ordered']]:pl-6 [&_li[data-list='bullet']]:list-disc [&_li[data-list='bullet']]:pl-6 [&_.ql-ui]:hidden"
-                dangerouslySetInnerHTML={{ __html: description }}
-              />
-              {availability.length > 0 && (
-                <div className="mt-4">
-                  <h2 className="font-semibold text-lg">Availability</h2>
-                  <ul className="flex flex-wrap gap-2 mt-2">
-                    {availability.map((slot) => (
-                      <li
-                        key={slot.id}
-                        className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm"
-                      >
-                        {slot.day} {slot.start}–{slot.end}
-                      </li>
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Basic Information</CardTitle>
+              <CardDescription>
+                Choose your subject and upload a banner image to attract students
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="subject">Subject Name</Label>
+                <Select value={subject} onValueChange={setSubject}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a subject" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {SUBJECTS.map((s) => (
+                      <SelectItem key={s} value={s}>{s}</SelectItem>
                     ))}
-                  </ul>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="banner">Banner Image</Label>
+                <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-6 text-center hover:border-muted-foreground/50 transition-colors">
+                  <Input
+                    id="banner"
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) =>
+                      e.target.files?.[0] && uploadBanner(e.target.files[0])
+                    }
+                  />
+                  <Label htmlFor="banner" className="cursor-pointer">
+                    <div className="flex flex-col items-center gap-2 mx-auto">
+                      <Upload className="w-8 h-8 text-muted-foreground" />
+                      <span className="text-sm font-medium">Click to upload banner image</span>
+                      <span className="text-xs text-muted-foreground">PNG, JPG, GIF up to 10MB</span>
+                    </div>
+                  </Label>
+                </div>
+                
+                {submitState !== "default" && (
+                  <div className="mt-3">
+                    {submitState === "saving" && (
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <ClipLoader color="hsl(var(--primary))" size={16} />
+                        <span>Uploading image...</span>
+                      </div>
+                    )}
+                    {submitState === "success" && (
+                      <div className="flex items-center gap-2 text-sm text-primary">
+                        <CheckCircle2 className="w-4 h-4" />
+                        <span>Image uploaded successfully</span>
+                      </div>
+                    )}
+                    {submitState === "failed" && (
+                      <div className="flex items-center gap-2 text-sm text-destructive">
+                        <XCircle className="w-4 h-4" />
+                        <span>Upload failed. Please try again.</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+                
+                {banner && (
+                  <div className="mt-3">
+                    <img
+                      src={banner}
+                      alt="Subject Preview"
+                      className="max-h-32 w-full object-cover rounded-lg border"
+                    />
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Description</CardTitle>
+              <CardDescription>
+                Provide a detailed description of your tutoring approach and what students can expect
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+
+              <div className="min-h-[200px]">
+                <QuillEditor
+                  ref={quillRef}
+                  theme="snow"
+                  value={description}
+                  onChange={setDescription}
+                  className="bg-background border rounded-md"
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Calendar className="w-5 h-5" />
+                Weekly Availability
+              </CardTitle>
+              <CardDescription>
+                Set your available time slots for tutoring sessions
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {availability.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <Clock className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                  <p>No availability slots added yet</p>
+                  <p className="text-sm">Add your first availability slot to get started</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {availability.map((slot) => (
+                    <Card key={slot.id} className="p-4">
+                      <div className="flex flex-col lg:flex-row gap-3 items-start lg:items-center">
+                        <div className="flex-1 grid grid-cols-1 sm:grid-cols-3 gap-3 w-full">
+                          <div className="space-y-1">
+                            <Label className="text-xs text-muted-foreground">Day</Label>
+                            <Select
+                              value={slot.day}
+                              onValueChange={(value) => handleUpdateSlot(slot.id, "day", value)}
+                            >
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {DAYS.map((day) => (
+                                  <SelectItem key={day} value={day}>{day}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          
+                          <div className="space-y-1">
+                            <Label className="text-xs text-muted-foreground">Start Time</Label>
+                            <Select
+                              value={slot.start}
+                              onValueChange={(value) => handleUpdateSlot(slot.id, "start", value)}
+                            >
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {TIME_OPTIONS.map((t) => (
+                                  <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          
+                          <div className="space-y-1">
+                            <Label className="text-xs text-muted-foreground">End Time</Label>
+                            <Select
+                              value={slot.end}
+                              onValueChange={(value) => handleUpdateSlot(slot.id, "end", value)}
+                            >
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {TIME_OPTIONS.map((t) => (
+                                  <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+                        
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleRemoveSlot(slot.id)}
+                          className="text-destructive hover:text-white/98 hover:bg-destructive"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </Card>
+                  ))}
                 </div>
               )}
+              
+              <Button
+                onClick={handleAddSlot}
+                variant="outline"
+                className="w-full"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Add Availability Slot
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      ) : (
+        <Card className="overflow-hidden">
+          <div className="h-64 w-full relative">
+            <Image
+              src={banner || "https://placehold.co/1200x600.png?text=No+Image"}
+              alt={subject || "Subject preview"}
+              width={1200}
+              height={600}
+              className="w-full h-full object-cover"
+              unoptimized
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+            <div className="absolute bottom-4 left-6 text-white">
+              <h1 className="text-3xl font-bold mb-2">
+                {subject || "Subject Title"}
+              </h1>
             </div>
           </div>
-        </div>
+          
+          <CardContent className="p-6 space-y-6">
+            <div>
+              <h3 className="text-lg font-semibold mb-3">Description</h3>
+              {description ? (
+                <div
+                  className="prose prose-sm max-w-none [&_li[data-list='ordered']]:list-decimal [&_li[data-list='ordered']]:pl-6 [&_li[data-list='bullet']]:list-disc [&_li[data-list='bullet']]:pl-6 [&_.ql-ui]:hidden"
+                  dangerouslySetInnerHTML={{ __html: description }}
+                />
+              ) : (
+                <p className="text-muted-foreground italic">No description provided</p>
+              )}
+            </div>
+            
+            <Separator />
+            
+            <div>
+              <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
+                <Calendar className="w-5 h-5" />
+                Availability
+              </h3>
+              {availability.length > 0 ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                  {availability.map((slot) => (
+                    <div
+                      key={slot.id}
+                      className="bg-primary/10 text-primary px-4 py-2 rounded-lg text-sm font-medium border border-primary/20"
+                    >
+                      <div className="flex items-center gap-1">
+                        <Clock className="w-3 h-3" />
+                        {slot.day}
+                      </div>
+                      <div className="text-xs opacity-80">
+                        {slot.start} - {slot.end}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-muted-foreground italic">No availability slots added</p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
       )}
     </div>
   );

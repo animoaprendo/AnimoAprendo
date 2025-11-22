@@ -9,6 +9,9 @@ export interface Message {
   type?: "text" | "appointment" | "quiz-result";
   seenBy?: string[]; // Array of user IDs who have seen this message
   appointment?: {
+    appointmentType?: "single" | "recurring";
+    endDate?: string;
+    startDate?: string;
     datetimeISO: string;
     mode: "online" | "in-person";
     status: "pending" | "accepted" | "declined" | "cancelled";

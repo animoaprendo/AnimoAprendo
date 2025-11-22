@@ -1,197 +1,203 @@
 "use client";
 import { SignOutButton, useUser } from "@clerk/nextjs";
-import { Dialog, DialogPanel, PopoverGroup } from "@headlessui/react";
 import Link from "next/link";
 import React, { Suspense, useState } from "react";
 import SwitchToTutee from "./ui/switchtotutee";
-import { Bars3Icon, XMarkIcon } from "@heroicons/react/24/outline";
 import ProfileImageSkeleton from "./ui/profile-skeleton";
 import Image from "next/image";
-import { ChatBubbleLeftIcon } from "@heroicons/react/24/solid";
+import { Button } from "@/components/ui/button";
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Menu, X, MessageCircle, LayoutDashboard, BookOpen, Calendar, History, User, LogOut, GraduationCap } from "lucide-react";
+import { Separator } from "@/components/ui/separator";
 
 function NavLinksTutor() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { isLoaded, user } = useUser();
 
   return (
-    <header className="bg-green-900 select-none">
-      <nav
-        aria-label="Global"
-        className="mx-auto flex max-w-[90rem] items-center justify-between p-6 lg:px-8"
-      >
+    <header className="bg-green-900 sticky top-0 z-50 select-none">
+      <nav className="mx-auto flex max-w-[1600px] items-center justify-between px-6 py-4">
         {/* Logo */}
-        <div className="flex lg:flex-1">
-          <Link href="/tutor/dashboard" className="-m-1.5 p-1.5">
-            <span className="text-white/98 font-semibold">AnimoAprendo</span>
+        <div className="flex items-center gap-2">
+          <Link href="/tutor/dashboard" className="flex items-center gap-2 font-bold text-xl text-white/98">
+            <span>AnimoAprendo</span>
           </Link>
         </div>
 
-        {/* Mobile Hamburger */}
-        <div className="flex gap-4 lg:hidden">
-          <Link
-            href="/tutor/chat"
-            className="text-sm font-semibold text-white/98 flex items-center gap-1"
-          >
-            <ChatBubbleLeftIcon className="size-6"/>
-          </Link>
-          <button
-            type="button"
-            onClick={() => setMobileMenuOpen(true)}
-            className="-m-2.5 inline-flex items-center justify-center rounded-md p-2.5 text-white/96"
-          >
-            <span className="sr-only">Open main menu</span>
-            <Bars3Icon aria-hidden="true" className="size-6" />
-          </button>
-        </div>
-
-        {/* Desktop Links */}
-        <PopoverGroup className="hidden lg:flex lg:gap-x-4 items-center">
-          <Link
-            href="/tutor/dashboard"
-            className="text-sm font-semibold text-white/98"
-          >
-            Dashboard
-          </Link>
-          <Link
-            href="/tutor/subjects"
-            className="text-sm font-semibold text-white/98"
-          >
-            View Subjects
-          </Link>
-          <Link
-            href="/tutor/appointments"
-            className="text-sm font-semibold text-white/98"
-          >
-            View Appointments
-          </Link>
-          <Link
-            href="/tutor/history"
-            className="text-sm font-semibold text-white/98"
-          >
-            Tutoring History
-          </Link>
-          <ul className="p-2">
-            <SwitchToTutee />
-          </ul>
-          <Link
-            href="/tutor/chat"
-            className="text-sm font-semibold text-white/98 flex items-center gap-1"
-          >
-            <ChatBubbleLeftIcon className="size-6"/>
-          </Link>
-          {/* Profile */}
-          <div className="dropdown dropdown-end">
-            <div
-              tabIndex={0}
-              role="button"
-              className="btn btn-ghost btn-circle avatar"
-            >
-              <div className="w-10 rounded-full">
-                <Suspense fallback={<ProfileImageSkeleton />}>
-                  {isLoaded && user ? (
-                    <Image
-                      width={120}
-                      height={120}
-                      alt="Profile Image"
-                      src={user.imageUrl}
-                      priority
-                    />
-                  ) : (
-                    <ProfileImageSkeleton />
-                  )}
-                </Suspense>
-              </div>
-            </div>
-            <ul
-              tabIndex={0}
-              className="menu menu-sm gap-3 dropdown-content bg-white rounded-box mt-3 w-52 p-2 shadow text-black z-50"
-            >
-              <p className="border-b px-2 pb-1">Welcome, {user?.username}</p>
-              <Link className="justify-between" href="/tutor/profile">
-                Profile
-              </Link>
-              <li>
-                <SignOutButton />
-              </li>
-            </ul>
-          </div>
-        </PopoverGroup>
-      </nav>
-
-      {/* Mobile Drawer */}
-      <Dialog
-        open={mobileMenuOpen}
-        onClose={setMobileMenuOpen}
-        className="lg:hidden"
-      >
-        <div className="fixed inset-0 z-50" />
-        <DialogPanel className="fixed inset-y-0 right-0 z-50 w-full max-w-sm bg-green-900 p-6 sm:ring-1 sm:ring-gray-900/10">
-          <div className="flex items-center justify-between">
-            <Link href="/tutor/dashboard" className="-m-1.5 p-1.5">
-              <span className="font-semibold text-white/98">AnimoAprendo</span>
+        {/* Mobile Actions */}
+        <div className="flex items-center gap-2 lg:hidden">
+          <Button variant="ghost" size="sm" className="text-white/98 hover:text-white hover:bg-white/10" asChild>
+            <Link href="/tutor/chat">
+              <MessageCircle className="w-4 h-4" />
+              <span className="sr-only">Chat</span>
             </Link>
-            <button
-              type="button"
-              onClick={() => setMobileMenuOpen(false)}
-              className="-m-2.5 rounded-md p-2.5 text-white/96"
-            >
-              <span className="sr-only">Close menu</span>
-              <XMarkIcon aria-hidden="true" className="size-6" />
-            </button>
-          </div>
-
-          <div className="mt-6 flow-root h-full">
-            <div className="-my-6 divide-y h-full divide-gray-500/10">
-              <div className="py-6 flex flex-col h-full">
-                <Link
-                  href="/tutor/dashboard"
-                  className="-mx-6 block rounded-lg px-6 py-2.5 text-base font-semibold text-white/98 hover:bg-gray-50 hover:text-black"
-                >
-                  Dashboard
-                </Link>
-                <Link
-                  href="/tutor/subjects"
-                  className="-mx-6 block rounded-lg px-6 py-2.5 text-base font-semibold text-white/98 hover:bg-gray-50 hover:text-black"
-                >
-                  View Subjects
-                </Link>
-                <Link
-                  href="/tutor/appointments"
-                  className="-mx-6 block rounded-lg px-6 py-2.5 text-base font-semibold text-white/98 hover:bg-gray-50 hover:text-black"
-                >
-                  View Appointments
-                </Link>
-                <Link
-                  href="/tutor/history"
-                  className="-mx-6 block rounded-lg px-6 py-2.5 text-base font-semibold text-white/98 hover:bg-gray-50 hover:text-black"
-                >
-                  Tutoring History
-                </Link>
-
-                {/* Bottom actions */}
-                <div className="mt-auto flex flex-col gap-4 px-6">
-                  <div className="mt-4">
-                    <ul className="border border-neutral-300 rounded-lg p-3 bg-white/5 text-center">
-                      <SwitchToTutee />
-                    </ul>
-                  </div>
-                  <Link
-                    href="/tutor/profile"
-                    className="block rounded-lg px-4 py-2 text-base font-semibold text-center text-white bg-blue-600 hover:bg-blue-700"
-                  >
-                    View Profile
-                  </Link>
+          </Button>
+          
+          <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+            <SheetTrigger asChild>
+              <Button variant="ghost" size="sm" className="text-white/98 hover:text-white hover:bg-white/10">
+                <Menu className="w-5 h-5" />
+                <span className="sr-only">Toggle menu</span>
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="right" className="w-80">
+              <SheetHeader>
+                <SheetTitle className="flex items-center gap-2">
+                  <GraduationCap className="w-5 h-5" />
+                  Tutor Navigation
+                </SheetTitle>
+                <SheetDescription>
+                  Access your tutor dashboard and manage your sessions
+                </SheetDescription>
+              </SheetHeader>
+              <div className="mt-6 space-y-4 mx-3">
+                <div className="space-y-2">
+                  <Button variant="ghost" className="w-full justify-start" asChild>
+                    <Link href="/tutor/dashboard">
+                      <LayoutDashboard className="w-4 h-4 mr-2" />
+                      Dashboard
+                    </Link>
+                  </Button>
+                  <Button variant="ghost" className="w-full justify-start" asChild>
+                    <Link href="/tutor/subjects">
+                      <BookOpen className="w-4 h-4 mr-2" />
+                      My Subjects
+                    </Link>
+                  </Button>
+                  <Button variant="ghost" className="w-full justify-start" asChild>
+                    <Link href="/tutor/appointments">
+                      <Calendar className="w-4 h-4 mr-2" />
+                      Appointments
+                    </Link>
+                  </Button>
+                  <Button variant="ghost" className="w-full justify-start" asChild>
+                    <Link href="/tutor/history">
+                      <History className="w-4 h-4 mr-2" />
+                      History
+                    </Link>
+                  </Button>
+                  <Button variant="ghost" className="w-full justify-start" asChild>
+                    <Link href="/tutor/chat">
+                      <MessageCircle className="w-4 h-4 mr-2" />
+                      Messages
+                    </Link>
+                  </Button>
+                </div>
+                
+                <Separator />
+                
+                <div className="space-y-3">
+                  <SwitchToTutee />
+                  
+                  <Button variant="outline" className="w-full justify-start" asChild>
+                    <Link href="/tutor/profile">
+                      <User className="w-4 h-4 mr-2" />
+                      Profile Settings
+                    </Link>
+                  </Button>
+                  
                   <SignOutButton>
-                    <div className="block rounded-lg px-4 py-2 text-base font-semibold text-center text-white bg-red-700 hover:bg-red-800 cursor-pointer">
-                      Logout
-                    </div>
+                    <Button variant="destructive" className="w-full justify-start">
+                      <LogOut className="w-4 h-4 mr-2" />
+                      Sign Out
+                    </Button>
                   </SignOutButton>
                 </div>
               </div>
-            </div>
-          </div>
-        </DialogPanel>
-      </Dialog>
+            </SheetContent>
+          </Sheet>
+        </div>
+
+        {/* Desktop Navigation */}
+        <div className="hidden lg:flex lg:items-center lg:gap-6">
+          <nav className="flex items-center gap-6">
+            <Button variant="ghost" size="sm" className="text-white/98 hover:text-white hover:bg-white/10" asChild>
+              <Link href="/tutor/dashboard" className="flex items-center gap-2">
+                <LayoutDashboard className="w-4 h-4" />
+                Dashboard
+              </Link>
+            </Button>
+            <Button variant="ghost" size="sm" className="text-white/98 hover:text-white hover:bg-white/10" asChild>
+              <Link href="/tutor/subjects" className="flex items-center gap-2">
+                <BookOpen className="w-4 h-4" />
+                Subjects
+              </Link>
+            </Button>
+            <Button variant="ghost" size="sm" className="text-white/98 hover:text-white hover:bg-white/10" asChild>
+              <Link href="/tutor/appointments" className="flex items-center gap-2">
+                <Calendar className="w-4 h-4" />
+                Appointments
+              </Link>
+            </Button>
+            <Button variant="ghost" size="sm" className="text-white/98 hover:text-white hover:bg-white/10" asChild>
+              <Link href="/tutor/history" className="flex items-center gap-2">
+                <History className="w-4 h-4" />
+                History
+              </Link>
+            </Button>
+            <Button variant="ghost" size="sm" className="text-white/98 hover:text-white hover:bg-white/10" asChild>
+              <Link href="/tutor/chat" className="flex items-center gap-2">
+                <MessageCircle className="w-4 h-4" />
+                Chat
+              </Link>
+            </Button>
+          </nav>
+          
+          <Separator orientation="vertical" className="h-6 bg-white/20" />
+          
+          <SwitchToTutee />
+          
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" className="relative h-8 w-8 rounded-full hover:bg-white/10">
+                <Avatar className="h-8 w-8">
+                  <Suspense fallback={<ProfileImageSkeleton />}>
+                    {isLoaded && user ? (
+                      <AvatarImage src={user.imageUrl} alt={user.username || 'Profile'} />
+                    ) : (
+                      <ProfileImageSkeleton />
+                    )}
+                  </Suspense>
+                  <AvatarFallback className="bg-white/20 text-white">
+                    <User className="w-4 h-4" />
+                  </AvatarFallback>
+                </Avatar>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="w-56" align="end" forceMount>
+              <DropdownMenuLabel className="font-normal">
+                <div className="flex flex-col space-y-1">
+                  <p className="text-sm font-medium leading-none">
+                    {user?.fullName || user?.username}
+                  </p>
+                  <p className="text-xs leading-none text-muted-foreground">
+                    {user?.primaryEmailAddress?.emailAddress}
+                  </p>
+                </div>
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem asChild>
+                <Link href="/tutor/profile" className="flex items-center">
+                  <User className="w-4 h-4 mr-2" />
+                  Profile Settings
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem asChild>
+                <SignOutButton>
+                  <div className="flex items-center cursor-pointer w-full">
+                    <LogOut className="w-4 h-4 mr-2" />
+                    Sign out
+                  </div>
+                </SignOutButton>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </nav>
     </header>
   );
 }

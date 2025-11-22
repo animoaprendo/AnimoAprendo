@@ -12,6 +12,7 @@ import { DotLoader } from "react-spinners";
 import { CircleCheckBig } from "@/components/animate-ui/icons/circle-check-big";
 import { CircleX } from "@/components/animate-ui/icons/circle-x";
 import { useRouter } from "next/navigation";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 let DESCRIPTION_LENGTH = 1;
 let QUIZ_COMPLETED = 1;
@@ -109,115 +110,131 @@ export default function OfferAndQuizPage() {
   }
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 xl:gap-8 p-2 xl:p-6 space-y-10 w-full lg:max-w-[100rem]">
-      <div className="relative">
-        <div className="flex flex-col relative z-10 gap-6 shadow-xl h-fit p-4 lg:sticky top-6 self-start bg-black/4 rounded-2xl w-full overflow-hidden">
-          <AnimatePresence>
-            {submitState !== "default" && (
-              <motion.div
-                className="absolute w-full h-full top-0 left-0 bg-black/15 flex flex-col items-center justify-center gap-4 pb-10"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.8 }}
-              >
-                {submitState === "saving" && (
-                  <>
-                    <DotLoader color="#0d542b" size={50} />
-                    <motion.h1
-                      className="text-green-950 font-bold text-xl"
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      transition={{ duration: 0.6 }}
-                    >
-                      Submitting
-                    </motion.h1>
-                  </>
-                )}
-                {submitState === "success" && (
-                  <>
-                    <CircleCheckBig animateOnView color="#0d542b" size={50} />
-                    <motion.h1
-                      className="text-green-950 font-bold text-xl"
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      transition={{ duration: 0.6 }}
-                    >
-                      Success
-                    </motion.h1>
-                  </>
-                )}
-                {submitState === "failed" && (
-                  <>
-                    <CircleX animateOnView color="#ff0613" size={50} />
-                    <motion.h1
-                      className="text-red-600 font-bold text-xl"
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      transition={{ duration: 0.6 }}
-                    >
-                      Failed
-                    </motion.h1>
-                  </>
-                )}
-              </motion.div>
-            )}
-          </AnimatePresence>
-          <div
-            className={`flex flex-col gap-6 ${submitState !== "default" ? "blur-xs opacity-50" : ""}`}
-          >
-            <CompletionChecklist
-              titleComplete={titleComplete}
-              description={descriptionLength}
-              descriptionComplete={descriptionComplete}
-              availabilityComplete={availabilityComplete}
-              bannerComplete={bannerComplete}
-              DESCRIPTION_LENGTH={DESCRIPTION_LENGTH}
-              QUIZ_COMPLETED={QUIZ_COMPLETED}
-            />
-            <ActionsBar
-              allComplete={allComplete}
-              handleSubmit={handleSubmit}
-              handleSave={handleSave}
-              saveState={saveState}
-              submitState={submitState}
-              documentId={documentId}
-            />
-          </div>
+    <div className="container mx-auto py-6 px-4 lg:max-w-[100rem]">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        <div className="lg:col-span-1">
+          <Card className="sticky top-6 shadow-lg border-0 bg-gradient-to-br from-background to-muted/20">
+            <AnimatePresence>
+              {submitState !== "default" && (
+                <motion.div
+                  className="absolute inset-0 bg-background/95 backdrop-blur-sm flex flex-col items-center justify-center gap-4 rounded-lg z-50"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  {submitState === "saving" && (
+                    <div className="text-center flex flex-col items-center">
+                      <DotLoader color="hsl(var(--primary))" size={40} />
+                      <motion.h2
+                        className="text-xl font-semibold mt-4 text-foreground"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ duration: 0.6 }}
+                      >
+                        {saveState === "saving" ? "Saving Draft..." : "Creating Offer..."}
+                      </motion.h2>
+                      <p className="text-muted-foreground mt-2">
+                        Please wait while we process your request
+                      </p>
+                    </div>
+                  )}
+                  {submitState === "success" && (
+                    <div className="text-center flex flex-col items-center">
+                      <CircleCheckBig animateOnView color="hsl(var(--primary))" size={50} />
+                      <motion.h2
+                        className="text-xl font-semibold mt-4 text-foreground"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ duration: 0.6 }}
+                      >
+                        Success!
+                      </motion.h2>
+                      <p className="text-muted-foreground mt-2">
+                        Your subject has been created successfully
+                      </p>
+                    </div>
+                  )}
+                  {submitState === "failed" && (
+                    <div className="text-center flex flex-col items-center">
+                      <CircleX animateOnView color="hsl(var(--destructive))" size={50} />
+                      <motion.h2
+                        className="text-xl font-semibold mt-4 text-destructive"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ duration: 0.6 }}
+                      >
+                        Failed
+                      </motion.h2>
+                      <p className="text-muted-foreground mt-2">
+                        Something went wrong. Please try again.
+                      </p>
+                    </div>
+                  )}
+                </motion.div>
+              )}
+            </AnimatePresence>
+            
+            <CardContent className={`p-6 ${submitState !== "default" ? "opacity-50" : ""}`}>
+              <CompletionChecklist
+                titleComplete={titleComplete}
+                description={descriptionLength}
+                descriptionComplete={descriptionComplete}
+                availabilityComplete={availabilityComplete}
+                bannerComplete={bannerComplete}
+                DESCRIPTION_LENGTH={DESCRIPTION_LENGTH}
+                QUIZ_COMPLETED={QUIZ_COMPLETED}
+              />
+              <div className="mt-6">
+                <ActionsBar
+                  allComplete={allComplete}
+                  handleSubmit={handleSubmit}
+                  handleSave={handleSave}
+                  saveState={saveState}
+                  submitState={submitState}
+                  documentId={documentId}
+                />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="lg:col-span-3">
+          <Card className="shadow-lg border-0">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-2xl font-bold tracking-tight">Create Subject Offering</CardTitle>
+              <CardDescription className="text-base">
+                Set up your new tutoring subject with detailed information, availability, and requirements. Complete all sections to publish your offering.
+              </CardDescription>
+            </CardHeader>
+            
+            <CardContent>
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key="offer"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  transition={{ type: "spring", stiffness: 200, damping: 20 }}
+                >
+                  <OfferDetails
+                    subject={subject}
+                    setSubject={setSubject}
+                    description={description}
+                    setDescription={setDescription}
+                    descriptionLength={descriptionLength}
+                    setDescriptionLength={setDescriptionLength}
+                    availability={availability}
+                    setAvailability={setAvailability}
+                    banner={banner}
+                    setBanner={setBanner}
+                  />
+                </motion.div>
+              </AnimatePresence>
+            </CardContent>
+          </Card>
         </div>
       </div>
-
-      <motion.div
-        layout
-        transition={{ layout: { type: "spring", stiffness: 250, damping: 30 } }}
-        className="lg:col-span-3 p-4 bg-black/3 shadow rounded-2xl"
-      >
-        <h1 className="text-xl font-bold mb-4 select-none">Offer Details</h1>
-
-        {/* Tab Content with smooth spring animation */}
-        <AnimatePresence mode="wait">
-          <motion.div
-            key="offer"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            transition={{ type: "spring", stiffness: 250, damping: 25 }}
-          >
-            <OfferDetails
-              subject={subject}
-              setSubject={setSubject}
-              description={description}
-              setDescription={setDescription}
-              descriptionLength={descriptionLength}
-              setDescriptionLength={setDescriptionLength}
-              availability={availability}
-              setAvailability={setAvailability}
-              banner={banner}
-              setBanner={setBanner}
-            />
-          </motion.div>
-        </AnimatePresence>
-      </motion.div>
     </div>
   );
 }

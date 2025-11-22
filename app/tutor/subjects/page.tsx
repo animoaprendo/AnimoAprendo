@@ -13,6 +13,12 @@ import {
 import { useUser } from "@clerk/nextjs";
 import { motion, AnimatePresence } from "framer-motion";
 import { CreatePopup } from "../alert";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Separator } from "@/components/ui/separator";
 
 export default function TutorSubjects() {
   const { user } = useUser();
@@ -75,73 +81,66 @@ export default function TutorSubjects() {
 
   // Skeleton Row
   const SkeletonRow = () => (
-    <tr className="animate-pulse">
-      <td className="p-2">
-        <div className="h-14 w-24 bg-gray-300 rounded-md mx-auto"></div>
-      </td>
-      <td className="p-2">
-        <div className="h-4 w-32 bg-gray-300 rounded"></div>
-      </td>
-      <td className="p-2">
-        <div className="h-4 w-40 bg-gray-300 rounded mx-auto"></div>
-      </td>
-      <td className="p-2">
-        <div className="h-8 w-24 bg-gray-300 rounded mx-auto"></div>
-      </td>
-    </tr>
+    <TableRow>
+      <TableCell className="text-center">
+        <Skeleton className="h-14 w-24 mx-auto" />
+      </TableCell>
+      <TableCell>
+        <Skeleton className="h-4 w-32" />
+      </TableCell>
+      <TableCell className="text-center">
+        <Skeleton className="h-4 w-40 mx-auto" />
+      </TableCell>
+      <TableCell className="text-center">
+        <Skeleton className="h-8 w-24 mx-auto" />
+      </TableCell>
+    </TableRow>
   );
 
   return (
     <div className="flex flex-col py-6 gap-6 w-10/12 text-neutral-800">
       {/* Header */}
       <div className="flex flex-row gap-4 flex-wrap justify-between items-center">
-        <h1 className="text-2xl font-bold text-nowrap">Subject Offerings</h1>
-        <Link
-          href={"/tutor/subjects/create"}
-          className="md:ml-auto py-2 px-4 rounded-lg font-semibold bg-green-900 text-white hover:bg-green-800 text-nowrap"
-        >
-          + Create New Subject
-        </Link>
+        <h1 className="text-3xl font-bold tracking-tight">Subject Offerings</h1>
+        <Button asChild>
+          <Link href="/tutor/subjects/create">
+            + Create New Subject
+          </Link>
+        </Button>
       </div>
 
       {/* Tabs */}
-      <div className="flex flex-row gap-2 border-b border-green-900 font-semibold justify-between md:justify-start">
+      <div className="flex flex-row gap-2 border-b font-semibold justify-between md:justify-start">
         {["available", "paused", "draft"].map((tab) => (
-          <button
+          <Button
             key={tab}
+            variant={activeTab === tab ? "default" : "ghost"}
             onClick={() => setActiveTab(tab as any)}
-            className={`px-3 py-1 rounded-t-lg ${
-              activeTab === tab
-                ? "bg-green-900 text-white border border-b-0"
-                : "hover:text-green-900 hover:cursor-pointer"
-            }`}
+            className="rounded-b-none"
           >
             {tab.charAt(0).toUpperCase() + tab.slice(1)}
-          </button>
+          </Button>
         ))}
       </div>
 
       {/* Desktop Table */}
-      <div className="hidden lg:block overflow-x-auto rounded-lg shadow-md">
-        <table className="table w-full">
-          <thead className="bg-green-900 text-white">
-            <tr className="text-center">
-              <th>Preview</th>
-              <th>Subject</th>
-              <th>Schedule</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-neutral-200">
+      <Card className="hidden lg:block">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="text-center">Preview</TableHead>
+              <TableHead>Subject</TableHead>
+              <TableHead className="text-center">Schedule</TableHead>
+              <TableHead className="text-center">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {loading ? (
               Array.from({ length: 3 }).map((_, i) => <SkeletonRow key={i} />)
             ) : subjects.length > 0 ? (
               subjects.map((data, i) => (
-                <tr
-                  key={i}
-                  className="text-center hover:bg-neutral-100 transition"
-                >
-                  <td className="p-2">
+                <TableRow key={i}>
+                  <TableCell className="text-center">
                     <Image
                       src={
                         data.banner && data.banner.trim() !== ""
@@ -154,90 +153,113 @@ export default function TutorSubjects() {
                       className="h-14 w-24 object-cover rounded-md border mx-auto"
                       unoptimized
                     />
-                  </td>
-                  <td className="p-2 font-medium">{data.subject}</td>
-                  <td className="p-2">
+                  </TableCell>
+                  <TableCell className="font-medium">{data.subject}</TableCell>
+                  <TableCell className="text-center">
                     {data.availability.map((a: any) => (
                       <div key={a.id} className="text-sm">
                         {a.day} {a.start} - {a.end}
                       </div>
                     ))}
-                  </td>
-                  <td className="p-2">
-                    <div className="flex flex-row gap-2 justify-center *:px-3 *:py-1 *:rounded-md *:text-sm *:font-medium">
-                      {activeTab === "paused" && (
-                        <button
-                          onClick={() => {
-                            setSelectedSubject(data._id);
-                            setActionType("resume");
-                            setModalOpen(true);
-                          }}
-                          className="bg-green-700 text-white hover:bg-green-800 aspect-square flex items-center justify-center hover:cursor-pointer"
-                        >
-                          <Play size={16} />
-                        </button>
-                      )}
-                      <Link
-                        href={"/tutor/subjects/view/" + data._id}
-                        className="bg-amber-200 hover:bg-amber-300 aspect-square flex items-center justify-center"
-                      >
-                        <EyeIcon size={16} />
-                      </Link>
-                      {activeTab !== "paused" && (
-                        <Link
-                          href={"/tutor/subjects/edit/" + data._id}
-                          className="bg-blue-200 hover:bg-blue-300 aspect-square flex items-center justify-center"
-                        >
-                          <PencilIcon size={16} />
-                        </Link>
-                      )}
-                      <button
-                        onClick={() => {
-                          setSelectedSubject(data._id);
-                          setActionType("delete");
-                          setModalOpen(true);
-                        }}
-                        className="bg-red-700 text-white hover:bg-red-800 aspect-square flex items-center justify-center hover:cursor-pointer"
-                      >
-                        <Trash2Icon size={16} />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
+                  </TableCell>
+                  <TableCell className="text-center">
+                    <TooltipProvider>
+                      <div className="flex flex-row gap-2 justify-center">
+                        {activeTab === "paused" && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                size="sm"
+                                onClick={() => {
+                                  setSelectedSubject(data._id);
+                                  setActionType("resume");
+                                  setModalOpen(true);
+                                }}
+                              >
+                                <Play size={16} />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Resume</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        )}
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button size="sm" variant="secondary" asChild>
+                              <Link href={"/tutor/subjects/view/" + data._id}>
+                                <EyeIcon size={16} />
+                              </Link>
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>View</p>
+                          </TooltipContent>
+                        </Tooltip>
+                        {activeTab !== "paused" && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button size="sm" variant="outline" asChild>
+                                <Link href={"/tutor/subjects/edit/" + data._id}>
+                                  <PencilIcon size={16} />
+                                </Link>
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Edit</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        )}
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              onClick={() => {
+                                setSelectedSubject(data._id);
+                                setActionType("delete");
+                                setModalOpen(true);
+                              }}
+                            >
+                              <Trash2Icon size={16} />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Delete</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </div>
+                    </TooltipProvider>
+                  </TableCell>
+                </TableRow>
               ))
             ) : (
-              <tr>
-                <td colSpan={5} className="text-center p-4 text-neutral-500">
+              <TableRow>
+                <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
                   No subjects in this tab yet.
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             )}
-          </tbody>
-        </table>
-      </div>
+          </TableBody>
+        </Table>
+      </Card>
 
-      {/* Mobile Skeleton */}
+      {/* Mobile Cards */}
       <div className="block lg:hidden space-y-4 min-h-[60svh]">
         {loading ? (
           Array.from({ length: 2 }).map((_, i) => (
-            <div
-              key={i}
-              className="card bg-white shadow-md rounded-lg overflow-hidden animate-pulse"
-            >
-              <div className="w-full aspect-video bg-gray-300"></div>
-              <div className="p-4 space-y-3">
-                <div className="h-4 w-32 bg-gray-300 rounded"></div>
-                <div className="h-4 w-24 bg-gray-300 rounded"></div>
-                <div className="h-8 w-20 bg-gray-300 rounded"></div>
-              </div>
-            </div>
+            <Card key={i}>
+              <Skeleton className="w-full aspect-video" />
+              <CardContent className="p-4 space-y-3">
+                <Skeleton className="h-4 w-32" />
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-8 w-20" />
+              </CardContent>
+            </Card>
           ))
         ) : subjects.length > 0 ? (
           subjects.map((data, i) => (
-            <div
-              key={i}
-              className="card bg-white shadow-md rounded-lg overflow-hidden"
-            >
+            <Card key={i} className="overflow-hidden">
               <Image
                 src={
                   data.banner && data.banner.trim() !== ""
@@ -250,129 +272,187 @@ export default function TutorSubjects() {
                 className="w-full aspect-video object-cover"
                 unoptimized
               />
-              <div className="p-4 flex flex-col gap-3">
-                <h2 className="font-bold text-lg">{data.subject}</h2>
+              <CardContent className="p-4">
+                <CardTitle className="mb-3">{data.subject}</CardTitle>
                 {data.availability.length > 0 && (
-                  <ul className="flex flex-wrap gap-2">
+                  <div className="flex flex-wrap gap-2 mb-4">
                     {data.availability.map((sched: any) => (
-                      <li
+                      <span
                         key={sched.id}
                         className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-xs font-medium"
                       >
                         {sched.day} {sched.start}-{sched.end}
-                      </li>
+                      </span>
                     ))}
-                  </ul>
+                  </div>
                 )}
-                <div className="grid grid-cols-2 [&>*:first-child]:col-span-2 [&>*:first-child]:py-3 gap-2">
+                <div className="grid grid-cols-2 gap-2">
                   {activeTab === "paused" && (
-                    <button
+                    <Button
+                      className="col-span-2"
                       onClick={() => {
                         setSelectedSubject(data._id);
                         setActionType("resume");
                         setModalOpen(true);
                       }}
-                      className="bg-green-700 text-white hover:bg-green-800 px-3 py-1 rounded text-center"
                     >
                       Resume
-                    </button>
+                    </Button>
                   )}
-                  <Link
-                    href={"/tutor/subjects/view/" + data._id}
-                    className="bg-amber-200 hover:bg-amber-300 px-3 py-1 rounded text-center"
-                  >
-                    View
-                  </Link>
-                  {activeTab !== "paused" && (
-                    <Link
-                      href={"/tutor/subjects/edit/" + data._id}
-                      className="bg-blue-200 hover:bg-blue-300 px-3 py-1 rounded text-center"
-                    >
-                      Edit
+                  <Button variant="secondary" asChild>
+                    <Link href={"/tutor/subjects/view/" + data._id}>
+                      View
                     </Link>
+                  </Button>
+                  {activeTab !== "paused" ? (
+                    <Button variant="outline" asChild>
+                      <Link href={"/tutor/subjects/edit/" + data._id}>
+                        Edit
+                      </Link>
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="destructive"
+                      onClick={() => {
+                        setSelectedSubject(data._id);
+                        setActionType("delete");
+                        setModalOpen(true);
+                      }}
+                    >
+                      Delete
+                    </Button>
                   )}
-                  <button
-                    onClick={() => {
-                      setSelectedSubject(data._id);
-                      setActionType("delete");
-                      setModalOpen(true);
-                    }}
-                    className="bg-red-700 text-white hover:bg-red-800 px-3 py-1 rounded hover:cursor-pointer text-center"
-                  >
-                    Delete
-                  </button>
+                  {activeTab !== "paused" && (
+                    <Button
+                      variant="destructive"
+                      className="col-span-2"
+                      onClick={() => {
+                        setSelectedSubject(data._id);
+                        setActionType("delete");
+                        setModalOpen(true);
+                      }}
+                    >
+                      Delete
+                    </Button>
+                  )}
                 </div>
-              </div>
-            </div>
+              </CardContent>
+            </Card>
           ))
         ) : (
-          <p className="text-center text-neutral-500">
-            No subjects in this tab yet.
-          </p>
+          <Card>
+            <CardContent className="text-center py-8">
+              <p className="text-muted-foreground">
+                No subjects in this tab yet.
+              </p>
+            </CardContent>
+          </Card>
         )}
       </div>
 
-      {/* Confirmation Modal */}
+      {/* Professional Confirmation Modal */}
       <AnimatePresence>
         {modalOpen && selectedSubject && actionType && (
           <motion.div
-            className="fixed inset-0 flex items-center justify-center bg-black/50 z-50"
+            className="fixed inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm z-50"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.25 }}
+            transition={{ duration: 0.2 }}
             onClick={() => setModalOpen(false)}
           >
             <motion.div
-              className="bg-white rounded-xl shadow-lg p-6 w-96 flex flex-col gap-4"
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              transition={{ duration: 0.25 }}
+              className="mx-4 w-full max-w-md"
+              initial={{ scale: 0.95, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 20 }}
+              transition={{ duration: 0.2, ease: "easeOut" }}
               onClick={(e) => e.stopPropagation()}
             >
-              <h2 className="text-lg font-semibold">Confirm Action</h2>
-              <p>
-                {activeTab === "paused" && actionType === "resume"
-                  ? "Do you want to resume this offer?"
-                  : activeTab === "available" && actionType === "delete"
-                    ? "Do you want to pause or delete this offer?"
-                    : actionType === "pause"
-                      ? "Do you want to pause this offer temporarily?"
-                      : "Are you sure you want to delete this offer?"}
-              </p>
-              <div className="flex justify-end gap-3 mt-4">
-                {activeTab === "available" && actionType === "delete" && (
-                  <button
-                    onClick={() => handlePause(selectedSubject!)}
-                    className="px-4 py-2 bg-yellow-400 rounded hover:bg-yellow-500"
-                  >
-                    Pause
-                  </button>
-                )}
-                {actionType === "resume" && (
-                  <button
-                    onClick={() => handleResume(selectedSubject!)}
-                    className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
-                  >
-                    Resume
-                  </button>
-                )}
-                {actionType === "delete" && (
-                  <button
-                    onClick={() => handleDelete(selectedSubject!)}
-                    className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
-                  >
-                    Delete
-                  </button>
-                )}
-                <button
-                  onClick={() => setModalOpen(false)}
-                  className="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400"
-                >
-                  Cancel
-                </button>
-              </div>
+              <Card className="shadow-2xl border-0">
+                <CardHeader className="text-center pb-4">
+                  <div className="mx-auto w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-4">
+                    {actionType === "delete" ? (
+                      <Trash2Icon className="w-6 h-6 text-destructive" />
+                    ) : actionType === "resume" ? (
+                      <Play className="w-6 h-6 text-primary" />
+                    ) : (
+                      <PencilIcon className="w-6 h-6 text-primary" />
+                    )}
+                  </div>
+                  <CardTitle className="text-xl">
+                    {actionType === "delete" ? "Delete Subject" :
+                     actionType === "resume" ? "Resume Subject" :
+                     "Pause Subject"}
+                  </CardTitle>
+                  <CardDescription className="text-base mt-2">
+                    {activeTab === "paused" && actionType === "resume"
+                      ? "This subject offering will be made available to students again."
+                      : activeTab === "available" && actionType === "delete"
+                        ? "Choose whether to temporarily pause this offering or permanently delete it."
+                        : actionType === "pause"
+                          ? "This will temporarily hide the subject from students but preserve all data."
+                          : "This action cannot be undone. All associated data will be permanently removed."}
+                  </CardDescription>
+                </CardHeader>
+                
+                <Separator />
+                
+                <CardFooter className="flex flex-col gap-3 pt-6">
+                  {activeTab === "available" && actionType === "delete" ? (
+                    <div className="flex flex-col w-full gap-2">
+                      <Button
+                        className="w-full transition-all duration-200 hover:scale-[1.02] hover:shadow-md hover:cursor-pointer"
+                        variant="secondary"
+                        onClick={() => handlePause(selectedSubject!)}
+                      >
+                        Pause Temporarily
+                      </Button>
+                      <Button
+                        className="w-full transition-all duration-200 hover:scale-[1.02] hover:shadow-lg hover:shadow-destructive/25 hover:cursor-pointer"
+                        variant="destructive"
+                        onClick={() => handleDelete(selectedSubject!)}
+                      >
+                        Delete Permanently
+                      </Button>
+                      <Button
+                        className="w-full transition-all duration-200 hover:scale-[1.02] hover:shadow-sm hover:cursor-pointer"
+                        variant="outline"
+                        onClick={() => setModalOpen(false)}
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="flex w-full gap-3">
+                      <Button
+                        className="flex-1 transition-all duration-200 hover:scale-[1.02] hover:shadow-sm hover:cursor-pointer"
+                        variant="outline"
+                        onClick={() => setModalOpen(false)}
+                      >
+                        Cancel
+                      </Button>
+                      {actionType === "resume" && (
+                        <Button
+                          className="flex-1 transition-all duration-200 hover:scale-[1.02] hover:shadow-md hover:cursor-pointer"
+                          onClick={() => handleResume(selectedSubject!)}
+                        >
+                          Resume
+                        </Button>
+                      )}
+                      {actionType === "delete" && (
+                        <Button
+                          className="flex-1 transition-all duration-200 hover:scale-[1.02] hover:shadow-lg hover:shadow-destructive/25 hover:cursor-pointer"
+                          variant="destructive"
+                          onClick={() => handleDelete(selectedSubject!)}
+                        >
+                          Delete
+                        </Button>
+                      )}
+                    </div>
+                  )}
+                </CardFooter>
+              </Card>
             </motion.div>
           </motion.div>
         )}

@@ -6,6 +6,12 @@ import type { View, Event as RBCEvent } from "react-big-calendar";
 import moment from "moment";
 // @ts-ignore
 import "react-big-calendar/lib/css/react-big-calendar.css";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { CalendarDays, BookOpen, CheckCircle, Clock, XCircle } from "lucide-react";
+import Link from "next/link";
 
 const localizer = momentLocalizer(moment);
 
@@ -66,7 +72,8 @@ export default function TuteeAppointmentsClient({ initialEvents }: TuteeAppointm
     return { style };
   };
 
-  const handleJoinSession = (event: AppointmentEvent) => {
+  const handleJoinSession = (event: AppointmentEvent | null) => {
+    if (!event) return;
     // You can implement the join logic here
     // For now, just show an alert
     alert(`📌 Joining session with ${event.tutorName}!`);
@@ -75,140 +82,186 @@ export default function TuteeAppointmentsClient({ initialEvents }: TuteeAppointm
 
   return (
     <div className="w-11/12 mx-auto py-8 space-y-6">
-      <div className="text-center">
-        <h1 className="text-4xl font-extrabold mb-2">📆 My Appointments</h1>
+      {/* <div className="text-center">
+        <h1 className="text-4xl font-extrabold mb-2 text-green-900 flex items-center justify-center gap-2">
+          <CalendarDays className="h-10 w-10" />
+          My Appointments
+        </h1>
         <p className="text-gray-500">
           View your scheduled tutoring and consultation sessions.
         </p>
-      </div>
+      </div> */}
 
       {events.length === 0 ? (
-        <div className="bg-white p-12 rounded-2xl shadow-lg text-center">
-          <div className="text-6xl mb-4">📅</div>
-          <h3 className="text-2xl font-bold text-gray-700 mb-2">No Appointments Yet</h3>
-          <p className="text-gray-500 mb-6">
-            You don't have any scheduled appointments. Browse subjects to book your first session!
-          </p>
-          <a 
-            href="/browse" 
-            className="inline-block bg-green-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-green-700 transition-colors"
-          >
-            Browse Subjects
-          </a>
-        </div>
+        <Card>
+          <CardContent className="p-12 text-center">
+            <CalendarDays className="mx-auto h-16 w-16 text-gray-400 mb-4" />
+            <h3 className="text-2xl font-bold text-gray-700 mb-2">No Appointments Yet</h3>
+            <p className="text-gray-500 mb-6">
+              You don't have any scheduled appointments. Browse subjects to book your first session!
+            </p>
+            <Button asChild className="bg-green-600 hover:bg-green-700">
+              <Link href="/browse">
+                Browse Subjects
+              </Link>
+            </Button>
+          </CardContent>
+        </Card>
       ) : (
-        <>
+        <div className="flex flex-col-reverse md:flex-col">
           {/* Statistics */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="bg-blue-100 border border-blue-300 rounded-xl p-4 text-center">
-              <div className="text-2xl font-bold text-blue-800">{events.length}</div>
-              <div className="text-blue-600 text-sm">Total Sessions</div>
-            </div>
-            <div className="bg-green-100 border border-green-300 rounded-xl p-4 text-center">
-              <div className="text-2xl font-bold text-green-800">
-                {events.filter(e => e.status === 'completed').length}
-              </div>
-              <div className="text-green-600 text-sm">Completed</div>
-            </div>
-            <div className="bg-yellow-100 border border-yellow-300 rounded-xl p-4 text-center">
-              <div className="text-2xl font-bold text-yellow-800">
-                {events.filter(e => e.status === 'pending' || e.status === 'active').length}
-              </div>
-              <div className="text-yellow-600 text-sm">Upcoming</div>
-            </div>
-            <div className="bg-red-100 border border-red-300 rounded-xl p-4 text-center">
-              <div className="text-2xl font-bold text-red-800">
-                {events.filter(e => e.status === 'cancelled').length}
-              </div>
-              <div className="text-red-600 text-sm">Cancelled</div>
-            </div>
+            <Card className="bg-blue-50 border-blue-200">
+              <CardContent className="p-4 text-center">
+                <div className="flex items-center justify-center gap-2 mb-2">
+                  <BookOpen className="h-5 w-5 text-blue-600" />
+                  <div className="text-2xl font-bold text-blue-800">{events.length}</div>
+                </div>
+                <div className="text-blue-600 text-sm">Total Sessions</div>
+              </CardContent>
+            </Card>
+            <Card className="bg-green-50 border-green-200">
+              <CardContent className="p-4 text-center">
+                <div className="flex items-center justify-center gap-2 mb-2">
+                  <CheckCircle className="h-5 w-5 text-green-600" />
+                  <div className="text-2xl font-bold text-green-800">
+                    {events.filter(e => e.status === 'completed').length}
+                  </div>
+                </div>
+                <div className="text-green-600 text-sm">Completed</div>
+              </CardContent>
+            </Card>
+            <Card className="bg-yellow-50 border-yellow-200">
+              <CardContent className="p-4 text-center">
+                <div className="flex items-center justify-center gap-2 mb-2">
+                  <Clock className="h-5 w-5 text-yellow-600" />
+                  <div className="text-2xl font-bold text-yellow-800">
+                    {events.filter(e => e.status === 'pending' || e.status === 'active').length}
+                  </div>
+                </div>
+                <div className="text-yellow-600 text-sm">Upcoming</div>
+              </CardContent>
+            </Card>
+            <Card className="bg-red-50 border-red-200">
+              <CardContent className="p-4 text-center">
+                <div className="flex items-center justify-center gap-2 mb-2">
+                  <XCircle className="h-5 w-5 text-red-600" />
+                  <div className="text-2xl font-bold text-red-800">
+                    {events.filter(e => e.status === 'cancelled').length}
+                  </div>
+                </div>
+                <div className="text-red-600 text-sm">Cancelled</div>
+              </CardContent>
+            </Card>
           </div>
 
           {/* Calendar */}
-          <div className="bg-white p-6 rounded-2xl shadow-lg overflow-x-auto">
-            <div className="h-[500px] sm:h-[600px] md:h-[700px]">
-              <Calendar
-                localizer={localizer}
-                events={events}
-                startAccessor="start"
-                endAccessor="end"
-                view={view}
-                onView={(v) => setView(v as View)}
-                views={["month", "week", "day"]}
-                defaultView="month"
-                onSelectEvent={handleSelectEvent}
-                popup
-                eventPropGetter={eventStyleGetter}
-              />
-            </div>
-          </div>
-        </>
+          <Card>
+            <CardContent className="p-6">
+              <div className="h-[500px] sm:h-[600px] md:h-[700px] overflow-x-auto">
+                <Calendar
+                  localizer={localizer}
+                  events={events}
+                  startAccessor="start"
+                  endAccessor="end"
+                  view={view}
+                  onView={(v) => setView(v as View)}
+                  views={["month", "week", "day"]}
+                  defaultView="month"
+                  onSelectEvent={handleSelectEvent}
+                  popup
+                  eventPropGetter={eventStyleGetter}
+                />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       )}
 
       {/* Modal */}
-      {selectedEvent && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 bg-opacity-50">
-          <div className="bg-white rounded-2xl shadow-lg p-6 w-96 max-w-full">
-            <h3 className="text-2xl font-bold mb-4">{selectedEvent.title}</h3>
-            
-            <div className="space-y-2 mb-4">
-              <p className="text-gray-600">
-                <strong>Tutor:</strong> {selectedEvent.tutorName}
-              </p>
-              <p className="text-gray-600">
-                <strong>Subject:</strong> {selectedEvent.subject}
-              </p>
-              <p className="text-gray-600">
-                <strong>Mode:</strong> {selectedEvent.mode}
-              </p>
-              <p className="text-gray-600">
-                <strong>Status:</strong> 
-                <span className={`ml-2 px-2 py-1 rounded-full text-xs font-medium ${
-                  selectedEvent.status === 'completed' ? 'bg-green-100 text-green-800' :
-                  selectedEvent.status === 'cancelled' ? 'bg-red-100 text-red-800' :
-                  selectedEvent.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                  'bg-blue-100 text-blue-800'
-                }`}>
+      <Dialog open={!!selectedEvent} onOpenChange={() => setSelectedEvent(null)}>
+        <DialogContent className="w-96 max-w-full">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-bold text-green-900">
+              {selectedEvent?.title}
+            </DialogTitle>
+          </DialogHeader>
+          
+          {selectedEvent && (
+            <div className="space-y-3">
+              <div className="flex justify-between items-center">
+                <span className="font-medium text-gray-700">Tutor:</span>
+                <span className="text-gray-900">{selectedEvent.tutorName}</span>
+              </div>
+              
+              <div className="flex justify-between items-center">
+                <span className="font-medium text-gray-700">Subject:</span>
+                <Badge variant="secondary">{selectedEvent.subject}</Badge>
+              </div>
+              
+              <div className="flex justify-between items-center">
+                <span className="font-medium text-gray-700">Mode:</span>
+                <Badge variant="outline">{selectedEvent.mode}</Badge>
+              </div>
+              
+              <div className="flex justify-between items-center">
+                <span className="font-medium text-gray-700">Status:</span>
+                <Badge 
+                  className={`${
+                    selectedEvent.status === 'completed' ? 'bg-green-600 hover:bg-green-600' :
+                    selectedEvent.status === 'cancelled' ? 'bg-red-600 hover:bg-red-600' :
+                    selectedEvent.status === 'pending' ? 'bg-yellow-600 hover:bg-yellow-600' :
+                    'bg-blue-600 hover:bg-blue-600'
+                  } text-white`}
+                >
                   {selectedEvent.status?.charAt(0).toUpperCase() + selectedEvent.status?.slice(1)}
-                </span>
-              </p>
-              <p className="text-gray-600">
-                <strong>From:</strong> {moment(selectedEvent.start).format("LLLL")}
-              </p>
-              <p className="text-gray-600">
-                <strong>To:</strong> {moment(selectedEvent.end).format("LLLL")}
-              </p>
+                </Badge>
+              </div>
+              
+              <div className="space-y-1">
+                <div className="flex justify-between items-center">
+                  <span className="font-medium text-gray-700">From:</span>
+                  <span className="text-sm text-gray-600">
+                    {moment(selectedEvent.start).format("MMM D, YYYY [at] h:mm A")}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="font-medium text-gray-700">To:</span>
+                  <span className="text-sm text-gray-600">
+                    {moment(selectedEvent.end).format("MMM D, YYYY [at] h:mm A")}
+                  </span>
+                </div>
+              </div>
             </div>
+          )}
 
-            <div className="flex justify-end gap-3">
-              <button
-                onClick={() => setSelectedEvent(null)}
-                className="px-4 py-2 rounded-lg bg-gray-200 hover:bg-gray-300 transition-colors"
+          <div className="flex justify-end gap-3 mt-6">
+            <Button
+              variant="outline"
+              onClick={() => setSelectedEvent(null)}
+            >
+              Close
+            </Button>
+            
+            {selectedEvent?.status !== 'completed' && selectedEvent?.status !== 'cancelled' && (
+              <Button
+                onClick={() => handleJoinSession(selectedEvent)}
+                className="bg-green-700 hover:bg-green-800"
               >
-                Close
-              </button>
-              
-              {selectedEvent.status !== 'completed' && selectedEvent.status !== 'cancelled' && (
-                <button
-                  onClick={() => handleJoinSession(selectedEvent)}
-                  className="px-4 py-2 rounded-lg bg-green-700 text-white hover:bg-green-800 transition-colors"
-                >
-                  Join Session
-                </button>
-              )}
-              
-              {selectedEvent.status === 'completed' && (
-                <a
-                  href={`/chat/${selectedEvent.appointmentId}`}
-                  className="px-4 py-2 rounded-lg bg-blue-700 text-white hover:bg-blue-800 transition-colors"
-                >
+                Join Session
+              </Button>
+            )}
+            
+            {selectedEvent?.status === 'completed' && (
+              <Button asChild className="bg-blue-700 hover:bg-blue-800">
+                <Link href={`/chat/${selectedEvent.appointmentId}`}>
                   View Chat
-                </a>
-              )}
-            </div>
+                </Link>
+              </Button>
+            )}
           </div>
-        </div>
-      )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

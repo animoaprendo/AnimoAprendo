@@ -4,6 +4,9 @@ import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { redirect, RedirectType } from "next/navigation";
 import { ClipLoader } from "react-spinners";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Save, Send, ArrowLeft, Loader2 } from "lucide-react";
 
 type Props = {
   allComplete: boolean;
@@ -42,100 +45,141 @@ export default function ActionsBar({
 
   return (
     <>
-      <div className="md:col-span-3 flex flex-wrap gap-4 justify-end items-center w-full">
-        <button
-          className="px-6 py-2 w-full rounded-lg bg-red-500 text-white select-none hover:cursor-pointer hover:bg-red-600"
-          onClick={() => {
-            if (documentId) {
-              redirect("/tutor/subjects", RedirectType.replace);
-            } else {
-              setActionType("cancel");
+      <div className="flex flex-col gap-3 w-full">
+        <div className="grid grid-cols-1 gap-3">
+          <Button
+            variant="outline"
+            onClick={() => {
+              if (documentId) {
+                redirect("/tutor/subjects", RedirectType.replace);
+              } else {
+                setActionType("cancel");
+                setShowModal(true);
+              }
+            }}
+            className="w-full hover:cursor-pointer"
+          >
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            {documentId ? "Back to Subjects" : "Cancel"}
+          </Button>
+          
+          <Button
+            variant="secondary"
+            onClick={() => {
+              setActionType("save");
               setShowModal(true);
-            }
-          }}
-        >
-          {documentId ? "Return" : "Cancel"}
-        </button>
-        <button
-          className="px-6 py-2 w-full rounded-lg bg-yellow-500 text-white select-none hover:cursor-pointer hover:bg-yellow-600"
-          onClick={() => {
-            setActionType("save");
-            setShowModal(true);
-          }}
-        >
-          {saveState == "default" ? (
-            "Save Draft"
-          ) : saveState == "saving" ? (
-            <div className="flex flex-row items-center justify-center gap-2">
-              <ClipLoader size={20} color="#ffffff" /> Saving
-            </div>
-          ) : saveState == "success" ? (
-            "Success"
-          ) : (
-            "Failed"
-          )}
-        </button>
-        <button
-          className={`px-6 py-2 w-full rounded-lg select-none ${
-            allComplete
-              ? "bg-green-600 hover:bg-green-700 text-white cursor-pointer"
-              : "bg-gray-300 text-gray-600 cursor-not-allowed"
-          }`}
-          disabled={!allComplete}
-          onClick={() => {
-            if (allComplete) {
-              setActionType("submit");
-              setShowModal(true);
-            }
-          }}
-        >
-          {submitState == "default"
-            ? "Submit"
-            : submitState == "saving"
-              ? "Submitting"
-              : submitState == "success"
-                ? "Success"
-                : "Failed"}
-        </button>
+            }}
+            disabled={saveState === "saving"}
+            className="w-full hover:cursor-pointer"
+          >
+            {saveState === "saving" ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Saving...
+              </>
+            ) : saveState === "success" ? (
+              <>
+                <Save className="w-4 h-4 mr-2" />
+                Saved!
+              </>
+            ) : saveState === "failed" ? (
+              "Save Failed"
+            ) : (
+              <>
+                <Save className="w-4 h-4 mr-2" />
+                Save Draft
+              </>
+            )}
+          </Button>
+          
+          <Button
+            disabled={!allComplete || submitState === "saving"}
+            onClick={() => {
+              if (allComplete) {
+                setActionType("submit");
+                setShowModal(true);
+              }
+            }}
+            className="w-full hover:cursor-pointer"
+          >
+            {submitState === "saving" ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Submitting...
+              </>
+            ) : submitState === "success" ? (
+              "Success!"
+            ) : submitState === "failed" ? (
+              "Submit Failed"
+            ) : (
+              <>
+                <Send className="w-4 h-4 mr-2" />
+                Submit Offer
+              </>
+            )}
+          </Button>
+        </div>
+        
+        {!allComplete && (
+          <p className="text-sm text-muted-foreground text-center">
+            Complete all required fields to enable submission
+          </p>
+        )}
       </div>
 
-      {/* Confirmation Modal with Animation */}
+      {/* Professional Confirmation Modal */}
       <AnimatePresence>
         {showModal && (
           <motion.div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
+            onClick={() => setShowModal(false)}
           >
             <motion.div
-              className="bg-white rounded-lg shadow-lg p-6 w-96"
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
+              className="mx-4 w-full max-w-md"
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
               transition={{ duration: 0.2 }}
+              onClick={(e) => e.stopPropagation()}
             >
-              <h2 className="text-lg font-semibold mb-4">
-                {actionType === "cancel" && "Are you sure you want to cancel?"}
-                {actionType === "save" &&
-                  "Do you want to save this as a draft?"}
-                {actionType === "submit" && "Are you sure you want to submit?"}
-              </h2>
-              <div className="flex justify-end gap-3">
-                <button
-                  className="px-4 py-2 rounded-md bg-gray-200 hover:bg-gray-300"
-                  onClick={() => setShowModal(false)}
-                >
-                  No
-                </button>
-                <button
-                  className="px-4 py-2 rounded-md bg-blue-600 text-white hover:bg-blue-700"
-                  onClick={confirmAction}
-                >
-                  Yes
-                </button>
-              </div>
+              <Card className="shadow-2xl border-0">
+                <CardHeader className="text-center">
+                  <CardTitle className="text-xl">
+                    {actionType === "cancel" && "Cancel Changes"}
+                    {actionType === "save" && "Save Draft"}
+                    {actionType === "submit" && "Submit Offer"}
+                  </CardTitle>
+                  <CardDescription className="text-base">
+                    {actionType === "cancel" && "Are you sure you want to cancel? Any unsaved changes will be lost."}
+                    {actionType === "save" && "Save your current progress as a draft. You can continue editing later."}
+                    {actionType === "submit" && "Submit your offer for review. Once submitted, it will be available to students."}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex gap-3">
+                    <Button
+                      variant="outline"
+                      onClick={() => setShowModal(false)}
+                      className="flex-1"
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      onClick={confirmAction}
+                      className="flex-1"
+                      variant={actionType === "cancel" ? "destructive" : "default"}
+                    >
+                      {actionType === "cancel" && "Discard Changes"}
+                      {actionType === "save" && "Save Draft"}
+                      {actionType === "submit" && "Submit"}
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
             </motion.div>
           </motion.div>
         )}
