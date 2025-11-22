@@ -177,7 +177,7 @@ export default function Browse() {
         <CardHeader className="p-0 mb-4">
           <div className="flex justify-between items-center">
             <div>
-              <h1 className="font-bold text-3xl text-green-900">⭐ Top Rated Offers</h1>
+              <h1 className="font-bold text-xl md:text-3xl text-green-900">⭐ Top Rated Offers</h1>
               <p className="text-sm text-gray-600 mt-1">Highest rated tutoring offers</p>
             </div>
             <div className="flex gap-2">
@@ -290,7 +290,7 @@ export default function Browse() {
         <CardHeader className="p-0 mb-4">
           <div className="flex justify-between items-center">
             <div>
-              <h1 className="font-bold text-3xl text-green-900">🆕 New Offers</h1>
+              <h1 className="font-bold text-xl md:text-3xl text-green-900">🆕 New Offers</h1>
               <p className="text-sm text-gray-600 mt-1">Latest offerings from our tutors</p>
             </div>
             <div className="flex gap-2">
@@ -314,11 +314,6 @@ export default function Browse() {
                   </Button>
                 </>
               )}
-              <Button asChild variant="outline" className="border-green-700 text-green-700 hover:bg-green-700 hover:text-white">
-                <Link href="/search">
-                  View All
-                </Link>
-              </Button>
             </div>
           </div>
         </CardHeader>
@@ -426,18 +421,11 @@ export default function Browse() {
         <CardHeader className="p-0 mb-6">
           <div className="flex justify-between items-center">
             <div>
-              <h1 className="font-bold text-3xl text-green-900">
+              <h1 className="font-bold text-xl md:text-3xl text-green-900">
                 🌟 Trending Tutors
               </h1>
               <p className="text-sm text-gray-600 mt-1">Top-rated tutors from our community</p>
             </div>
-            {trendingTutors.length > 0 && (
-              <Button asChild variant="outline" className="border-green-700 text-green-700 hover:bg-green-700 hover:text-white">
-                <Link href="/search">
-                  View All
-                </Link>
-              </Button>
-            )}
           </div>
         </CardHeader>
 

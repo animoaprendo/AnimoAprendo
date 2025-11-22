@@ -108,7 +108,7 @@ export default function TuteeAppointmentsClient({ initialEvents }: TuteeAppointm
           </CardContent>
         </Card>
       ) : (
-        <>
+        <div className="flex flex-col-reverse md:flex-col">
           {/* Statistics */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <Card className="bg-blue-50 border-blue-200">
@@ -175,7 +175,7 @@ export default function TuteeAppointmentsClient({ initialEvents }: TuteeAppointm
               </div>
             </CardContent>
           </Card>
-        </>
+        </div>
       )}
 
       {/* Modal */}
