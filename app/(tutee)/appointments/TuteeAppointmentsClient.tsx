@@ -82,7 +82,7 @@ export default function TuteeAppointmentsClient({ initialEvents }: TuteeAppointm
 
   return (
     <div className="w-11/12 mx-auto py-8 space-y-6">
-      <div className="text-center">
+      {/* <div className="text-center">
         <h1 className="text-4xl font-extrabold mb-2 text-green-900 flex items-center justify-center gap-2">
           <CalendarDays className="h-10 w-10" />
           My Appointments
@@ -90,7 +90,7 @@ export default function TuteeAppointmentsClient({ initialEvents }: TuteeAppointm
         <p className="text-gray-500">
           View your scheduled tutoring and consultation sessions.
         </p>
-      </div>
+      </div> */}
 
       {events.length === 0 ? (
         <Card>

@@ -103,7 +103,7 @@ function InquiryInformation({ inquiry }: { inquiry: Inquiry | null }) {
               className="text-xs text-gray-600 line-clamp-2"
               dangerouslySetInnerHTML={{ __html: inquiry.description }}
             />
-            <div className="flex items-center justify-between mt-2">
+            <div className="flex items-center justify-between mt-2 capitalize">
               <span className={`px-2 py-1 rounded text-xs font-medium ${
                 inquiry.status === "active"
                   ? "bg-green-100 text-green-800"
