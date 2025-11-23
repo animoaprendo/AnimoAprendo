@@ -98,6 +98,82 @@ export async function getCollectionData(collection: Collections) {
   }
 }
 
+export async function createCollectionData(collection: Collections, data: any) {
+  try {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/createData`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        collection,
+        data,
+      }),
+    });
+
+    const result = await response.json();
+    if (result.success) {
+      return result;
+    } else {
+      throw new Error(result.error || "Failed to create data");
+    }
+  } catch (error) {
+    console.error("Error creating collection data:", error);
+    throw error;
+  }
+}
+
+export async function updateCollectionData(collection: Collections, id: string, data: any) {
+  try {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/updateData`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        collection,
+        id,
+        data,
+      }),
+    });
+
+    const result = await response.json();
+    if (result.success) {
+      return result;
+    } else {
+      throw new Error(result.error || "Failed to update data");
+    }
+  } catch (error) {
+    console.error("Error updating collection data:", error);
+    throw error;
+  }
+}
+
+export async function deleteCollectionData(collection: Collections, id: string) {
+  try {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/deleteData`, {
+      method: "DELETE",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        collection,
+        id,
+      }),
+    });
+
+    const result = await response.json();
+    if (result.success) {
+      return result;
+    } else {
+      throw new Error(result.error || "Failed to delete data");
+    }
+  } catch (error) {
+    console.error("Error deleting collection data:", error);
+    throw error;
+  }
+}
+
 // Create inquiry when tutee starts chat with tutor
 export async function createInquiry(inquiryData: {
   tuteeId: string;

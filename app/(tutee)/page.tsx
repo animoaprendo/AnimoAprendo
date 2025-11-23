@@ -1,36 +1,50 @@
 "use client";
 import React, { useEffect, useState } from "react";
-import { Search, ShieldCheck, Users, BookOpen, Star, Clock, GraduationCap, ChevronRight, Award } from "lucide-react";
+import {
+  Search,
+  ShieldCheck,
+  Users,
+  BookOpen,
+  Star,
+  Clock,
+  GraduationCap,
+  ChevronRight,
+  Award,
+} from "lucide-react";
 import { redirect } from "next/navigation";
 import TextType from "@/components/reactbits/texttype";
 import LogoLoop from "@/components/reactbits/logoloop";
 import Image from "next/image";
 import { motion } from "framer-motion";
 import { SignInButton, SignUpButton } from "@clerk/nextjs";
-import { getCollectionData } from "../actions";
+import { getCollectionData, fetchAppointments } from "../actions";
 import SkeletonFAQs from "@/components/landing/faqskeleton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import { Separator } from "@/components/ui/separator";
-
-// ------------------ PLACEHOLDERS ------------------
-const stats = [
-  { label: "Tutors", value: 43 },
-  { label: "Tutees", value: 43 },
-  { label: "Offerings", value: 43 },
-  { label: "Hours Tutored", value: 120 },
-  { label: "Avg. Rating", value: 4.8 },
-  { label: "Subjects", value: 25 },
-];
 
 export type FAQs = {
   q: string;
   a: string;
 };
-// ---------------------------------------------------
+
+type PlatformStats = {
+  label: string;
+  value: number | string;
+};
 
 const techLogos = [
   {
@@ -70,14 +84,72 @@ const techLogos = [
 
 export default function Landing() {
   const [faq, setFaq] = useState<FAQs[]>();
+  const [stats, setStats] = useState<PlatformStats[]>([
+    { label: "Users", value: "—" },
+    { label: "Offerings", value: "—" },
+    { label: "Avg. Rating", value: "—" },
+    { label: "Subjects", value: "—" },
+  ]);
+  const [statsLoading, setStatsLoading] = useState(true);
 
   useEffect(() => {
+    // Fetch FAQ data
     getCollectionData("faq").then((res) => {
       if (res.success) {
         setFaq(res.data);
       }
     });
+
+    // Fetch platform statistics
+    fetchPlatformStats();
   }, []);
+
+  const fetchPlatformStats = async () => {
+    try {
+      setStatsLoading(true);
+
+      // Fetch all necessary data
+      const [
+        usersResponse,
+        subjectsResponse,
+        subjectOptionsResponse,
+        reviewsResponse,
+      ] = await Promise.all([
+        getCollectionData("users"),
+        getCollectionData("subjects"), // This will be offerings
+        getCollectionData("subjectOptions"), // This will be subjects
+        getCollectionData("reviews"),
+      ]);
+
+      const users = usersResponse.data || [];
+      const offerings = subjectsResponse.data || []; // subjects collection = offerings
+      const subjects = subjectOptionsResponse.data || []; // subjectOptions collection = subjects
+      const reviews = reviewsResponse.data || [];
+
+      // Calculate average rating from reviews collection
+      let averageRating = "0";
+      if (reviews.length > 0) {
+        const totalRating = reviews.reduce((sum: number, review: any) => {
+          return sum + (review.rating || 0);
+        }, 0);
+        averageRating = (totalRating / reviews.length).toFixed(1);
+      }
+
+      const newStats: PlatformStats[] = [
+        { label: "Users", value: users.length },
+        { label: "Offerings", value: offerings.length },
+        { label: "Avg. Rating", value: averageRating },
+        { label: "Subjects", value: subjects.length },
+      ];
+
+      setStats(newStats);
+    } catch (error) {
+      console.error("Error fetching platform stats:", error);
+      // Keep placeholder values on error
+    } finally {
+      setStatsLoading(false);
+    }
+  };
 
   function handleSearch(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -174,12 +246,13 @@ export default function Landing() {
         <div className="text-center mb-12">
           <h2 className="text-3xl font-bold mb-4">Our Growing Community</h2>
           <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-            Join thousands of students and educators in our thriving academic community
+            Join thousands of students and educators in our thriving academic
+            community
           </p>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {stats.map((stat, i) => {
-            const icons = [Users, BookOpen, BookOpen, Clock, Star, GraduationCap];
+            const icons = [Users, BookOpen, Star, GraduationCap];
             const Icon = icons[i] || Users;
             return (
               <motion.div
@@ -193,9 +266,15 @@ export default function Landing() {
                   <CardContent className="pt-6">
                     <Icon className="w-12 h-12 mx-auto mb-4 text-primary" />
                     <h3 className="text-3xl font-bold mb-2 text-primary">
-                      {stat.value}
+                      {statsLoading ? (
+                        <div className="h-8 w-16 bg-muted animate-pulse rounded mx-auto"></div>
+                      ) : (
+                        stat.value
+                      )}
                     </h3>
-                    <p className="text-muted-foreground font-medium">{stat.label}</p>
+                    <p className="text-muted-foreground font-medium">
+                      {stat.label}
+                    </p>
                   </CardContent>
                 </Card>
               </motion.div>
@@ -211,11 +290,13 @@ export default function Landing() {
             <GraduationCap className="w-4 h-4 mr-2" />
             DLSU-D's First Peer-to-Peer Platform
           </Badge>
-          <h1 className="text-4xl md:text-5xl font-bold text-primary mb-6">AnimoAprendo</h1>
+          <h1 className="text-4xl md:text-5xl font-bold text-primary mb-6">
+            AnimoAprendo
+          </h1>
           <p className="text-xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">
-            The first peer-to-peer tutoring system of DLSU-D. Learn from students
-            who understand your struggles — or share your expertise to help others
-            succeed in their academic journey.
+            The first peer-to-peer tutoring system of DLSU-D. Learn from
+            students who understand your struggles — or share your expertise to
+            help others succeed in their academic journey.
           </p>
         </div>
       </section>
@@ -230,8 +311,8 @@ export default function Landing() {
                 Teachers, your expertise matters too!
               </CardTitle>
               <CardDescription className="text-lg">
-                Join AnimoAprendo to guide students with professional insights and
-                experience from the classroom.
+                Join AnimoAprendo to guide students with professional insights
+                and experience from the classroom.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -253,11 +334,13 @@ export default function Landing() {
             <div className="inline-flex items-center justify-center w-20 h-20 bg-primary-foreground/10 rounded-full mb-6">
               <ShieldCheck className="h-10 w-10" />
             </div>
-            <h2 className="text-3xl md:text-4xl font-bold mb-6">Community & Safety</h2>
+            <h2 className="text-3xl md:text-4xl font-bold mb-6">
+              Community & Safety
+            </h2>
             <p className="text-xl opacity-90 max-w-3xl mx-auto leading-relaxed">
               AnimoAprendo is built on respect, collaboration, and academic
-              integrity. We ensure a safe and supportive space for all learners and
-              tutors within the DLSU-D community.
+              integrity. We ensure a safe and supportive space for all learners
+              and tutors within the DLSU-D community.
             </p>
           </div>
         </div>
@@ -267,19 +350,29 @@ export default function Landing() {
       <section className="bg-gradient-to-r from-green-800 to-green-900 text-white py-20 w-full">
         <div className="container mx-auto px-4 text-center">
           <div className="max-w-3xl mx-auto">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">Ready to level up your learning?</h2>
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">
+              Ready to level up your learning?
+            </h2>
             <p className="text-xl opacity-90 mb-8">
               Join AnimoAprendo today — as a tutor, tutee, or teacher.
             </p>
             <div className="flex flex-col sm:flex-row justify-center gap-4">
               <SignInButton mode="modal">
-                <Button variant="outline" size="lg" className="bg-transparent border-white text-white hover:bg-white hover:text-green-900">
+                <Button
+                  variant="outline"
+                  size="lg"
+                  className="bg-transparent border-white text-white hover:bg-white hover:text-green-900"
+                >
                   <Search className="w-4 h-4 mr-2" />
                   Find a Tutor
                 </Button>
               </SignInButton>
               <SignUpButton mode="modal">
-                <Button variant="outline" size="lg" className="bg-transparent border-white text-white hover:bg-white hover:text-green-900">
+                <Button
+                  variant="outline"
+                  size="lg"
+                  className="bg-transparent border-white text-white hover:bg-white hover:text-green-900"
+                >
                   <Users className="w-4 h-4 mr-2" />
                   Become a Tutor
                 </Button>

@@ -1,19 +1,30 @@
+"use client";
+
 import { useUser } from "@clerk/nextjs";
-import {
-  Dialog,
-  DialogPanel,
-  DialogTitle,
-  Field,
-  Fieldset,
-  Input,
-  Label,
-  Select,
-} from "@headlessui/react";
-import clsx from "clsx";
-import { ChevronDownIcon } from "lucide-react";
 import { useEffect, useState } from "react";
+import { BookOpen, Plus } from "lucide-react";
 import { createSubjectOption } from "../actions";
 import { CreatePopup } from "@/app/tutor/alert";
+import { getCollectionData } from "@/app/actions";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 
 type College = {
   _id: {
@@ -27,46 +38,46 @@ type College = {
   }[];
 };
 
-const initialColleges = [
-  {
-    _id: {
-      $oid: "68cc34d441c9a252e8ab2725",
-    },
-    name: "College of Information and Computer Studies",
-    abbreviation: "CICS",
-    departments: [
-      {
-        name: "Information Technology",
-        yearLevel: [5, 5, 5, 3],
-      },
-      {
-        name: "Computer Science",
-        yearLevel: [5, 5, 5, 5],
-      },
-    ],
-  },
-  {
-    _id: {
-      $oid: "68cc350641c9a252e8ab2726",
-    },
-    name: "College of Science",
-    abbreviation: "COS",
-    departments: [
-      {
-        name: "Biology",
-        yearLevel: [3, 3, 3],
-      },
-      {
-        name: "Medical Biology",
-        yearLevel: [3, 4, 5],
-      },
-      {
-        name: "Applied Mathematics",
-        yearLevel: [2, 1],
-      },
-    ],
-  },
-];
+// const initialColleges = [
+//   {
+//     _id: {
+//       $oid: "68cc34d441c9a252e8ab2725",
+//     },
+//     name: "College of Information and Computer Studies",
+//     abbreviation: "CICS",
+//     departments: [
+//       {
+//         name: "Information Technology",
+//         yearLevel: [5, 5, 5, 3],
+//       },
+//       {
+//         name: "Computer Science",
+//         yearLevel: [5, 5, 5, 5],
+//       },
+//     ],
+//   },
+//   {
+//     _id: {
+//       $oid: "68cc350641c9a252e8ab2726",
+//     },
+//     name: "College of Science",
+//     abbreviation: "COS",
+//     departments: [
+//       {
+//         name: "Biology",
+//         yearLevel: [3, 3, 3],
+//       },
+//       {
+//         name: "Medical Biology",
+//         yearLevel: [3, 4, 5],
+//       },
+//       {
+//         name: "Applied Mathematics",
+//         yearLevel: [2, 1],
+//       },
+//     ],
+//   },
+// ];
 
 const CreateSubject = ({
   isOpen,
@@ -79,34 +90,45 @@ const CreateSubject = ({
   user: ReturnType<typeof useUser>["user"];
   updateSubjects: () => void;
 }) => {
-  const [colleges, setColleges] = useState<College[]>(initialColleges);
+  const [colleges, setColleges] = useState<College[]>([]);
+
   // Initialize form data first using initialColleges so we don't reference it before declaration
-  const [formData, setFormData] = useState({
+  const [formDataDefault, setFormDataDefault] = useState({
     subjectName: "",
     subjectCode: "",
     yearLevel: 1,
     semester: 1,
-    college: initialColleges[0]?.abbreviation || "",
-    department: initialColleges[0]?.departments?.[0]?.name || "",
+    college: colleges[0]?.abbreviation || "",
+    department: colleges[0]?.departments?.[0]?.name || "",
   });
-
+  const [formData, setFormData] = useState({ ...formDataDefault });
   // Departments should be derived from selected college; initialize safely
-  const [departments, setDepartments] = useState<College["departments"]>(
-    initialColleges.find(
-      (c) => c.abbreviation === (initialColleges[0]?.abbreviation || "")
-    )?.departments || []
-  );
+  const [departments, setDepartments] = useState<College["departments"]>([]);
 
+  // Fetch colleges from backend if needed
   useEffect(() => {
-    if (isOpen) {
-      setFormData({
+    getCollectionData("colleges").then((data) => {
+      setColleges(data.data);
+      setFormDataDefault({
         subjectName: "",
         subjectCode: "",
         yearLevel: 1,
         semester: 1,
-        college: colleges[0]?.abbreviation || "",
-        department: colleges[0]?.departments?.[0]?.name || "",
+        college: data.data[0]?.abbreviation || "",
+        department: data.data[0]?.departments?.[0]?.name || "",
       });
+
+      setDepartments(
+        data.data.find(
+          (c: any) => c.abbreviation === (data.data[0]?.abbreviation || "")
+        )?.departments || []
+      );
+    });
+  }, []);
+
+  useEffect(() => {
+    if (isOpen) {
+      setFormData({ ...formDataDefault, subjectName: "", subjectCode: "" });
     }
   }, [isOpen]);
 
@@ -118,206 +140,218 @@ const CreateSubject = ({
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    console.log("Form submitted:", formData);
 
     setIsOpen(false);
     createSubjectOption(formData).then((res) => {
-      console.log("Subject option created successfully:", res);
       CreatePopup("Subject created successfully!", "success");
       updateSubjects();
     });
   }
 
+  function setSessionDefault() {
+    // Implement the logic to set the current formData as session default
+    setFormDataDefault({ ...formData });
+    CreatePopup("Session default set successfully!", "success");
+  }
   return (
-    <Dialog
-      open={isOpen}
-      onClose={() => setIsOpen(false)}
-      className="fixed top-0 left-0 bg-black/40 w-full h-full z-999"
-    >
-      <div className="fixed inset-0 flex w-screen items-center justify-center p-4">
-        <DialogPanel className="max-w-lg w-full space-y-4 border bg-white p-12 rounded-2xl shadow-lg">
-          <DialogTitle className="font-bold">Create Subject</DialogTitle>
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <BookOpen className="h-5 w-5" />
+            Create New Subject
+          </DialogTitle>
+          <DialogDescription>
+            Add a new subject to the curriculum
+          </DialogDescription>
+        </DialogHeader>
 
-          <form onSubmit={handleSubmit}>
-            <Fieldset className="flex flex-col gap-2">
-              <Field>
-                <Label className="text-sm/6 font-medium text-black">
-                  Subject Name
-                </Label>
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Basic Information */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">Subject Information</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="subjectName">Subject Name</Label>
                 <Input
-                  className={clsx(
-                    "mt-3 block w-full rounded-lg border-none bg-black/5 px-3 py-1.5 text-sm/6 text-black",
-                    "focus:not-data-focus:outline-none data-focus:outline-2 data-focus:-outline-offset-2 data-focus:outline-white/25"
-                  )}
+                  id="subjectName"
                   value={formData.subjectName}
                   onChange={(e) =>
                     setFormData({ ...formData, subjectName: e.target.value })
                   }
-                  placeholder="Enter subject name"
+                  placeholder="e.g., Introduction to Computer Science"
                   required
                 />
-              </Field>
-              <Field>
-                <Label className="text-sm/6 font-medium text-black">
-                  Subject Code
-                </Label>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="subjectCode">Subject Code</Label>
                 <Input
-                  className={clsx(
-                    "mt-3 block w-full rounded-lg border-none bg-black/5 px-3 py-1.5 text-sm/6 text-black",
-                    "focus:not-data-focus:outline-none data-focus:outline-2 data-focus:-outline-offset-2 data-focus:outline-white/25"
-                  )}
+                  id="subjectCode"
                   value={formData.subjectCode}
                   onChange={(e) =>
                     setFormData({ ...formData, subjectCode: e.target.value })
                   }
-                  placeholder="Enter subject code"
+                  placeholder="e.g., CS101"
                   required
                 />
-              </Field>
-              <Field>
-                <Label className="text-sm/6 font-medium text-black">
-                  College
-                </Label>
-                <div className="relative">
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Academic Details */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">Academic Details</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2 flex flex-col w-full">
+                  <Label>College</Label>
                   <Select
-                    className={clsx(
-                      "mt-3 block w-full appearance-none rounded-lg border-none bg-black/5 px-3 py-1.5 text-sm/6 text-black",
-                      "focus:not-data-focus:outline-none data-focus:outline-2 data-focus:-outline-offset-2 data-focus:outline-white/25",
-                      // Make the text of each option black on Windows
-                      "*:text-black"
-                    )}
-                    value={
-                      colleges.find((c) => c.abbreviation === formData.college)
-                        ? formData.college
-                        : colleges[0].abbreviation
-                    }
-                    onChange={(e) => {
+                    value={formData.college}
+                    onValueChange={(value) => {
                       const college = colleges.find(
-                        (c) => c.abbreviation === e.target.value
+                        (c) => c.abbreviation === value
                       );
                       if (college) {
                         setFormData({
                           ...formData,
                           college: college.abbreviation,
-                          department: college.departments[0].name,
+                          department: college.departments[0]?.name || "General",
                         });
                       }
                     }}
                     disabled={user?.publicMetadata.adminRole !== "superadmin"}
+                    
                   >
-                    {colleges.map((college) => (
-                      <option
-                        key={college._id.$oid}
-                        value={college.abbreviation}
-                      >
-                        {college.name}
-                      </option>
-                    ))}
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select college" />
+                    </SelectTrigger>
+                    <SelectContent className="w-full">
+                      {colleges.map((college, i) => (
+                        <SelectItem key={i} value={college.abbreviation}>
+                          <div className="flex flex-col items-start">
+                            <span className="font-medium">{college.abbreviation}</span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
                   </Select>
-                  {user?.publicMetadata.adminRole === "superadmin" && (
-                    <ChevronDownIcon
-                      className="group pointer-events-none absolute top-2.5 right-2.5 size-4 fill-white/60"
-                      aria-hidden="true"
-                    />
-                  )}
                 </div>
-              </Field>
-              <Field>
-                <Label className="text-sm/6 font-medium text-black">
-                  Department
-                </Label>
-                <div className="relative">
-                  <Select
-                    className={clsx(
-                      "mt-3 block w-full appearance-none rounded-lg border-none bg-black/5 px-3 py-1.5 text-sm/6 text-black",
-                      "focus:not-data-focus:outline-none data-focus:outline-2 data-focus:-outline-offset-2 data-focus:outline-white/25",
-                      // Make the text of each option black on Windows
-                      "*:text-black"
-                    )}
-                    value={formData.department}
-                    onChange={(e) => {
-                      const department = departments.find(
-                        (d) => d.name === e.target.value
-                      );
-                      if (department) {
-                        setFormData({
-                          ...formData,
-                          department: department.name,
-                        });
-                      }
-                    }}
-                    disabled={user?.publicMetadata.adminRole !== "superadmin"}
-                  >
-                    <option value="General">General</option>
-                    {departments.map((department, i) => (
-                      <option key={i} value={department.name}>
-                        {department.name}
-                      </option>
-                    ))}
-                  </Select>
-                  {user?.publicMetadata.adminRole === "superadmin" && (
-                    <ChevronDownIcon
-                      className="group pointer-events-none absolute top-2.5 right-2.5 size-4 fill-white/60"
-                      aria-hidden="true"
-                    />
-                  )}
-                </div>
-              </Field>
 
-              
+                <div className="space-y-2">
+                  <Label>Department</Label>
+                  <Select
+                    value={formData.department}
+                    onValueChange={(value) =>
+                      setFormData({ ...formData, department: value })
+                    }
+                    disabled={user?.publicMetadata.adminRole !== "superadmin"}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select department" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="General">General</SelectItem>
+                      {departments.map((department, i) => (
+                        <SelectItem key={i} value={department.name}>
+                          {department.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
               <div className="grid grid-cols-2 gap-4">
-                <Field>
-                  <Label className="text-sm/6 font-medium text-black">
-                    Year Level
-                  </Label>
+                <div className="space-y-2">
+                  <Label htmlFor="yearLevel">Year Level</Label>
                   <Input
-                    className={clsx(
-                      "mt-3 block w-full rounded-lg border-none bg-black/5 px-3 py-1.5 text-sm/6 text-black",
-                      "focus:not-data-focus:outline-none data-focus:outline-2 data-focus:-outline-offset-2 data-focus:outline-white/25"
-                    )}
+                    id="yearLevel"
                     type="number"
+                    min="1"
+                    max="6"
                     value={formData.yearLevel}
                     onChange={(e) =>
-                      setFormData({ ...formData, yearLevel: e.target.value.toString() === "" ? 0 : parseInt(e.target.value) })
+                      setFormData({
+                        ...formData,
+                        yearLevel:
+                          e.target.value.toString() === ""
+                            ? 1
+                            : parseInt(e.target.value),
+                      })
                     }
-                    placeholder="Enter year level"
+                    placeholder="1"
                     required
                   />
-                </Field>
-                <Field>
-                  <Label className="text-sm/6 font-medium text-black">
-                    Semester
-                  </Label>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="semester">Semester</Label>
                   <Input
-                    className={clsx(
-                      "mt-3 block w-full rounded-lg border-none bg-black/5 px-3 py-1.5 text-sm/6 text-black",
-                      "focus:not-data-focus:outline-none data-focus:outline-2 data-focus:-outline-offset-2 data-focus:outline-white/25"
-                    )}
+                    id="semester"
                     type="number"
+                    min="1"
+                    max="3"
                     value={formData.semester}
                     onChange={(e) =>
-                      setFormData({ ...formData, semester: e.target.value.toString() === "" ? 0 : parseInt(e.target.value) })
+                      setFormData({
+                        ...formData,
+                        semester:
+                          e.target.value.toString() === ""
+                            ? 1
+                            : parseInt(e.target.value),
+                      })
                     }
-                    placeholder="Enter semester"
+                    placeholder="1"
                     required
                   />
-                </Field>
+                </div>
               </div>
-            </Fieldset>
-            <div className="flex gap-4 ml-auto mt-6 w-fit">
-              <button
+
+              <div className="flex gap-2">
+                <Badge variant="secondary">
+                  {formData.college || "No college selected"}
+                </Badge>
+                <Badge variant="outline">
+                  {formData.department || "No department selected"}
+                </Badge>
+                <Badge variant="outline">
+                  Year {formData.yearLevel} • Semester {formData.semester}
+                </Badge>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Action Buttons */}
+          <div className="flex justify-between pt-4 border-t">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={setSessionDefault}
+              className="flex items-center gap-2"
+            >
+              Set Default
+            </Button>
+            <div className="flex gap-3">
+              <Button
+                type="button"
+                variant="outline"
                 onClick={() => setIsOpen(false)}
-                className="btn btn-error rounded"
               >
                 Cancel
-              </button>
-              <button type="submit" className="btn btn-success rounded">
-                Create
-              </button>
+              </Button>
+              <Button type="submit" className="flex items-center gap-2">
+                <Plus className="h-4 w-4" />
+                Create Subject
+              </Button>
             </div>
-          </form>
-        </DialogPanel>
-      </div>
+          </div>
+        </form>
+      </DialogContent>
     </Dialog>
   );
 };
