@@ -16,6 +16,7 @@ const isAdminRootRoute = createRouteMatcher(["/admin"]);
 const isAdminRoute = createRouteMatcher(["/admin/(.*)"]);
 const isSuperAdminRoute = createRouteMatcher(["/superadmin(.*)"]);
 const isIdentityRoute = createRouteMatcher(["/.well-known(.*)"]);
+const isAnyRoute = createRouteMatcher(["/(.*)"]);
 
 export default clerkMiddleware(async (auth, req) => {
   const { sessionClaims, userId } = await auth();
@@ -29,6 +30,7 @@ export default clerkMiddleware(async (auth, req) => {
       }
     | undefined;
 
+  
   if (isIdentityRoute(req)) {
     return NextResponse.next();
   }
@@ -53,7 +55,7 @@ export default clerkMiddleware(async (auth, req) => {
 
   // If user is logged in and not onboarded (but skip admins)
   if (
-    (isPublicRoute(req) || isDefaultRoute(req)) &&
+    (isAnyRoute(req)) &&
     metadata?.onboarded === false &&
     !isAdmin(metadata) &&
     userId
