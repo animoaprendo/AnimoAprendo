@@ -60,6 +60,10 @@ export default clerkMiddleware(async (auth, req) => {
     !isAdmin(metadata) &&
     userId
   ) {
+    if(isOnboardingRoute(req)) {
+      return NextResponse.next();
+    }
+    
     return NextResponse.redirect(new URL("/onboarding", req.url));
   }
 
