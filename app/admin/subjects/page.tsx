@@ -21,6 +21,8 @@ export type Subject = {
   subjectCode: string;
   college: string;
   department: string;
+  year: number;
+  semester: number;
   createdAt: string;
   updatedAt: string;
 };
@@ -35,7 +37,27 @@ export default function Subjects() {
 
   function updateSubjects() {
     getCollectionData("subjectOptions").then((data) => {
-      setSubjects(data.data);
+      const sortedData = data.data.sort((a: Subject, b: Subject) => {
+        // First sort by college alphabetically
+        if (a.college !== b.college) {
+          return a.college.localeCompare(b.college);
+        }
+        // Then sort by department alphabetically
+        if (a.department !== b.department) {
+          return a.department.localeCompare(b.department);
+        }
+        // Then sort by year (ascending)
+        if (a.year !== b.year) {
+          return a.year - b.year;
+        }
+        // Then sort by semester (ascending)
+        if (a.semester !== b.semester) {
+          return a.semester - b.semester;
+        }
+        // Finally sort by subject name alphabetically
+        return a.subjectName.localeCompare(b.subjectName);
+      });
+      setSubjects(sortedData);
     });
   }
 
@@ -76,6 +98,8 @@ export default function Subjects() {
             <TableHead>Subject Code</TableHead>
             <TableHead>Department</TableHead>
             <TableHead>College</TableHead>
+            <TableHead>Year</TableHead>
+            <TableHead>Semester</TableHead>
             <TableHead>Updated At</TableHead>
             <TableHead className="text-right">Actions</TableHead>
           </TableRow>
@@ -93,6 +117,8 @@ export default function Subjects() {
               <TableCell>
                 {subject.college}
               </TableCell>
+              <TableCell>{subject.year}</TableCell>
+              <TableCell>{subject.semester}</TableCell>
               <TableCell>{new Date(subject.updatedAt).toLocaleDateString()}</TableCell>
               <TableCell className="text-right">
                 <div>

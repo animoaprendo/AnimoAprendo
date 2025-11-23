@@ -84,6 +84,8 @@ const CreateSubject = ({
   const [formData, setFormData] = useState({
     subjectName: "",
     subjectCode: "",
+    yearLevel: 1,
+    semester: 1,
     college: initialColleges[0]?.abbreviation || "",
     department: initialColleges[0]?.departments?.[0]?.name || "",
   });
@@ -100,6 +102,8 @@ const CreateSubject = ({
       setFormData({
         subjectName: "",
         subjectCode: "",
+        yearLevel: 1,
+        semester: 1,
         college: colleges[0]?.abbreviation || "",
         department: colleges[0]?.departments?.[0]?.name || "",
       });
@@ -118,7 +122,7 @@ const CreateSubject = ({
 
     setIsOpen(false);
     createSubjectOption(formData).then((res) => {
-      console.log('Subject option created successfully:', res);
+      console.log("Subject option created successfully:", res);
       CreatePopup("Subject created successfully!", "success");
       updateSubjects();
     });
@@ -244,6 +248,7 @@ const CreateSubject = ({
                     }}
                     disabled={user?.publicMetadata.adminRole !== "superadmin"}
                   >
+                    <option value="General">General</option>
                     {departments.map((department, i) => (
                       <option key={i} value={department.name}>
                         {department.name}
@@ -258,6 +263,46 @@ const CreateSubject = ({
                   )}
                 </div>
               </Field>
+
+              
+              <div className="grid grid-cols-2 gap-4">
+                <Field>
+                  <Label className="text-sm/6 font-medium text-black">
+                    Year Level
+                  </Label>
+                  <Input
+                    className={clsx(
+                      "mt-3 block w-full rounded-lg border-none bg-black/5 px-3 py-1.5 text-sm/6 text-black",
+                      "focus:not-data-focus:outline-none data-focus:outline-2 data-focus:-outline-offset-2 data-focus:outline-white/25"
+                    )}
+                    type="number"
+                    value={formData.yearLevel}
+                    onChange={(e) =>
+                      setFormData({ ...formData, yearLevel: e.target.value.toString() === "" ? 0 : parseInt(e.target.value) })
+                    }
+                    placeholder="Enter year level"
+                    required
+                  />
+                </Field>
+                <Field>
+                  <Label className="text-sm/6 font-medium text-black">
+                    Semester
+                  </Label>
+                  <Input
+                    className={clsx(
+                      "mt-3 block w-full rounded-lg border-none bg-black/5 px-3 py-1.5 text-sm/6 text-black",
+                      "focus:not-data-focus:outline-none data-focus:outline-2 data-focus:-outline-offset-2 data-focus:outline-white/25"
+                    )}
+                    type="number"
+                    value={formData.semester}
+                    onChange={(e) =>
+                      setFormData({ ...formData, semester: e.target.value.toString() === "" ? 0 : parseInt(e.target.value) })
+                    }
+                    placeholder="Enter semester"
+                    required
+                  />
+                </Field>
+              </div>
             </Fieldset>
             <div className="flex gap-4 ml-auto mt-6 w-fit">
               <button
@@ -266,10 +311,7 @@ const CreateSubject = ({
               >
                 Cancel
               </button>
-              <button
-                type="submit"
-                className="btn btn-success rounded"
-              >
+              <button type="submit" className="btn btn-success rounded">
                 Create
               </button>
             </div>

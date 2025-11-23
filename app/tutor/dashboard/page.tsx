@@ -195,7 +195,7 @@ export default async function Dashboard() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
+              {/* <div className="flex items-center justify-between">
                 <span className="text-sm font-medium">Current Level</span>
                 <Badge variant="secondary">New Tutor</Badge>
               </div>
@@ -212,7 +212,11 @@ export default async function Dashboard() {
                   <TrendingUp className="w-4 h-4 mr-2" />
                   View Progress
                 </Link>
-              </Button>
+              </Button> */}
+              <div className="flex items-center justify-around">
+                <span className="text-sm font-medium">Feature coming soon</span>
+                {/* <Badge variant="secondary">New Tutor</Badge> */}
+              </div>
             </CardContent>
           </Card>
 
@@ -225,7 +229,7 @@ export default async function Dashboard() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <p className="text-sm text-muted-foreground">
+              {/* <p className="text-sm text-muted-foreground">
                 Manage your tutoring schedule and set your available hours for
                 students to book sessions.
               </p>
@@ -235,7 +239,11 @@ export default async function Dashboard() {
                   <CalendarDays className="w-4 h-4 mr-2" />
                   Manage Schedule
                 </Link>
-              </Button>
+              </Button> */}
+              <div className="flex items-center justify-around">
+                <span className="text-sm font-medium">Feature coming soon</span>
+                {/* <Badge variant="secondary">New Tutor</Badge> */}
+              </div>
             </CardContent>
           </Card>
         </div>

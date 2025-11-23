@@ -185,7 +185,7 @@ export default function TutorSubjects() {
                             </TooltipContent>
                           </Tooltip>
                         )}
-                        <Tooltip>
+                        {/* <Tooltip>
                           <TooltipTrigger asChild>
                             <Button size="sm" variant="secondary" asChild>
                               <Link href={"/tutor/subjects/view/" + data._id}>
@@ -196,7 +196,7 @@ export default function TutorSubjects() {
                           <TooltipContent>
                             <p>View</p>
                           </TooltipContent>
-                        </Tooltip>
+                        </Tooltip> */}
                         {activeTab !== "paused" && (
                           <Tooltip>
                             <TooltipTrigger asChild>

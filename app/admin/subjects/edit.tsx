@@ -87,11 +87,13 @@ const EditSubject = ({
   const [colleges, setColleges] = useState<College[]>(initialColleges);
   // Initialize form data first using initialColleges so we don't reference it before declaration
   const [formData, setFormData] = useState({
-     _id: data?._id,
+    _id: data?._id,
     subjectName: data?.subjectName,
     subjectCode: data?.subjectCode,
     college: data?.college,
     department: data?.department,
+    yearLevel: data?.year,
+    semester: data?.semester,
     createdAt: data?.createdAt,
   });
 
@@ -113,6 +115,8 @@ const EditSubject = ({
         subjectCode: data?.subjectCode,
         college: data?.college,
         department: data?.department,
+        yearLevel: data?.year,
+        semester: data?.semester,
         createdAt: data?.createdAt,
       });
     }
@@ -256,6 +260,7 @@ const EditSubject = ({
                     }}
                     disabled={user?.publicMetadata.adminRole !== "superadmin"}
                   >
+                    <option value="General">General</option>
                     {departments.map((department, i) => (
                       <option key={i} value={department.name}>
                         {department.name}
@@ -270,6 +275,57 @@ const EditSubject = ({
                   )}
                 </div>
               </Field>
+
+              <div className="grid grid-cols-2 gap-4">
+                <Field>
+                  <Label className="text-sm/6 font-medium text-black">
+                    Year Level
+                  </Label>
+                  <Input
+                    className={clsx(
+                      "mt-3 block w-full rounded-lg border-none bg-black/5 px-3 py-1.5 text-sm/6 text-black",
+                      "focus:not-data-focus:outline-none data-focus:outline-2 data-focus:-outline-offset-2 data-focus:outline-white/25"
+                    )}
+                    type="number"
+                    value={formData.yearLevel}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        yearLevel:
+                          e.target.value.toString() === ""
+                            ? 0
+                            : parseInt(e.target.value),
+                      })
+                    }
+                    placeholder="Enter year level"
+                    required
+                  />
+                </Field>
+                <Field>
+                  <Label className="text-sm/6 font-medium text-black">
+                    Semester
+                  </Label>
+                  <Input
+                    className={clsx(
+                      "mt-3 block w-full rounded-lg border-none bg-black/5 px-3 py-1.5 text-sm/6 text-black",
+                      "focus:not-data-focus:outline-none data-focus:outline-2 data-focus:-outline-offset-2 data-focus:outline-white/25"
+                    )}
+                    type="number"
+                    value={formData.semester}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        semester:
+                          e.target.value.toString() === ""
+                            ? 0
+                            : parseInt(e.target.value),
+                      })
+                    }
+                    placeholder="Enter semester"
+                    required
+                  />
+                </Field>
+              </div>
             </Fieldset>
             <div className="flex gap-4 ml-auto mt-6 w-fit">
               <button

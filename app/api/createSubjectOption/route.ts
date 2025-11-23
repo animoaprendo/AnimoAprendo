@@ -6,7 +6,7 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
 
-    const { subjectName, subjectCode, college, department } = body;
+    const { subjectName, subjectCode, college, department, yearLevel, semester } = body;
 
     const client = await clientPromise;
     const db = client.db("main");
@@ -17,6 +17,8 @@ export async function POST(request: NextRequest) {
       subjectCode,
       college,
       department,
+      semester,
+      year: yearLevel,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     });
