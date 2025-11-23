@@ -26,6 +26,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
+import { getMicrosoftAccessToken } from '@/lib/microsoft-oauth';
+
 
 export default async function Dashboard() {
   const user = await currentUser();
@@ -34,6 +36,8 @@ export default async function Dashboard() {
 
   // Fetch real appointments from database
   const appointmentsResult = await fetchAppointments(user.id);
+  const tokens = await getMicrosoftAccessToken(user.id);
+  console.log(tokens)
 
   let upcomingAppointments: any[] = [];
   let stats = {
