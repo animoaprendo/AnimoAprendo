@@ -46,27 +46,27 @@ export default function ClientCalendar({ events, stats }: ClientCalendarProps) {
   }
 
   const eventStyleGetter = (event: CalendarEvent) => {
-    let backgroundColor = "hsl(var(--primary))"; // default primary
-    let borderColor = "hsl(var(--primary))"; 
+    let backgroundColor = "#3b82f6"; // default primary (blue-500)
+    let borderColor = "#3b82f6"; 
     
-    // Color code by status with CSS variables
+    // Color code by status with hex colors
     if (event.status === 'completed') {
-      backgroundColor = "hsl(142 76% 36%)"; // green-600
-      borderColor = "hsl(142 76% 36%)";
+      backgroundColor = "#16a34a"; // green-600
+      borderColor = "#16a34a";
     } else if (event.status === 'pending') {
-      backgroundColor = "hsl(32 95% 44%)"; // amber-600
-      borderColor = "hsl(32 95% 44%)";
+      backgroundColor = "#d97706"; // amber-600
+      borderColor = "#d97706";
     } else if (event.status === 'cancelled') {
-      backgroundColor = "hsl(var(--destructive))"; // destructive
-      borderColor = "hsl(var(--destructive))";
+      backgroundColor = "#dc2626"; // red-600
+      borderColor = "#dc2626";
     } else if (event.status === 'declined') {
-      backgroundColor = "hsl(var(--muted-foreground))"; // muted
-      borderColor = "hsl(var(--muted-foreground))";
+      backgroundColor = "#6b7280"; // gray-500
+      borderColor = "#6b7280";
     }
 
     const style: React.CSSProperties = {
       backgroundColor,
-      color: "white",
+      color: "black",
       borderRadius: "6px",
       padding: "4px 8px",
       border: `1px solid ${borderColor}`,
@@ -74,6 +74,7 @@ export default function ClientCalendar({ events, stats }: ClientCalendarProps) {
       fontSize: "12px",
       fontWeight: "500",
       boxShadow: "0 1px 2px 0 rgb(0 0 0 / 0.05)",
+      
     };
     return { style };
   };

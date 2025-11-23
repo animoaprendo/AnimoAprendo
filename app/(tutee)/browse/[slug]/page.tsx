@@ -457,10 +457,10 @@ export default function OfferDetailsPage({
                   {offer.status}
                 </Badge>
               </div>
-              <div className="flex justify-between items-center">
+              {/* <div className="flex justify-between items-center">
                 <span className="text-gray-600">Available Slots:</span>
                 <Badge variant="outline">{offer.availability.length}</Badge>
-              </div>
+              </div> */}
               {reviews.length > 0 && (
                 <div className="flex justify-between items-center">
                   <span className="text-gray-600">Rating:</span>

@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
 
         // Calculate average rating for this tutor from tutee reviews
         const tutorReviews = await reviewsCollection.find({
-          tutorId: offering.userId,
+          offerId: offering._id.toString(),
           reviewerType: 'tutee' // Only tutee ratings of tutors
         }).toArray();
 

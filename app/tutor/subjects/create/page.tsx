@@ -113,7 +113,7 @@ export default function OfferAndQuizPage() {
     <div className="container mx-auto py-6 px-4 lg:max-w-[100rem]">
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         <div className="lg:col-span-1">
-          <Card className="sticky top-6 shadow-lg border-0 bg-gradient-to-br from-background to-muted/20">
+          <Card className="sticky top-20 shadow-lg border-0 bg-gradient-to-br from-background to-muted/20">
             <AnimatePresence>
               {submitState !== "default" && (
                 <motion.div
