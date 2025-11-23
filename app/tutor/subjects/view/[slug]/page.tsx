@@ -23,10 +23,8 @@ export default function TutorViewSubject({
     async function fetchData() {
       const result = await getOffer(userId, slug);
       setData(result.data || []);
-      console.log(result.data);
     }
     if (userId) fetchData();
-    console.log(data);
   }, [userId]);
 
   // Use the first subject only

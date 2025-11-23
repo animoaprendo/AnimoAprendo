@@ -7,11 +7,12 @@ export async function PATCH(req: Request) {
   try {
     const client = await clientPromise;
     const db = client.db("main");
-    const { _id, ...rest } = sendData;
+    const { _id, yearLevel: year, ...rest } = sendData;
 
     // Add updated timestamp to the update data
     const updateDataWithTimestamp = {
       ...rest,
+      year,
       updatedAt: new Date().toISOString(),
     };
 
