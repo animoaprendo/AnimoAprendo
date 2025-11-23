@@ -84,7 +84,7 @@ export default async function Layout({
                   </div>
                   <div className="hidden flex-none lg:block h-10">
                     {/* <div>{pathname}</div> */}
-                    <NavLinksTutee />
+                    {/* <NavLinksTutee /> */}
                   </div>
                 </div>
               </div>

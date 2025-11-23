@@ -3,7 +3,7 @@ import React from "react";
 
 const TuteeProfile = () => {
   return (
-    <div className="h-full w-full flex flex-col items-center justify-center">
+    <div className="h-full w-full flex flex-col items-center justify-center my-4">
       <Profile />
     </div>
   );

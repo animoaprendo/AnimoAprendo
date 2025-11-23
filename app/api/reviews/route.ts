@@ -70,6 +70,7 @@ export async function POST(request: NextRequest) {
       comment: comment || '',
       reviewerId,
       reviewerType: isTutorReview ? 'tutor' : 'tutee',
+      offerId: appointment.offeringId,
       tutorId: appointment.tutorId,
       tuteeId: appointment.tuteeId,
       createdAt: new Date().toISOString(),

@@ -25,7 +25,7 @@ export default function TutorSubjects() {
   const userId = user?.id;
 
   const [activeTab, setActiveTab] = useState<
-    "available" | "draft" | "paused"
+    "available" | "draft" | "paused" | "pending"
   >("available");
   const [Data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -46,6 +46,7 @@ export default function TutorSubjects() {
   async function fetchData() {
     setLoading(true);
     const result = await getOffers(userId);
+    console.log("Fetched subjects:", result.data);
     setData(result.data || []);
     setLoading(false);
   }
@@ -111,7 +112,7 @@ export default function TutorSubjects() {
 
       {/* Tabs */}
       <div className="flex flex-row gap-2 border-b font-semibold justify-between md:justify-start">
-        {["available", "paused", "draft"].map((tab) => (
+        {["available", "paused", "draft", "pending"].map((tab) => (
           <Button
             key={tab}
             variant={activeTab === tab ? "default" : "ghost"}

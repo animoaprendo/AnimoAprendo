@@ -15,6 +15,7 @@ const isOnlyTutorRoute = createRouteMatcher(["/tutor"]);
 const isAdminRootRoute = createRouteMatcher(["/admin"]);
 const isAdminRoute = createRouteMatcher(["/admin/(.*)"]);
 const isSuperAdminRoute = createRouteMatcher(["/superadmin(.*)"]);
+const isIdentityRoute = createRouteMatcher(["/.well-known(.*)"]);
 
 export default clerkMiddleware(async (auth, req) => {
   const { sessionClaims, userId } = await auth();
@@ -27,6 +28,10 @@ export default clerkMiddleware(async (auth, req) => {
         accountType: string;
       }
     | undefined;
+
+  if (isIdentityRoute(req)) {
+    return NextResponse.next();
+  }
 
   // Helper function to check if user is admin
   const isAdmin = (metadata: any) => metadata?.isAdmin === true;
@@ -133,7 +138,7 @@ export default clerkMiddleware(async (auth, req) => {
   // }
 
   if (isOnlyTutorRoute(req) && userId) {
-    if(metadata?.role === "tutor") {
+    if (metadata?.role === "tutor") {
       return NextResponse.redirect(new URL("/tutor/dashboard", req.url));
     } else {
       return NextResponse.redirect(new URL("/", req.url));

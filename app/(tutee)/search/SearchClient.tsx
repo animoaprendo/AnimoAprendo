@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { useUser } from "@clerk/nextjs";
 
 interface Availability {
   id: string;
@@ -46,6 +47,7 @@ interface SearchClientProps {
 }
 
 export default function SearchClient({ initialOfferings }: SearchClientProps) {
+  const { user } = useUser();
   const [search, setSearch] = useQueryState("query", { defaultValue: "" });
   const [sortBy, setSortBy] = useQueryState("sortBy", { defaultValue: "" });
   const [day, setDay] = useQueryState("day", { defaultValue: "" });
@@ -66,7 +68,19 @@ export default function SearchClient({ initialOfferings }: SearchClientProps) {
         });
 
         if (response.success && response.data) {
-          setResults(response.data);
+          const userDept = (user?.publicMetadata as any)?.collegeInformation
+            ?.department as string | undefined;
+
+          // Filter subjects by department
+          const filteredSubjects = response.data.filter(
+            (s: any) => s.department === userDept || s.department === "General"
+          );
+
+          if(user) {
+            setResults(filteredSubjects);
+          } else {
+            setResults(response.data);
+          }
         } else {
           console.error("Error fetching filtered results:", response.error);
           // Fallback to initial offerings if search fails
@@ -83,7 +97,7 @@ export default function SearchClient({ initialOfferings }: SearchClientProps) {
     // Debounce search to avoid too many API calls
     const timeoutId = setTimeout(fetchFilteredResults, 300);
     return () => clearTimeout(timeoutId);
-  }, [search, sortBy, day, rating, initialOfferings]);
+  }, [search, sortBy, day, rating, initialOfferings, user]);
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();

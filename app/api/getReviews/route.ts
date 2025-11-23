@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
     // Find tutee reviews for this tutor (ratings of the tutor by their students)
     const reviews = await reviewsCollection
       .find({ 
-        tutorId: offering.userId,
+        offerId: offeringId,
         reviewerType: 'tutee' // Only tutee reviews of tutors
       })
       .sort({ createdAt: -1 }) // Most recent first

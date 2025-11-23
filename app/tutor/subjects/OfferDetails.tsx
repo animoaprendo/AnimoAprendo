@@ -3,7 +3,17 @@
 import { useState, useRef, useEffect, forwardRef } from "react";
 import dynamic from "next/dynamic";
 import Image from "next/image";
-import { Trash2, Upload, Eye, Edit, Plus, Clock, Calendar, CheckCircle2, XCircle } from "lucide-react";
+import {
+  Trash2,
+  Upload,
+  Eye,
+  Edit,
+  Plus,
+  Clock,
+  Calendar,
+  CheckCircle2,
+  XCircle,
+} from "lucide-react";
 import ReactQuill from "react-quill-new";
 // @ts-ignore
 import "react-quill-new/dist/quill.snow.css";
@@ -14,11 +24,24 @@ import { ClipLoader, MoonLoader, RiseLoader } from "react-spinners";
 import { CircleCheckBig } from "@/components/animate-ui/icons/circle-check-big";
 import { CircleX } from "@/components/animate-ui/icons/circle-x";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import { getCollectionData } from "@/app/actions";
 
 const QuillEditor = dynamic(
   async () => {
@@ -44,13 +67,6 @@ type Props = {
   setBanner: (val: string) => void;
 };
 
-const SUBJECTS = [
-  "Mathematics",
-  "Science",
-  "English",
-  "History",
-  "Computer Science",
-];
 const DAYS = [
   "Monday",
   "Tuesday",
@@ -83,6 +99,8 @@ export default function OfferDetails({
 }: Props) {
   const { user } = useUser();
   const [isPreview, setIsPreview] = useState(false);
+  const [SUBJECTS, setSUBJECTS] = useState<any[]>([]);
+
   const [submitState, setSubmitState] = useState<
     "default" | "saving" | "success" | "failed"
   >("default");
@@ -94,6 +112,20 @@ export default function OfferDetails({
       setDescriptionLength(editor.getLength() - 1);
     }
   }, [description]);
+
+  useEffect(() => {
+    getCollectionData("subjectOptions").then((data) => {
+      if (data.success && Array.isArray(data.data)) {
+        const allSubjects = data.data.map((item: any) => item);
+        
+        const userDept = (user?.publicMetadata as any)?.collegeInformation?.department as string | undefined;
+
+        // Filter subjects by department
+        const filteredSubjects = allSubjects.filter((s: any) => s.department === userDept || s.department === "General");        
+        setSUBJECTS(filteredSubjects);
+      }
+    });
+  }, [user]);
 
   const handleAddSlot = () =>
     setAvailability([
@@ -131,7 +163,9 @@ export default function OfferDetails({
       <div className="flex justify-between items-center flex-wrap gap-4">
         <div>
           <h2 className="text-2xl font-bold tracking-tight">Subject Details</h2>
-          <p className="text-muted-foreground">Configure your tutoring offer settings and availability</p>
+          <p className="text-muted-foreground">
+            Configure your tutoring offer settings and availability
+          </p>
         </div>
         <Button
           variant={isPreview ? "outline" : "secondary"}
@@ -158,7 +192,8 @@ export default function OfferDetails({
             <CardHeader>
               <CardTitle className="text-lg">Basic Information</CardTitle>
               <CardDescription>
-                Choose your subject and upload a banner image to attract students
+                Choose your subject and upload a banner image to attract
+                students
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -170,7 +205,9 @@ export default function OfferDetails({
                   </SelectTrigger>
                   <SelectContent>
                     {SUBJECTS.map((s) => (
-                      <SelectItem key={s} value={s}>{s}</SelectItem>
+                      <SelectItem key={s._id} value={s.subjectCode}>
+                        {s.subjectCode} - {s.subjectName}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -191,12 +228,16 @@ export default function OfferDetails({
                   <Label htmlFor="banner" className="cursor-pointer">
                     <div className="flex flex-col items-center gap-2 mx-auto">
                       <Upload className="w-8 h-8 text-muted-foreground" />
-                      <span className="text-sm font-medium">Click to upload banner image</span>
-                      <span className="text-xs text-muted-foreground">PNG, JPG, GIF up to 10MB</span>
+                      <span className="text-sm font-medium">
+                        Click to upload banner image
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        PNG, JPG, GIF up to 10MB
+                      </span>
                     </div>
                   </Label>
                 </div>
-                
+
                 {submitState !== "default" && (
                   <div className="mt-3">
                     {submitState === "saving" && (
@@ -219,7 +260,7 @@ export default function OfferDetails({
                     )}
                   </div>
                 )}
-                
+
                 {banner && (
                   <div className="mt-3">
                     <img
@@ -237,11 +278,11 @@ export default function OfferDetails({
             <CardHeader>
               <CardTitle className="text-lg">Description</CardTitle>
               <CardDescription>
-                Provide a detailed description of your tutoring approach and what students can expect
+                Provide a detailed description of your tutoring approach and
+                what students can expect
               </CardDescription>
             </CardHeader>
             <CardContent>
-
               <div className="min-h-[200px]">
                 <QuillEditor
                   ref={quillRef}
@@ -269,7 +310,9 @@ export default function OfferDetails({
                 <div className="text-center py-8 text-muted-foreground">
                   <Clock className="w-12 h-12 mx-auto mb-4 opacity-50" />
                   <p>No availability slots added yet</p>
-                  <p className="text-sm">Add your first availability slot to get started</p>
+                  <p className="text-sm">
+                    Add your first availability slot to get started
+                  </p>
                 </div>
               ) : (
                 <div className="space-y-3">
@@ -278,57 +321,75 @@ export default function OfferDetails({
                       <div className="flex flex-col lg:flex-row gap-3 items-start lg:items-center">
                         <div className="flex-1 grid grid-cols-1 sm:grid-cols-3 gap-3 w-full">
                           <div className="space-y-1">
-                            <Label className="text-xs text-muted-foreground">Day</Label>
+                            <Label className="text-xs text-muted-foreground">
+                              Day
+                            </Label>
                             <Select
                               value={slot.day}
-                              onValueChange={(value) => handleUpdateSlot(slot.id, "day", value)}
+                              onValueChange={(value) =>
+                                handleUpdateSlot(slot.id, "day", value)
+                              }
                             >
                               <SelectTrigger>
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
                                 {DAYS.map((day) => (
-                                  <SelectItem key={day} value={day}>{day}</SelectItem>
+                                  <SelectItem key={day} value={day}>
+                                    {day}
+                                  </SelectItem>
                                 ))}
                               </SelectContent>
                             </Select>
                           </div>
-                          
+
                           <div className="space-y-1">
-                            <Label className="text-xs text-muted-foreground">Start Time</Label>
+                            <Label className="text-xs text-muted-foreground">
+                              Start Time
+                            </Label>
                             <Select
                               value={slot.start}
-                              onValueChange={(value) => handleUpdateSlot(slot.id, "start", value)}
+                              onValueChange={(value) =>
+                                handleUpdateSlot(slot.id, "start", value)
+                              }
                             >
                               <SelectTrigger>
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
                                 {TIME_OPTIONS.map((t) => (
-                                  <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                                  <SelectItem key={t.value} value={t.value}>
+                                    {t.label}
+                                  </SelectItem>
                                 ))}
                               </SelectContent>
                             </Select>
                           </div>
-                          
+
                           <div className="space-y-1">
-                            <Label className="text-xs text-muted-foreground">End Time</Label>
+                            <Label className="text-xs text-muted-foreground">
+                              End Time
+                            </Label>
                             <Select
                               value={slot.end}
-                              onValueChange={(value) => handleUpdateSlot(slot.id, "end", value)}
+                              onValueChange={(value) =>
+                                handleUpdateSlot(slot.id, "end", value)
+                              }
                             >
                               <SelectTrigger>
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
                                 {TIME_OPTIONS.map((t) => (
-                                  <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                                  <SelectItem key={t.value} value={t.value}>
+                                    {t.label}
+                                  </SelectItem>
                                 ))}
                               </SelectContent>
                             </Select>
                           </div>
                         </div>
-                        
+
                         <Button
                           variant="outline"
                           size="sm"
@@ -342,7 +403,7 @@ export default function OfferDetails({
                   ))}
                 </div>
               )}
-              
+
               <Button
                 onClick={handleAddSlot}
                 variant="outline"
@@ -372,7 +433,7 @@ export default function OfferDetails({
               </h1>
             </div>
           </div>
-          
+
           <CardContent className="p-6 space-y-6">
             <div>
               <h3 className="text-lg font-semibold mb-3">Description</h3>
@@ -382,12 +443,14 @@ export default function OfferDetails({
                   dangerouslySetInnerHTML={{ __html: description }}
                 />
               ) : (
-                <p className="text-muted-foreground italic">No description provided</p>
+                <p className="text-muted-foreground italic">
+                  No description provided
+                </p>
               )}
             </div>
-            
+
             <Separator />
-            
+
             <div>
               <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
                 <Calendar className="w-5 h-5" />
@@ -411,7 +474,9 @@ export default function OfferDetails({
                   ))}
                 </div>
               ) : (
-                <p className="text-muted-foreground italic">No availability slots added</p>
+                <p className="text-muted-foreground italic">
+                  No availability slots added
+                </p>
               )}
             </div>
           </CardContent>
