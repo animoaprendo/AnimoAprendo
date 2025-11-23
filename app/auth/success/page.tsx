@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { CheckCircle, Copy } from "lucide-react";
+import { CheckCircle, Copy, Loader2 } from "lucide-react";
 
-export default function AuthSuccessPage() {
+function AuthSuccessContent() {
   const searchParams = useSearchParams();
   const [accessToken, setAccessToken] = useState<string>("");
   const [expiresAt, setExpiresAt] = useState<string>("");
@@ -107,5 +107,33 @@ export default function AuthSuccessPage() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+function LoadingFallback() {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-green-50 p-4">
+      <Card className="w-full max-w-2xl">
+        <CardHeader>
+          <CardTitle className="text-center text-green-900 flex items-center justify-center gap-2">
+            <Loader2 className="w-6 h-6 text-green-600 animate-spin" />
+            Loading Authentication Result...
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="text-center">
+          <p className="text-sm text-gray-600">
+            Processing your Microsoft authentication...
+          </p>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+export default function AuthSuccessPage() {
+  return (
+    <Suspense fallback={<LoadingFallback />}>
+      <AuthSuccessContent />
+    </Suspense>
   );
 }
