@@ -278,7 +278,9 @@ export async function PATCH(request: NextRequest) {
             tutorId: updated.creatorId, // The one who created the appointment
             tuteeId: actorId, // The one who accepted/declined
             status: status, // 'accepted' or 'declined'
+            appointmentType: updated.appointment.appointmentType || 'single',
             datetimeISO: updated.appointment.datetimeISO,
+            endDate: updated.appointment.endDate,
             mode: updated.appointment.mode,
             subject: subject, // Save subject information from inquiry
             offeringId: offeringId, // Save offering ID if available

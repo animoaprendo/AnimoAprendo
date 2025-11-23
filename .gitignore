@@ -9,6 +9,12 @@
 !.yarn/plugins
 !.yarn/releases
 !.yarn/versions
+/docs
+
+/lib/microsoft*
+/app/auth
+/app/api/microsoft
+/app/api/auth
 
 # testing
 /coverage
