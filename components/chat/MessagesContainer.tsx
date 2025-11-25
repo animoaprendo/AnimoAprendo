@@ -176,7 +176,7 @@ function MessagesHeader({
       </div>
       <div className="flex items-center gap-2">
         {/* Tutor-only appointment button */}
-        {userRole === "tutor" && activeUser && (
+        {activeUser && (
           <button
             onClick={onOpenAppointmentModal}
             title="Schedule appointment"

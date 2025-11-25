@@ -9,9 +9,15 @@ export async function POST(req: Request) {
     const client = await clientPromise;
     const db = client.db("main");
     
+    const userData = await db
+      .collection("users")
+      .findOne({ id: sendData.userId });
+
     // Add timestamps to the subject data
     const subjectWithTimestamps = {
       ...sendData,
+      college: userData?.public_metadata.collegeInformation.college || null,
+      department: userData?.public_metadata.collegeInformation.department || null,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };

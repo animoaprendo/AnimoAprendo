@@ -71,3 +71,84 @@ export async function deleteSubjectOption(data: any) {
     throw error;
   }
 }
+
+export async function approveOffer(offerId: string) {
+  try {
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_BASE_URL}/api/updateData`,
+      {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          collection: "subjects",
+          id: offerId,
+          data: { status: "available" }
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error("Failed to approve offer");
+    }
+
+    return response.json();
+  } catch (error) {
+    console.error("Error approving offer:", error);
+    throw error;
+  }
+}
+
+export async function rejectOffer(offerId: string) {
+  try {
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_BASE_URL}/api/updateData`,
+      {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          collection: "subjects",
+          id: offerId,
+          data: { status: "rejected" }
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error("Failed to reject offer");
+    }
+
+    return response.json();
+  } catch (error) {
+    console.error("Error rejecting offer:", error);
+    throw error;
+  }
+}
+
+export async function getPendingOffers() {
+  try {
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_BASE_URL}/api/getData?collection=subjects`,
+      {
+        method: "GET",
+        cache: "no-store",
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error("Failed to fetch offers");
+    }
+
+    const result = await response.json();
+    return {
+      success: true,
+      data: result.data?.filter((offer: any) => offer.status === "pending") || []
+    };
+  } catch (error) {
+    console.error("Error fetching pending offers:", error);
+    return { success: false, data: [], error: error instanceof Error ? error.message : "Unknown error" };
+  }
+}

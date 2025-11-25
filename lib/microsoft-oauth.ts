@@ -28,10 +28,6 @@ export async function getMicrosoftAccessToken(userId?: string): Promise<Microsof
       const errorData = await response.json();
       console.error('Microsoft OAuth error details:', errorData);
       
-      if (errorData.debug) {
-        console.log('Debug info:', errorData.debug);
-      }
-      
       throw new Error(errorData.error || `Failed to get token: ${response.status}`);
     }
 

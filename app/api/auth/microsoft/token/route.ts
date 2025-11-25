@@ -23,10 +23,6 @@ export async function POST(req: NextRequest) {
     try {
       // First, let's check what OAuth connections the user has
       const user = await client.users.getUser(targetUserId);
-      console.log('User external accounts:', user.externalAccounts?.map(acc => ({
-        provider: acc.provider,
-        verified: acc.verification?.status
-      })));
 
       // Try the standard Microsoft OAuth provider
       let oauthTokens = null;
@@ -34,11 +30,8 @@ export async function POST(req: NextRequest) {
       let tokenError = null;
 
       try {
-        console.log(`Trying provider: microsoft for user: ${targetUserId}`);
-        
         // First check if user has external accounts
         const microsoftAccounts = user.externalAccounts?.filter(acc => acc.provider === 'oauth_microsoft');
-        console.log('Microsoft accounts found:', microsoftAccounts?.length || 0);
         
         if (!microsoftAccounts || microsoftAccounts.length === 0) {
           throw new Error('No Microsoft external accounts found');
@@ -46,7 +39,6 @@ export async function POST(req: NextRequest) {
 
         // Check if accounts are verified
         const verifiedAccounts = microsoftAccounts.filter(acc => acc.verification?.status === 'verified');
-        console.log('Verified Microsoft accounts:', verifiedAccounts.length);
         
         if (verifiedAccounts.length === 0) {
           throw new Error('Microsoft accounts are not verified');
@@ -54,20 +46,6 @@ export async function POST(req: NextRequest) {
 
         // Try to get the OAuth access token (using new API without oauth_ prefix)
         oauthTokens = await client.users.getUserOauthAccessToken(targetUserId, 'microsoft');
-        console.log('OAuth tokens response:', {
-          hasData: !!oauthTokens?.data,
-          dataLength: oauthTokens?.data?.length || 0,
-          totalCount: oauthTokens?.totalCount
-        });
-        
-        // Log token details (without exposing the actual token)
-        if (oauthTokens?.data && oauthTokens.data.length > 0) {
-          console.log('Token details:', {
-            provider: oauthTokens.data[0].provider,
-            hasToken: !!oauthTokens.data[0].token,
-            tokenLength: oauthTokens.data[0].token?.length || 0
-          });
-        }
         
       } catch (providerError: any) {
         tokenError = providerError;
@@ -131,7 +109,6 @@ export async function POST(req: NextRequest) {
       }
 
       const tokenData = oauthTokens.data[0];
-      console.log('Retrieved token data:', { provider: usedProvider, hasToken: !!tokenData.token });
 
       return NextResponse.json({
         success: true,

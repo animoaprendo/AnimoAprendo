@@ -5,6 +5,7 @@ import {
   AudioWaveform,
   BookOpen,
   Bot,
+  CheckSquare2,
   Command,
   Frame,
   GalleryVerticalEnd,
@@ -53,6 +54,11 @@ const data = {
       title: "Subjects",
       url: "/admin/subjects",
       icon: BookOpen,
+    },
+    {
+      title: "Approvals",
+      url: "/admin/approval",
+      icon: CheckSquare2,
     },
     {
       title: "Users",
@@ -105,6 +111,11 @@ export default function AppSidebar({ userData, ...props }: AppSidebarProps) {
         title: "Subjects",
         url: "/admin/subjects",
         icon: BookOpen,
+      },
+      {
+        title: "Approvals",
+        url: "/admin/approval",
+        icon: CheckSquare2,
       },
       {
         title: "Users",

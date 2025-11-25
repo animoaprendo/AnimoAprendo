@@ -32,7 +32,7 @@ export default function CompletionChecklist({
   const progress = (completedItems / items.length) * 100;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 z-5">
       <div>
         <div className="flex items-center justify-between mb-2">
           <h3 className="font-semibold text-lg">Progress</h3>

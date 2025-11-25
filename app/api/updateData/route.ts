@@ -15,7 +15,7 @@ export async function PUT(request: NextRequest) {
     }
 
     const client = await clientPromise;
-    const db = client.db("animo-aprendo");
+    const db = client.db("main");
     const collectionRef = db.collection(collection);
 
     // Add updated timestamp
