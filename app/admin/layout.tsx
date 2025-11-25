@@ -20,6 +20,7 @@ import {
 import { useState, useEffect } from "react";
 import { useUser } from "@clerk/nextjs";
 import AlertFragment from "../tutor/alert";
+import { Toaster } from "sonner";
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const { isLoaded, isSignedIn, user } = useUser();
@@ -103,6 +104,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           {children}
         </div>
       </SidebarInset>
+      <Toaster position="bottom-right" />
     </SidebarProvider>
   );
 }

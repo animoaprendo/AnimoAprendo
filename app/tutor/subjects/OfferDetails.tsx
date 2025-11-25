@@ -205,7 +205,7 @@ export default function OfferDetails({
                   </SelectTrigger>
                   <SelectContent>
                     {SUBJECTS.map((s) => (
-                      <SelectItem key={s._id} value={s.subjectCode}>
+                      <SelectItem key={s._id} value={`${s.subjectCode} - ${s.subjectName}`}>
                         {s.subjectCode} - {s.subjectName}
                       </SelectItem>
                     ))}

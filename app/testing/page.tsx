@@ -4,6 +4,8 @@ import { Badge } from '@/components/ui/badge';
 import { CheckCircle, AlertTriangle, Settings, ExternalLink } from 'lucide-react';
 
 export default function TestingIndexPage() {
+
+  
   return (
     <div className="container mx-auto p-6 max-w-4xl">
       <div className="mb-8">

@@ -27,12 +27,12 @@ const Footer = () => {
             <h6 className="text-lg font-semibold mb-3">Quick Links</h6>
             <ul className="flex flex-col gap-2">
               <li>
-                <a href="#" className="hover:underline">
+                <a href="https://portal.dlsud.edu.ph/mydlsud" target="_blank" rel="noopener noreferrer" className="hover:underline">
                   DLSU-D Portal
                 </a>
               </li>
               <li>
-                <a href="#" className="hover:underline">
+                <a href="https://dlsud.edu20.org" target="_blank" rel="noopener noreferrer" className="hover:underline">
                   Schoolbook
                 </a>
               </li>
@@ -40,7 +40,7 @@ const Footer = () => {
           </nav>
 
           {/* Legal */}
-          <nav>
+          {/* <nav>
             <h6 className="text-lg font-semibold mb-3">Legal</h6>
             <ul className="flex flex-col gap-2">
               <li>
@@ -59,7 +59,7 @@ const Footer = () => {
                 </a>
               </li>
             </ul>
-          </nav>
+          </nav> */}
         </div>
       </div>
 

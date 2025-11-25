@@ -122,7 +122,8 @@ export default function Landing() {
       ]);
 
       const users = usersResponse.data || [];
-      const offerings = subjectsResponse.data || []; // subjects collection = offerings
+      const allOfferings = subjectsResponse.data || []; // subjects collection = offerings
+      const offerings = allOfferings.filter((offering: any) => offering.status === "available"); // Filter for available offerings only
       const subjects = subjectOptionsResponse.data || []; // subjectOptions collection = subjects
       const reviews = reviewsResponse.data || [];
 
@@ -172,8 +173,8 @@ export default function Landing() {
             backgroundImage: "url(/images/DLSUD-rotonda.jpg)",
           }}
         >
-          <div className="hero-overlay bg-gradient-to-b from-green-900/40 to-black/70 "></div>
-          <div className="hero-content !items-start !justify-start text-white/95 w-full">
+          <div className="hero-overlay bg-linear-to-b from-green-900/40 to-black/70 "></div>
+          <div className="hero-content items-start! justify-start! text-white/95 w-full">
             <div className="w-full">
               <TextType
                 text={["Having trouble with a subject?", "We got you covered!"]}
@@ -347,7 +348,7 @@ export default function Landing() {
       </section>
 
       {/* Final Call to Action */}
-      <section className="bg-gradient-to-r from-green-800 to-green-900 text-white py-20 w-full">
+      <section className="bg-linear-to-r from-green-800 to-green-900 text-white py-20 w-full">
         <div className="container mx-auto px-4 text-center">
           <div className="max-w-3xl mx-auto">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">
