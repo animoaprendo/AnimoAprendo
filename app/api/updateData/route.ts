@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
 import clientPromise from "@/lib/mongodb";
+import { updateSessionStats } from "@/app/gamification-actions";
 
 export async function PUT(request: NextRequest) {
   try {
@@ -45,6 +46,25 @@ export async function PUT(request: NextRequest) {
         { success: false, error: "Document not found" },
         { status: 404 }
       );
+    }
+
+    // Trigger gamification updates for appointment completions
+    if (collection === 'appointments' && data.status === 'completed') {
+      try {
+        // Get the appointment to find the tutor ID
+        const appointment = await collectionRef.findOne({ _id: mongoId });
+        if (appointment && appointment.tutorId) {
+          await updateSessionStats({
+            completed: true,
+            appointmentId: id,
+            subjectId: appointment.subject,
+            durationMinutes: appointment.duration || 60
+          }, appointment.tutorId);
+        }
+      } catch (error) {
+        console.error("Error updating gamification for appointment completion:", error);
+        // Don't fail the main update if gamification fails
+      }
     }
 
     return NextResponse.json({

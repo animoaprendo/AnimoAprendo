@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ObjectId } from 'mongodb';
 import clientPromise from '@/lib/mongodb';
+import { updateSessionStats } from '@/app/gamification-actions';
 
 export async function POST(request: NextRequest) {
   try {
@@ -96,6 +97,20 @@ export async function POST(request: NextRequest) {
       { _id: new ObjectId(appointmentId) },
       { $set: updateFields }
     );
+
+    // Update gamification for tutor when they receive a rating
+    if (isTuteeReview) { // Tutee reviewing tutor
+      try {
+        await updateSessionStats({
+          rating: Number(rating),
+          appointmentId: appointmentId,
+          subjectId: appointment.subject
+        }, appointment.tutorId);
+      } catch (error) {
+        console.error("Error updating gamification for review:", error);
+        // Don't fail the review creation if gamification fails
+      }
+    }
 
     return NextResponse.json({ 
       success: true, 
