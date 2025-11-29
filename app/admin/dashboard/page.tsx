@@ -42,8 +42,6 @@ type DashboardData = {
 
 type DashboardStats = {
   totalUsers: number;
-  totalTutors: number;
-  totalTutees: number;
   totalSubjects: number;
   totalColleges: number;
   totalDepartments: number;
@@ -81,8 +79,6 @@ export default function AdminDashboard() {
   });
   const [stats, setStats] = useState<DashboardStats>({
     totalUsers: 0,
-    totalTutors: 0,
-    totalTutees: 0,
     totalSubjects: 0,
     totalColleges: 0,
     totalDepartments: 0,
@@ -135,8 +131,6 @@ export default function AdminDashboard() {
 
         setStats({
           totalUsers: dashboardData.users.length,
-          totalTutors: tutors.length,
-          totalTutees: tutees.length,
           totalSubjects: dashboardData.subjects.length,
           totalColleges: dashboardData.colleges.length,
           totalDepartments,
@@ -214,7 +208,7 @@ export default function AdminDashboard() {
       </div>
 
       {/* Stats Overview */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Users</CardTitle>
@@ -269,36 +263,6 @@ export default function AdminDashboard() {
             </div>
           </CardContent>
         </Card>
-      </div>
-
-      {/* User Breakdown */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Tutors</CardTitle>
-            <ArrowUpRight className="h-4 w-4 text-green-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">{stats.totalTutors.toLocaleString()}</div>
-            <p className="text-xs text-muted-foreground">
-              {stats.totalUsers > 0 ? Math.round((stats.totalTutors / stats.totalUsers) * 100) : 0}% of all users
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Tutees</CardTitle>
-            <ArrowUpRight className="h-4 w-4 text-blue-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-blue-600">{stats.totalTutees.toLocaleString()}</div>
-            <p className="text-xs text-muted-foreground">
-              {stats.totalUsers > 0 ? Math.round((stats.totalTutees / stats.totalUsers) * 100) : 0}% of all users
-            </p>
-          </CardContent>
-        </Card>
-
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Completed Sessions</CardTitle>
@@ -326,8 +290,13 @@ export default function AdminDashboard() {
         </Card>
       </div>
 
+      {/* User Breakdown */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        
+      </div>
+
       {/* Charts */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
+      {/* <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
         <Card className="col-span-4">
           <CardHeader>
             <CardTitle>Weekly User Activity</CardTitle>
@@ -432,7 +401,7 @@ export default function AdminDashboard() {
             </ChartContainer>
           </CardContent>
         </Card>
-      </div>
+      </div> */}
 
       {/* Recent Activity Summary */}
       <div className="grid gap-4 md:grid-cols-2">
@@ -477,12 +446,12 @@ export default function AdminDashboard() {
               <span className="text-sm font-medium">Departments</span>
               <span className="text-sm font-bold">{stats.totalDepartments}</span>
             </div>
-            <div className="flex items-center justify-between">
+            {/* <div className="flex items-center justify-between">
               <span className="text-sm font-medium">Tutor-to-Tutee Ratio</span>
               <span className="text-sm font-bold">
                 1:{stats.totalTutors > 0 ? Math.round(stats.totalTutees / stats.totalTutors) : 0}
               </span>
-            </div>
+            </div> */}
             <div className="flex items-center justify-between">
               <span className="text-sm font-medium">Avg. Sessions per User</span>
               <span className="text-sm font-bold">

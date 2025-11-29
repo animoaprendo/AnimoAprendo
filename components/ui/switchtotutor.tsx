@@ -20,9 +20,9 @@ export default function SwitchToTutor() {
 
   return (
     <Button
-      variant="outline"
+      variant="default"
       size="sm"
-      className="bg-gradient-to-r from-green-300 via-green-500 to-blue-400 text-transparent bg-clip-text font-bold border-0 hover:from-green-400 hover:via-green-600 hover:to-blue-500 w-full lg:w-fit"
+      className="bg-linear-to-r from-green-300 via-green-500 to-blue-400 text-transparent bg-clip-text font-bold border-0 hover:from-green-400 hover:via-green-600 hover:to-blue-500 w-full lg:w-fit hover:cursor-pointer"
       onClick={(e: React.MouseEvent) => {
         console.log("Switching to tutor");
         handleClick();

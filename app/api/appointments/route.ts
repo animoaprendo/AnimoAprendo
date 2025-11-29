@@ -61,6 +61,8 @@ export async function GET(request: NextRequest) {
 export async function PATCH(request: NextRequest) {
   try {
     const body = await request.json();
+
+    console.log('Received quiz update:', body);
     
     // Handle quiz updates (by tutor)
     if (body.quiz !== undefined) {
@@ -69,6 +71,8 @@ export async function PATCH(request: NextRequest) {
         quiz: Question[]; 
         userId: string; 
       };
+
+      console.log('Received quiz update:', body);
 
       if (!messageId || !userId) {
         return NextResponse.json({ error: 'messageId and userId are required' }, { status: 400 });

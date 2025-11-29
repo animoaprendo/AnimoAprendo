@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react";
 import { Plus, X, Building2, GraduationCap, Save, AlertCircle } from "lucide-react";
 import { updateCollectionData } from "@/app/actions";
-import { CreatePopup } from "@/app/tutor/alert";
 import {
   Dialog,
   DialogContent,
@@ -15,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { toast } from "sonner";
 
 type Department = {
   name: string;
@@ -182,12 +182,12 @@ const EditCollegeModal = ({
 
       await updateCollectionData("colleges", college._id.$oid, updatedCollege);
       
-      CreatePopup("College updated successfully!", "success");
+      toast.success("College updated successfully!");
       setIsOpen(false);
       onCollegeUpdated();
     } catch (error) {
       console.error("Error updating college:", error);
-      CreatePopup("Failed to update college. Please try again.", "error");
+      toast.error("Failed to update college. Please try again.");
     } finally {
       setIsSubmitting(false);
     }

@@ -1,12 +1,34 @@
 "use client";
-import { ArrowLeft, ArrowRight, Star } from "lucide-react";
+import { 
+  ArrowLeft, 
+  ArrowRight, 
+  Star, 
+  Search, 
+  Filter, 
+  SlidersHorizontal,
+  Users,
+  BookOpen,
+  Clock,
+  TrendingUp,
+  Sparkles,
+  X,
+  ChevronDown
+} from "lucide-react";
 import Link from "next/link";
-import React, { useRef, useState, useEffect } from "react";
+import React, { useRef, useState, useEffect, useMemo } from "react";
 import { getAllOfferings } from "@/app/actions";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { Slider } from "@/components/ui/slider";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 import { useUser } from "@clerk/nextjs";
 
 interface CardInfo {
@@ -39,13 +61,32 @@ interface TrendingTutor {
   totalReviews: number;
 }
 
+interface FilterState {
+  search: string;
+  minRating: number;
+  selectedDays: string[];
+  subjects: string[];
+  status: string;
+  sortBy: string;
+}
+
 export default function Browse() {
   const { user } = useUser();
   const scrollRef = useRef<HTMLDivElement>(null);
-  const newOffersScrollRef = useRef<HTMLDivElement>(null);
   const [offerings, setOfferings] = useState<CardInfo[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState("all");
+  
+  // Filter state
+  const [filters, setFilters] = useState<FilterState>({
+    search: "",
+    minRating: 0,
+    selectedDays: [],
+    subjects: [],
+    status: "all",
+    sortBy: "rating"
+  });
 
   // Fetch offerings from MongoDB on component mount
   useEffect(() => {
@@ -55,13 +96,12 @@ export default function Browse() {
         const response = await getAllOfferings();
 
         if (response.success && response.data) {
-          // Data is already sorted by the backend (rating desc, then createdAt asc for same ratings)
           const userDept = (user?.publicMetadata as any)?.collegeInformation
             ?.department as string | undefined;
 
-          // Filter subjects by department
+          // Filter subjects by department or show all if no specific department
           const filteredSubjects = response.data.filter(
-            (s: any) => s.department === userDept || s.department === "General"
+            (s: any) => !userDept || s.department === userDept || s.department === "General"
           );
 
           setOfferings(filteredSubjects);
@@ -79,6 +119,81 @@ export default function Browse() {
     fetchOfferings();
   }, [user]);
 
+  // Get unique subjects and days for filter options
+  const availableSubjects = useMemo(() => {
+    const subjects = new Set(offerings.map(o => o.subject));
+    return Array.from(subjects).sort();
+  }, [offerings]);
+
+  const availableDays = useMemo(() => {
+    const days = new Set(offerings.flatMap(o => o.availability.map(a => a.day)));
+    return Array.from(days);
+  }, [offerings]);
+
+  // Filter and sort offerings based on current filters
+  const filteredOfferings = useMemo(() => {
+    let filtered = [...offerings];
+
+    // Text search
+    if (filters.search) {
+      const searchLower = filters.search.toLowerCase();
+      filtered = filtered.filter(offer => 
+        offer.subject.toLowerCase().includes(searchLower) ||
+        offer.description.toLowerCase().includes(searchLower) ||
+        offer.user?.displayName.toLowerCase().includes(searchLower)
+      );
+    }
+
+    // Rating filter
+    if (filters.minRating > 0) {
+      filtered = filtered.filter(offer => 
+        (offer.averageRating || 0) >= filters.minRating
+      );
+    }
+
+    // Subject filter
+    if (filters.subjects.length > 0) {
+      filtered = filtered.filter(offer => 
+        filters.subjects.includes(offer.subject)
+      );
+    }
+
+    // Day availability filter
+    if (filters.selectedDays.length > 0) {
+      filtered = filtered.filter(offer =>
+        offer.availability.some(slot =>
+          filters.selectedDays.includes(slot.day)
+        )
+      );
+    }
+
+    // Status filter
+    if (filters.status !== "all") {
+      filtered = filtered.filter(offer => offer.status === filters.status);
+    }
+
+    // Sort
+    switch (filters.sortBy) {
+      case "rating":
+        filtered.sort((a, b) => (b.averageRating || 0) - (a.averageRating || 0));
+        break;
+      case "newest":
+        filtered.sort((a, b) => {
+          const dateA = a.createdAt ? new Date(a.createdAt) : new Date(0);
+          const dateB = b.createdAt ? new Date(b.createdAt) : new Date(0);
+          return dateB.getTime() - dateA.getTime();
+        });
+        break;
+      case "subject":
+        filtered.sort((a, b) => a.subject.localeCompare(b.subject));
+        break;
+      default:
+        break;
+    }
+
+    return filtered;
+  }, [offerings, filters]);
+
   const scroll = (dir: "left" | "right") => {
     if (scrollRef.current) {
       scrollRef.current.scrollBy({
@@ -88,21 +203,26 @@ export default function Browse() {
     }
   };
 
-  const scrollNewOffers = (dir: "left" | "right") => {
-    if (newOffersScrollRef.current) {
-      newOffersScrollRef.current.scrollBy({
-        left: dir === "left" ? -300 : 300,
-        behavior: "smooth",
-      });
-    }
+  // Reset filters
+  const resetFilters = () => {
+    setFilters({
+      search: "",
+      minRating: 0,
+      selectedDays: [],
+      subjects: [],
+      status: "all",
+      sortBy: "rating"
+    });
   };
 
   // Loading state
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center h-screen text-center text-green-900">
-        <div className="loading loading-spinner loading-lg text-green-700"></div>
-        <p className="mt-4 text-lg">Loading tutoring offers...</p>
+      <div className="flex flex-col items-center justify-center min-h-screen">
+        <div className="flex flex-col items-center space-y-4">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
+          <p className="text-lg font-medium text-gray-700">Loading tutoring offers...</p>
+        </div>
       </div>
     );
   }
@@ -110,423 +230,464 @@ export default function Browse() {
   // Error state
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center h-screen text-center text-green-900">
-        <p className="text-2xl font-bold text-red-600">{error}</p>
-        <p className="text-gray-600 mt-2">Please try refreshing the page</p>
+      <div className="flex flex-col items-center justify-center min-h-screen">
+        <Card className="p-8 max-w-md">
+          <CardContent className="text-center space-y-4">
+            <div className="text-red-500 text-5xl">⚠️</div>
+            <CardTitle className="text-xl text-red-600">{error}</CardTitle>
+            <CardDescription>Please try refreshing the page</CardDescription>
+            <Button onClick={() => window.location.reload()} variant="outline">
+              Refresh Page
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     );
   }
 
-  // Get trending tutors from real data (top 6 highest rated tutors)
-  const getTrendingTutors = () => {
-    const tutorsMap = new Map();
+  // Get categorized offerings for tabs
+  const getCategorizedOfferings = () => {
+    const topRated = [...offerings]
+      .filter(o => (o.averageRating || 0) >= 4.0)
+      .sort((a, b) => (b.averageRating || 0) - (a.averageRating || 0))
+      .slice(0, 12);
 
-    // Group offerings by tutor and calculate their best ratings
-    offerings.forEach((offering) => {
-      if (
-        offering.user &&
-        offering.averageRating &&
-        offering.averageRating > 0
-      ) {
-        const tutorId = offering.user.id;
-        const currentTutor = tutorsMap.get(tutorId);
-
-        if (!currentTutor || offering.averageRating > currentTutor.rating) {
-          tutorsMap.set(tutorId, {
-            id: tutorId,
-            name: offering.user.displayName,
-            subject: offering.subject,
-            rating: offering.averageRating,
-            image: offering.user.imageUrl || "https://i.pravatar.cc/150?img=1",
-            totalReviews: offering.totalReviews || 0,
-          });
-        }
-      }
-    });
-
-    // Convert to array and sort by rating, then return top 6
-    return Array.from(tutorsMap.values())
-      .sort((a, b) => b.rating - a.rating)
-      .slice(0, 6);
-  };
-
-  const trendingTutors = getTrendingTutors();
-
-  // Get newest offers (first 10 created offerings)
-  const getNewestOffers = () => {
-    // Create a copy of offerings before sorting to avoid mutating the original array
-    // Sort by createdAt if available, otherwise use _id (ObjectId contains creation time)
-    return [...offerings]
+    const newest = [...offerings]
       .sort((a, b) => {
-        // If both have createdAt, use that
-        if (a.createdAt && b.createdAt) {
-          return (
-            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-          );
-        }
-        // If only one has createdAt, prioritize it
-        if (a.createdAt && !b.createdAt) return -1;
-        if (!a.createdAt && b.createdAt) return 1;
-
-        // If neither has createdAt, use _id (ObjectId creation time)
-        return b._id.localeCompare(a._id);
+        const dateA = a.createdAt ? new Date(a.createdAt) : new Date(0);
+        const dateB = b.createdAt ? new Date(b.createdAt) : new Date(0);
+        return dateB.getTime() - dateA.getTime();
       })
-      .slice(0, 10); // Show first 10 newest
+      .slice(0, 12);
+
+    const trending = [...offerings]
+      .filter(o => (o.totalReviews || 0) > 0)
+      .sort((a, b) => (b.totalReviews || 0) - (a.totalReviews || 0))
+      .slice(0, 12);
+
+    return { topRated, newest, trending };
   };
 
-  const newestOffers = getNewestOffers();
+  const { topRated, newest, trending } = getCategorizedOfferings();
 
-  // Get top rated offers (first 10 from the already sorted array)
-  const getTopRatedOffers = () => {
-    const slice = offerings.slice(0, 10);
-    return slice.filter(
-      (offering) => offering.averageRating && offering.averageRating > 3
-    );
+  // Get current offerings based on active tab and filters
+  const getCurrentOfferings = () => {
+    switch (activeTab) {
+      case "top-rated":
+        return topRated.filter(o => filteredOfferings.includes(o));
+      case "newest":
+        return newest.filter(o => filteredOfferings.includes(o));
+      case "trending":
+        return trending.filter(o => filteredOfferings.includes(o));
+      default:
+        return filteredOfferings;
+    }
   };
 
-  const topRatedOffers = getTopRatedOffers();
+  const currentOfferings = getCurrentOfferings();
 
   return (
-    <div className="flex flex-col gap-12 py-6 w-10/12 h-full m-auto">
-      {/* Top Rated */}
-      {topRatedOffers.length > 0 && (
-        <Card className="p-6">
-          <CardHeader className="p-0 mb-4">
-            <div className="flex justify-between items-center">
+    <div className="min-h-screen">
+      {/* Header with Search and Filters */}
+      <div className="bg-white/80 backdrop-blur-sm border-b sticky top-0 z-40">
+        <div className="max-w-7xl mx-auto px-4 py-6">
+          <div className="flex flex-col space-y-6">
+            {/* Title and Stats */}
+            <div className="flex justify-between items-start">
               <div>
-                <h1 className="font-bold text-xl md:text-3xl text-green-900">
-                  ⭐ Top Rated Offers
+                <h1 className="text-xl md:text-3xl font-bold text-gray-900 mb-2">
+                  Discover Amazing Tutors
                 </h1>
-                <p className="text-sm text-gray-600 mt-1">
-                  Highest rated tutoring offers
+                <p className="text-gray-600">
+                  Found {currentOfferings.length} tutor{currentOfferings.length !== 1 ? 's' : ''} matching your criteria
                 </p>
               </div>
-              <div className="flex gap-2">
-                <Button
-                  onClick={() => scroll("left")}
-                  variant="outline"
-                  size="icon"
-                  className="border-green-700 text-green-700 hover:bg-green-700 hover:text-white"
-                >
-                  <ArrowLeft size={18} />
-                </Button>
-                <Button
-                  onClick={() => scroll("right")}
-                  variant="outline"
-                  size="icon"
-                  className="border-green-700 text-green-700 hover:bg-green-700 hover:text-white"
-                >
-                  <ArrowRight size={18} />
-                </Button>
+              <div className="flex items-center space-x-2 text-sm text-gray-500">
+                <Users className="w-4 h-4" />
+                <span>{offerings.length} total tutors</span>
               </div>
             </div>
-          </CardHeader>
 
-          <div
-            ref={scrollRef}
-            className="flex gap-6 p-2 overflow-x-auto overflow-y-visible scrollbar-hide scroll-smooth"
-          >
-            {topRatedOffers.map((item, i) => (
-              <Card
-                key={i}
-                className="min-w-[280px] max-w-[300px] hover:shadow-xl hover:scale-101 transition-all duration-200 flex flex-col"
-              >
+            {/* Search and Filter Controls */}
+            <div className="flex flex-col lg:flex-row gap-4">
+              {/* Search Bar */}
+              <div className="flex-1">
                 <div className="relative">
-                  <img
-                    src={item.banner}
-                    alt={item.subject}
-                    className="w-full h-40 object-cover rounded-t-lg"
+                  <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                  <Input
+                    placeholder="Search by subject, tutor name, or description..."
+                    value={filters.search}
+                    onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
+                    className="pl-10 py-6 text-base"
                   />
-                  <Badge className="absolute top-3 right-3 bg-green-700 hover:bg-green-700">
-                    {item.status === "available" ? "Available" : "Unavailable"}
-                  </Badge>
-                  <Badge
-                    variant="secondary"
-                    className="absolute top-3 left-3 bg-white/90 backdrop-blur-sm text-gray-800"
-                  >
-                    ⭐{" "}
-                    {(item as any).averageRating > 0
-                      ? (item as any).averageRating.toFixed(1)
-                      : "New"}
-                  </Badge>
                 </div>
-                <CardContent className="flex flex-col gap-2 p-4 h-full">
-                  <h2 className="font-bold text-lg text-green-900">
-                    {item.subject}
-                  </h2>
+              </div>
 
-                  {/* Tutor Information */}
-                  {item.user && (
-                    <div className="flex items-center gap-3 py-2 mb-2 border-b border-gray-100">
-                      <Avatar className="w-8 h-8">
-                        <AvatarImage
-                          src={
-                            item.user.imageUrl ||
-                            "https://i.pravatar.cc/100?img=1"
-                          }
-                          alt={item.user.displayName}
-                        />
-                        <AvatarFallback>
-                          {item.user.displayName?.charAt(0) || "T"}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="flex flex-col">
-                        <span className="text-sm font-semibold text-gray-800">
-                          {item.user.displayName}
-                        </span>
-                        <span className="text-xs text-gray-500">Tutor</span>
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="text-sm text-gray-700 line-clamp-3 overflow-hidden">
-                    <div
-                      className="whitespace-pre-wrap break-words"
-                      dangerouslySetInnerHTML={{
-                        __html:
-                          item.description?.length > 50
-                            ? item.description.substring(0, 50) + "..."
-                            : item.description || "No description available",
-                      }}
-                    />
-                  </div>
-                  <Card className="text-xs text-green-700 mt-auto bg-green-50 border-green-200">
-                    <CardContent className="p-2">
-                      <p className="font-semibold mb-1">Availability:</p>
-                      {item.availability.map((a) => (
-                        <p key={a.id} className="text-xs">
-                          {a.day} • {a.start} - {a.end}
-                        </p>
-                      ))}
-                    </CardContent>
-                  </Card>
-                  <Button
-                    asChild
-                    className="mt-3 bg-green-700 hover:bg-green-800"
-                  >
-                    <Link href={`/browse/${item._id}`}>View Details</Link>
-                  </Button>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </Card>
-      )}
-
-      {/* New Offers */}
-      <Card className="p-6">
-        <CardHeader className="p-0 mb-4">
-          <div className="flex justify-between items-center">
-            <div>
-              <h1 className="font-bold text-xl md:text-3xl text-green-900">
-                🆕 New Offers
-              </h1>
-              <p className="text-sm text-gray-600 mt-1">
-                Latest offerings from our tutors
-              </p>
-            </div>
-            <div className="flex gap-2">
-              {newestOffers.length > 4 && (
-                <>
-                  <Button
-                    onClick={() => scrollNewOffers("left")}
-                    variant="outline"
-                    size="icon"
-                    className="border-green-700 text-green-700 hover:bg-green-700 hover:text-white"
-                  >
-                    <ArrowLeft size={18} />
-                  </Button>
-                  <Button
-                    onClick={() => scrollNewOffers("right")}
-                    variant="outline"
-                    size="icon"
-                    className="border-green-700 text-green-700 hover:bg-green-700 hover:text-white"
-                  >
-                    <ArrowRight size={18} />
-                  </Button>
-                </>
-              )}
-            </div>
-          </div>
-        </CardHeader>
-
-        {newestOffers.length > 0 ? (
-          <div
-            ref={newOffersScrollRef}
-            className="flex gap-6 p-2 overflow-x-auto overflow-y-visible scrollbar-hide scroll-smooth"
-          >
-            {newestOffers.map((item: CardInfo) => (
-              <Card
-                key={item._id}
-                className="min-w-[280px] max-w-[300px] hover:shadow-xl hover:scale-101 transition-all duration-200 flex flex-col"
-              >
-                <div className="relative">
-                  <img
-                    src={item.banner}
-                    alt={item.subject}
-                    className="w-full h-40 object-cover rounded-t-xl"
-                  />
-                  <Badge className="absolute top-3 right-3 bg-green-700 hover:bg-green-700">
-                    {item.status === "available" ? "Available" : "Unavailable"}
-                  </Badge>
-                  <Badge
-                    variant="secondary"
-                    className="absolute top-3 left-3 bg-white/90 backdrop-blur-sm text-gray-800"
-                  >
-                    ⭐{" "}
-                    {item.averageRating && item.averageRating > 0
-                      ? item.averageRating.toFixed(1)
-                      : "New"}
-                  </Badge>
-                </div>
-                <CardContent className="flex flex-col gap-2 p-4 h-full">
-                  <h2 className="font-bold text-lg text-green-900">
-                    {item.subject}
-                  </h2>
-
-                  {/* Tutor Information */}
-                  {item.user && (
-                    <div className="flex items-center gap-3 py-2 mb-2 border-b border-gray-100">
-                      <Avatar className="w-8 h-8">
-                        <AvatarImage
-                          src={
-                            item.user.imageUrl ||
-                            "https://i.pravatar.cc/100?img=1"
-                          }
-                          alt={item.user.displayName}
-                        />
-                        <AvatarFallback>
-                          {item.user.displayName?.charAt(0) || "T"}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="flex flex-col">
-                        <span className="text-sm font-semibold text-gray-800">
-                          {item.user.displayName}
-                        </span>
-                        <span className="text-xs text-gray-500">Tutor</span>
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="text-sm text-gray-700 line-clamp-2 overflow-hidden">
-                    <div
-                      className="whitespace-pre-wrap break-words"
-                      dangerouslySetInnerHTML={{
-                        __html:
-                          item.description?.length > 80
-                            ? item.description.substring(0, 80) + "..."
-                            : item.description || "No description available",
-                      }}
-                    />
-                  </div>
-
-                  <Card className="text-xs text-green-700 mt-auto bg-green-50 border-green-200">
-                    <CardContent className="p-2">
-                      <p className="font-semibold mb-1">Availability:</p>
-                      {item.availability.slice(0, 2).map((a) => (
-                        <p key={a.id} className="text-xs">
-                          {a.day} • {a.start} - {a.end}
-                        </p>
-                      ))}
-                      {item.availability.length > 2 && (
-                        <p className="text-gray-500 text-xs">
-                          +{item.availability.length - 2} more slots
-                        </p>
-                      )}
-                    </CardContent>
-                  </Card>
-
-                  <Button
-                    asChild
-                    className="mt-3 bg-green-700 hover:bg-green-800"
-                  >
-                    <Link href={`/browse/${item._id}`}>View Details</Link>
-                  </Button>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        ) : (
-          <Card className="text-center py-12">
-            <CardContent className="p-6">
-              <p className="text-gray-600 text-lg mb-2">No new offers yet!</p>
-              <p className="text-gray-500">
-                New tutoring offers will appear here.
-              </p>
-            </CardContent>
-          </Card>
-        )}
-      </Card>
-
-      {/* Trending Tutors */}
-      <Card className="p-10">
-        <CardHeader className="p-0 mb-6">
-          <div className="flex justify-between items-center">
-            <div>
-              <h1 className="font-bold text-xl md:text-3xl text-green-900">
-                🌟 Trending Tutors
-              </h1>
-              <p className="text-sm text-gray-600 mt-1">
-                Top-rated tutors from our community
-              </p>
-            </div>
-          </div>
-        </CardHeader>
-
-        {trendingTutors.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-            {trendingTutors.map((tutor: TrendingTutor) => (
-              <Card
-                key={tutor.id}
-                className="flex flex-col items-center gap-3 p-6 bg-gradient-to-br from-green-50 to-green-100 hover:shadow-xl hover:scale-101 transition-all duration-200"
-              >
-                <Avatar className="w-24 h-24 border-4 border-green-700">
-                  <AvatarImage src={tutor.image} alt={tutor.name} />
-                  <AvatarFallback className="text-2xl bg-green-100">
-                    {tutor.name?.charAt(0) || "T"}
-                  </AvatarFallback>
-                </Avatar>
-                <h2 className="font-bold text-lg text-green-900">
-                  {tutor.name}
-                </h2>
-                <Badge
-                  variant="secondary"
-                  className="text-sm text-green-800 bg-green-200"
+              {/* Quick Filters */}
+              <div className="flex items-center gap-3">
+                <Select
+                  value={filters.sortBy}
+                  onValueChange={(value) => setFilters(prev => ({ ...prev, sortBy: value }))}
                 >
-                  {tutor.subject}
-                </Badge>
-                <div className="flex items-center gap-1">
-                  <Star className="text-yellow-500 fill-yellow-500" size={18} />
-                  <span className="font-semibold text-green-900">
-                    {tutor.rating.toFixed(1)}
-                  </span>
-                  <span className="text-xs text-gray-500">
-                    ({tutor.totalReviews} reviews)
-                  </span>
-                </div>
-                <Button asChild className="bg-green-700 hover:bg-green-800">
-                  <Link
-                    href={`/browse/${offerings.find((o) => o.user?.id === tutor.id)?._id}`}
-                  >
-                    View Profile
-                  </Link>
-                </Button>
-              </Card>
-            ))}
+                  <SelectTrigger className="w-40">
+                    <SelectValue placeholder="Sort by" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="rating">Rating</SelectItem>
+                    <SelectItem value="newest">Newest</SelectItem>
+                    <SelectItem value="subject">Subject</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                {/* Advanced Filters Sheet */}
+                <Sheet>
+                  <SheetTrigger asChild>
+                    <Button variant="outline" className="gap-2">
+                      <SlidersHorizontal className="w-4 h-4" />
+                      Filters
+                      {(filters.minRating > 0 || filters.selectedDays.length > 0 || filters.subjects.length > 0) && (
+                        <Badge variant="secondary" className="ml-1">
+                          {[
+                            filters.minRating > 0 ? 1 : 0,
+                            filters.selectedDays.length > 0 ? 1 : 0,
+                            filters.subjects.length > 0 ? 1 : 0
+                          ].reduce((a, b) => a + b, 0)}
+                        </Badge>
+                      )}
+                    </Button>
+                  </SheetTrigger>
+                  <SheetContent>
+                    <SheetHeader>
+                      <SheetTitle>Filter Tutors</SheetTitle>
+                      <SheetDescription>
+                        Refine your search to find the perfect tutor
+                      </SheetDescription>
+                    </SheetHeader>
+
+                    <div className="py-6 space-y-6 px-4">
+                      {/* Minimum Rating */}
+                      <div className="space-y-3">
+                        <Label className="text-sm font-medium">Minimum Rating</Label>
+                        <div className="space-y-2">
+                          <Slider
+                            value={[filters.minRating]}
+                            onValueChange={([value]) => setFilters(prev => ({ ...prev, minRating: value }))}
+                            max={5}
+                            min={0}
+                            step={0.5}
+                            className="w-full"
+                          />
+                          <div className="flex justify-between text-xs text-gray-500">
+                            <span>Any</span>
+                            <span>{filters.minRating > 0 ? `${filters.minRating}+ stars` : 'Any'}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <Separator />
+
+                      {/* Subject Filter */}
+                      <div className="space-y-3">
+                        <Label className="text-sm font-medium">Subjects</Label>
+                        <div className="space-y-2 max-h-40 overflow-y-auto">
+                          {availableSubjects.map(subject => (
+                            <div key={subject} className="flex items-center space-x-2">
+                              <Checkbox
+                                id={`subject-${subject}`}
+                                checked={filters.subjects.includes(subject)}
+                                onCheckedChange={(checked) => {
+                                  if (checked) {
+                                    setFilters(prev => ({
+                                      ...prev,
+                                      subjects: [...prev.subjects, subject]
+                                    }));
+                                  } else {
+                                    setFilters(prev => ({
+                                      ...prev,
+                                      subjects: prev.subjects.filter(s => s !== subject)
+                                    }));
+                                  }
+                                }}
+                              />
+                              <Label
+                                htmlFor={`subject-${subject}`}
+                                className="text-sm font-normal cursor-pointer"
+                              >
+                                {subject}
+                              </Label>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      <Separator />
+
+                      {/* Availability Filter */}
+                      <div className="space-y-3">
+                        <Label className="text-sm font-medium">Available Days</Label>
+                        <div className="space-y-2">
+                          {availableDays.map(day => (
+                            <div key={day} className="flex items-center space-x-2">
+                              <Checkbox
+                                id={`day-${day}`}
+                                checked={filters.selectedDays.includes(day)}
+                                onCheckedChange={(checked) => {
+                                  if (checked) {
+                                    setFilters(prev => ({
+                                      ...prev,
+                                      selectedDays: [...prev.selectedDays, day]
+                                    }));
+                                  } else {
+                                    setFilters(prev => ({
+                                      ...prev,
+                                      selectedDays: prev.selectedDays.filter(d => d !== day)
+                                    }));
+                                  }
+                                }}
+                              />
+                              <Label
+                                htmlFor={`day-${day}`}
+                                className="text-sm font-normal cursor-pointer"
+                              >
+                                {day}
+                              </Label>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      <Separator />
+
+                      {/* Reset Filters */}
+                      <Button variant="outline" onClick={resetFilters} className="w-full">
+                        Reset All Filters
+                      </Button>
+                    </div>
+                  </SheetContent>
+                </Sheet>
+              </div>
+            </div>
+
+            {/* Active Filters Display */}
+            {(filters.search || filters.minRating > 0 || filters.selectedDays.length > 0 || filters.subjects.length > 0) && (
+              <div className="flex flex-wrap gap-2">
+                {filters.search && (
+                  <Badge variant="secondary" className="gap-1">
+                    Search: "{filters.search}"
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-4 w-4 p-0 ml-1 text-red-500 hover:text-red-700 hover:bg-red-100 hover:cursor-pointer"
+                      onClick={() => setFilters(prev => ({ ...prev, search: "" }))}
+                    >
+                      <X className="w-3 h-3" />
+                    </Button>
+                  </Badge>
+                )}
+                {filters.minRating > 0 && (
+                  <Badge variant="secondary" className="gap-1">
+                    Rating: {filters.minRating}+ stars
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-4 w-4 p-0 ml-1 text-red-500 hover:text-red-700 hover:bg-red-100 hover:cursor-pointer"
+                      onClick={() => setFilters(prev => ({ ...prev, minRating: 0 }))}
+                    >
+                      <X className="w-3 h-3" />
+                    </Button>
+                  </Badge>
+                )}
+                {filters.subjects.map(subject => (
+                  <Badge key={subject} variant="secondary" className="gap-1">
+                    {subject}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-4 w-4 p-0 ml-1 text-red-500 hover:text-red-700 hover:bg-red-100 hover:cursor-pointer"
+                      onClick={() => setFilters(prev => ({
+                        ...prev,
+                        subjects: prev.subjects.filter(s => s !== subject)
+                      }))}
+                    >
+                      <X className="w-3 h-3" />
+                    </Button>
+                  </Badge>
+                ))}
+                {filters.selectedDays.map(day => (
+                  <Badge key={day} variant="secondary" className="gap-1">
+                    {day}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-4 w-4 p-0 ml-1 text-red-500 hover:text-red-700 hover:bg-red-100 hover:cursor-pointer"
+                      onClick={() => setFilters(prev => ({
+                        ...prev,
+                        selectedDays: prev.selectedDays.filter(d => d !== day)
+                      }))}
+                    >
+                      <X className="w-3 h-3" />
+                    </Button>
+                  </Badge>
+                ))}
+              </div>
+            )}
           </div>
-        ) : (
-          <Card className="text-center py-12">
-            <CardContent className="p-6">
-              <p className="text-gray-600 text-lg mb-2">
-                No trending tutors yet!
-              </p>
-              <p className="text-gray-500">
-                Tutors will appear here once they receive ratings.
-              </p>
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div className="max-w-7xl mx-auto px-4 py-8">
+        {/* Category Tabs */}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="grid w-full grid-cols-2 lg:grid-cols-4 gap-2 mb-8">
+            <TabsTrigger value="all" className="gap-2">
+              <BookOpen className="w-4 h-4" />
+              All Tutors
+            </TabsTrigger>
+            <TabsTrigger value="top-rated" className="gap-2">
+              <Star className="w-4 h-4" />
+              Top Rated
+            </TabsTrigger>
+            <TabsTrigger value="newest" className="gap-2">
+              <Sparkles className="w-4 h-4" />
+              Newest
+            </TabsTrigger>
+            <TabsTrigger value="trending" className="gap-2">
+              <TrendingUp className="w-4 h-4" />
+              Trending
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="all" className="mt-8 min-h-[500px] w-full">
+            <TutorGrid offerings={currentOfferings} />
+          </TabsContent>
+
+          <TabsContent value="top-rated" className="mt-8 min-h-[500px] w-full">
+            <TutorGrid offerings={currentOfferings} />
+          </TabsContent>
+
+          <TabsContent value="newest" className="mt-8 min-h-[500px] w-full">
+            <TutorGrid offerings={currentOfferings} />
+          </TabsContent>
+
+          <TabsContent value="trending" className="mt-8 min-h-[500px] w-full">
+            <TutorGrid offerings={currentOfferings} />
+          </TabsContent>
+        </Tabs>
+      </div>
+    </div>
+  );
+}
+
+// Reusable Tutor Grid Component
+function TutorGrid({ offerings }: { offerings: CardInfo[] }) {
+  if (offerings.length === 0) {
+    return (
+      <div className="min-h-[400px] w-screen xl:max-w-7xl lg:max-w-[996px] md:max-w-[736px] max-w-[393px] flex items-center justify-center">
+        <div className="w-full flex justify-center">
+          <Card className="p-12 text-center">
+            <CardContent className="space-y-4">
+              <div className="text-6xl">🔍</div>
+              <CardTitle className="text-xl">No tutors found</CardTitle>
+              <CardDescription>
+                Try adjusting your filters or search terms to find more tutors.
+              </CardDescription>
             </CardContent>
           </Card>
-        )}
-      </Card>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-[400px] w-full">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 w-full">
+        {offerings.map((offering) => (
+        <Card key={offering._id} className="group hover:shadow-lg hover:-translate-y-1 transition-all duration-200 overflow-hidden">
+          <div className="relative">
+            <img
+              src={offering.banner}
+              alt={offering.subject}
+              className="w-full h-48 object-cover"
+            />
+            <div className="absolute inset-0 bg-black/20 group-hover:bg-black/30 transition-colors" />
+            
+            {/* Status Badge */}
+            <Badge 
+              className={`absolute top-3 right-3 ${
+                offering.status === "available" 
+                  ? "bg-green-500 hover:bg-green-500" 
+                  : "bg-red-500 hover:bg-red-500"
+              }`}
+            >
+              {offering.status === "available" ? "Available" : "Unavailable"}
+            </Badge>
+            
+
+          </div>
+
+          <CardContent className="p-6">
+            <div className="space-y-4">
+              {/* Subject */}
+              <div>
+                <CardTitle className="text-xl mb-2">{offering.subject}</CardTitle>
+                {offering.user && (
+                  <div className="flex items-start gap-3">
+                    <Avatar className="w-8 h-8">
+                      <AvatarImage src={offering.user.imageUrl} alt={offering.user.displayName} />
+                      <AvatarFallback>
+                        {offering.user.displayName?.charAt(0) || "T"}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm font-medium">{offering.user.displayName}</p>
+                        {offering.averageRating && !isNaN(Number(offering.averageRating)) && Number(offering.averageRating) > 0 ? (
+                          <Badge variant="secondary" className="text-xs">
+                            <Star className="w-3 h-3 mr-1 fill-yellow-400 text-yellow-400" />
+                            {Number(offering.averageRating).toFixed(1)}
+                          </Badge>
+                        ) : null}
+                      </div>
+                      <div className="flex items-center gap-1 text-xs text-gray-500">
+                        <Users className="w-3 h-3" />
+                        {offering.totalReviews || 0} reviews
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Description */}
+              <CardDescription 
+                className="line-clamp-2 prose prose-sm max-w-none text-gray-600"
+                dangerouslySetInnerHTML={{
+                  __html: offering.description || "No description available"
+                }}
+              />
+
+              {/* Availability Preview */}
+              <div className="flex items-center gap-2 text-sm text-gray-600">
+                <Clock className="w-4 h-4" />
+                <span>
+                  {offering.availability.length > 0 
+                    ? `${offering.availability.length} time slot${offering.availability.length !== 1 ? 's' : ''} available`
+                    : "No availability listed"
+                  }
+                </span>
+              </div>
+
+              {/* Action Button */}
+              <Button asChild className="w-full">
+                <Link href={`/browse/${offering._id}`}>
+                  View Details
+                </Link>
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      ))}
+      </div>
     </div>
   );
 }

@@ -80,6 +80,13 @@ const techLogos = [
     title: "COS",
     href: "https://www.facebook.com/profile.php?id=61565118910503",
   },
+  {
+    node: (
+      <Image src={"/images/CICSSGLogo.png"} width={50} height={50} alt="logo" />
+    ),
+    title: "CICSSG",
+    href: "https://www.facebook.com/DLSUD.CICSSG",
+  },
 ];
 
 export default function Landing() {

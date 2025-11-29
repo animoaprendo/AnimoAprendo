@@ -15,7 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { useState } from "react";
 import { Plus, X, Building2, GraduationCap } from "lucide-react";
 import { createCollectionData } from "@/app/actions";
-import { CreatePopup } from "@/app/tutor/alert";
+import { toast } from "sonner";
 
 type Department = {
   name: string;
@@ -52,12 +52,12 @@ const CreateCollegeModal = ({
     e.preventDefault();
     
     if (!formData.name || !formData.abbreviation) {
-      CreatePopup("Please fill in all required fields", "error");
+      toast.error("Please fill in all required fields");
       return;
     }
 
     if (departments.length === 0) {
-      CreatePopup("Please add at least one department", "error");
+      toast.error("Please add at least one department");
       return;
     }
 
@@ -71,14 +71,14 @@ const CreateCollegeModal = ({
     try {
       const result = await createCollectionData("colleges", collegeData);
       if (result.success) {
-        CreatePopup("College created successfully", "success");
+        toast.success("College created successfully!");
         handleClose();
         updateColleges();
       } else {
-        CreatePopup("Failed to create college", "error");
+        toast.error("Failed to create college");
       }
     } catch (error) {
-      CreatePopup("Error creating college", "error");
+      toast.error("Error creating college");
     }
   };
 
@@ -91,12 +91,12 @@ const CreateCollegeModal = ({
 
   const addDepartment = () => {
     if (!editingDepartment.name.trim()) {
-      CreatePopup("Please enter department name", "error");
+      toast.error("Please enter department name");
       return;
     }
 
     if (editingDepartment.yearLevel.every(year => year === 0)) {
-      CreatePopup("Please add at least one student to any year level", "error");
+      toast.error("Please add at least one student to any year level");
       return;
     }
 

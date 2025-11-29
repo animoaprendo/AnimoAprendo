@@ -26,6 +26,7 @@ import {
 } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { toast } from "sonner";
 
 type College = {
   _id: {
@@ -80,9 +81,6 @@ const EditSubject = ({
   }, []);
 
   useEffect(() => {
-    if (!isOpen) {
-      setSelectedSubject(null);
-    }
     if (isOpen && data) {
       setFormData({
         _id: data._id,
@@ -109,10 +107,14 @@ const EditSubject = ({
 
     setIsOpen(false);
     editSubjectOption(formData).then((res) => {
-      console.log("Subject option created successfully:", res);
-      CreatePopup("Subject updated successfully!", "success");
+      toast.success("Subject updated successfully!");
       updateSubjects();
     });
+  }
+
+  function handleClose() {
+    setIsOpen(false);
+    setSelectedSubject(null);
   }
 
   return (
@@ -291,7 +293,7 @@ const EditSubject = ({
             <Button
               type="button"
               variant="outline"
-              onClick={() => setIsOpen(false)}
+              onClick={handleClose}
             >
               Cancel
             </Button>

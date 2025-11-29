@@ -13,6 +13,7 @@ import {
   Eye,
   TrendingUp,
 } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
 import { redirect, RedirectType } from "next/navigation";
 import { fetchAppointments, fetchUsers } from "@/app/actions";
 import {
@@ -27,7 +28,16 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { getMicrosoftAccessToken } from '@/lib/microsoft-oauth';
+import { LevelCard } from '@/components/gamification/level-card';
+import { AchievementSystem } from '@/components/gamification/achievement-system';
+import { StatsOverview, WeeklyGoals } from '@/components/gamification/progress-tracking';
+import { getUserGamificationProfile } from '@/app/gamification-actions';
 
+// Utility function to calculate XP required for a level
+function getXPForLevel(level: number): number {
+  if (level <= 1) return 0;
+  return Math.floor(100 * Math.pow(1.5, level - 2));
+}
 
 export default async function Dashboard() {
   const user = await currentUser();
@@ -44,8 +54,44 @@ export default async function Dashboard() {
     completed: 0,
     upcoming: 0,
   };
+  
+  // Get real gamification data from database
+  const gamificationProfileResult = await getUserGamificationProfile(user.id);
   let hasError = false;
+  
+  // Initialize default stats
+  let gamificationStats = {
+    totalAppointments: 0,
+    completed: 0,
+    upcoming: 0,
+    totalReviews: 0,
+    averageRating: 0,
+    streakDays: 0,
+    profileCompleteness: 50,
+    responseTime: 0,
+    cancelationRate: 0
+  };
+  
+  let gamificationProfile = null;
+  
+  // Use real gamification data if available
+  if (gamificationProfileResult.success && gamificationProfileResult.data) {
+    gamificationProfile = gamificationProfileResult.data;
+    gamificationStats = {
+      totalAppointments: gamificationProfile.stats.totalSessions,
+      completed: gamificationProfile.stats.completedSessions,
+      upcoming: 0, // Will be calculated from appointments
+      totalReviews: gamificationProfile.stats.totalReviews,
+      averageRating: gamificationProfile.stats.averageRating,
+      streakDays: gamificationProfile.currentStreak,
+      profileCompleteness: gamificationProfile.stats.profileCompleteness,
+      responseTime: gamificationProfile.stats.averageResponseTime,
+      cancelationRate: gamificationProfile.stats.canceledSessions > 0 ? 
+        (gamificationProfile.stats.canceledSessions / gamificationProfile.stats.totalSessions) * 100 : 0
+    };
+  }
 
+  console.log(gamificationProfile)
   if (appointmentsResult.success && appointmentsResult.appointments) {
     const now = new Date();
 
@@ -121,6 +167,11 @@ export default async function Dashboard() {
             rawDate: apt.datetimeISO,
           };
         });
+        
+        // Update upcoming count in gamification stats
+        if (gamificationProfileResult.success && gamificationProfileResult.data) {
+          gamificationStats.upcoming = stats.upcoming;
+        }
       } else {
         // Fallback: show appointments even if user data fetch failed
         upcomingAppointments = upcoming.map((apt: any) => {
@@ -185,39 +236,55 @@ export default async function Dashboard() {
             </CardContent>
           </Card>
 
-          {/* Level Overview Card */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Award className="w-5 h-5" />
-                Level Overview
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {/* <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">Current Level</span>
-                <Badge variant="secondary">New Tutor</Badge>
-              </div>
-
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">Rating</span>
-                <RatingGFX rating={5} />
-              </div>
-
-              <Separator />
-
-              <Button variant="outline" className="w-full" asChild>
-                <Link href="#">
-                  <TrendingUp className="w-4 h-4 mr-2" />
-                  View Progress
-                </Link>
-              </Button> */}
-              <div className="flex items-center justify-around">
-                <span className="text-sm font-medium">Feature coming soon</span>
-                {/* <Badge variant="secondary">New Tutor</Badge> */}
-              </div>
-            </CardContent>
-          </Card>
+          {/* Gamification Level Card */}
+          {gamificationProfile ? (
+            <Card className="relative overflow-hidden">
+              <div className="absolute inset-0 opacity-10 bg-linear-to-br from-primary/20 to-primary/5" />
+              <CardHeader className="relative">
+                <CardTitle className="flex items-center gap-2">
+                  <Award className="w-5 h-5 text-primary" />
+                  Level Progress
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="relative space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-2xl font-bold">Level {gamificationProfile.currentLevel}</h3>
+                    <p className="text-sm text-muted-foreground">
+                      {gamificationProfile.totalXP} total XP
+                    </p>
+                  </div>
+                  <Badge variant="secondary" className="text-lg px-3 py-1">
+                    {gamificationProfile.totalXP} XP
+                  </Badge>
+                </div>
+                
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span>Progress to Level {gamificationProfile.currentLevel + 1}</span>
+                    <span>{Math.round(((gamificationProfile.totalXP % 100) / 100) * 100)}%</span>
+                  </div>
+                  <Progress 
+                    value={(gamificationProfile.totalXP % 100)} 
+                    className="h-2" 
+                  />
+                  <p className="text-xs text-muted-foreground text-center">
+                    {100 - (gamificationProfile.totalXP % 100)} XP until next level
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          ) : (
+            <LevelCard
+              userId={user.id}
+              stats={gamificationStats}
+            />
+          )}
+          
+          {/* Achievement System */}
+          <AchievementSystem
+            stats={gamificationStats}
+          />
 
           {/* Availability Card */}
           <Card>
@@ -261,6 +328,14 @@ export default async function Dashboard() {
           </div>
 
           <Separator />
+
+          {/* Gamification Stats Overview */}
+          <StatsOverview stats={gamificationStats} />
+          
+          {/* Weekly Goals */}
+          {/* <WeeklyGoals 
+            stats={gamificationStats}
+          /> */}
 
           {/* Statistics Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">

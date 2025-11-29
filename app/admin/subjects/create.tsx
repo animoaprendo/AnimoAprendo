@@ -4,7 +4,6 @@ import { useUser } from "@clerk/nextjs";
 import { useEffect, useState } from "react";
 import { BookOpen, Plus } from "lucide-react";
 import { createSubjectOption } from "../actions";
-import { CreatePopup } from "@/app/tutor/alert";
 import { getCollectionData } from "@/app/actions";
 import {
   Dialog,
@@ -25,6 +24,7 @@ import {
 } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { toast } from "sonner";
 
 type College = {
   _id: {
@@ -143,7 +143,7 @@ const CreateSubject = ({
 
     setIsOpen(false);
     createSubjectOption(formData).then((res) => {
-      CreatePopup("Subject created successfully!", "success");
+      toast.success("Subject created successfully!");
       updateSubjects();
     });
   }
@@ -151,7 +151,7 @@ const CreateSubject = ({
   function setSessionDefault() {
     // Implement the logic to set the current formData as session default
     setFormDataDefault({ ...formData });
-    CreatePopup("Session default set successfully!", "success");
+    toast.success("Session default set successfully!");
   }
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
