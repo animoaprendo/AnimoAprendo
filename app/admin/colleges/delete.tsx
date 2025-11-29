@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { Trash2, AlertTriangle } from "lucide-react";
 import { deleteCollectionData } from "@/app/actions";
-import { CreatePopup } from "@/app/tutor/alert";
 import {
   Dialog,
   DialogContent,
@@ -14,6 +13,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { toast } from "sonner";
 
 type Department = {
   name: string;
@@ -60,12 +60,12 @@ const DeleteCollegeModal = ({
       // Delete the college from the database
       await deleteCollectionData("colleges", collegeId);
       
-      CreatePopup("College deleted successfully!", "success");
+      toast.success("College deleted successfully!");
       setIsOpen(false);
       onCollegeDeleted();
     } catch (error) {
       console.error("Error deleting college:", error);
-      CreatePopup("Failed to delete college. Please try again.", "error");
+      toast.error("Failed to delete college. Please try again.");
     } finally {
       setIsDeleting(false);
     }

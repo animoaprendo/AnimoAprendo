@@ -15,6 +15,8 @@ import {
   UserX,
   MoreHorizontal,
   RefreshCw,
+  ChevronUp,
+  ChevronDown,
 } from "lucide-react";
 import { getCollectionData, fetchAppointments, fetchUsers } from "@/app/actions";
 import {
@@ -86,6 +88,9 @@ type UserWithStats = User & {
   stats: UserStats;
 };
 
+type SortField = 'name' | 'role' | 'status' | 'appointments' | 'rating' | 'lastActive';
+type SortDirection = 'asc' | 'desc';
+
 export default function UserManagement() {
   const [users, setUsers] = useState<UserWithStats[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<UserWithStats[]>([]);
@@ -95,6 +100,8 @@ export default function UserManagement() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [selectedUser, setSelectedUser] = useState<UserWithStats | null>(null);
   const [showUserDetails, setShowUserDetails] = useState(false);
+  const [sortField, setSortField] = useState<SortField>('name');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
 
   const [overallStats, setOverallStats] = useState({
     totalUsers: 0,
@@ -110,7 +117,7 @@ export default function UserManagement() {
 
   useEffect(() => {
     filterUsers();
-  }, [users, searchTerm, roleFilter, statusFilter]);
+  }, [users, searchTerm, roleFilter, statusFilter, sortField, sortDirection]);
 
   const fetchUserData = async () => {
     try {
@@ -263,7 +270,61 @@ export default function UserManagement() {
       }
     }
 
-    setFilteredUsers(filtered);
+    // Sort the filtered results
+    const sorted = sortUsersArray(filtered);
+    setFilteredUsers(sorted);
+  };
+
+  const sortUsersArray = (usersToSort: UserWithStats[]) => {
+    return [...usersToSort].sort((a, b) => {
+      let aValue: any;
+      let bValue: any;
+
+      switch (sortField) {
+        case 'name':
+          aValue = `${a.firstName} ${a.lastName}`.toLowerCase();
+          bValue = `${b.firstName} ${b.lastName}`.toLowerCase();
+          break;
+        case 'role':
+          aValue = a.role;
+          bValue = b.role;
+          break;
+        case 'status':
+          const now = new Date();
+          const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+          aValue = a.lastSignInAt && new Date(a.lastSignInAt) > weekAgo ? 1 : 0;
+          bValue = b.lastSignInAt && new Date(b.lastSignInAt) > weekAgo ? 1 : 0;
+          break;
+        case 'appointments':
+          aValue = a.stats.totalAppointments;
+          bValue = b.stats.totalAppointments;
+          break;
+        case 'rating':
+          aValue = a.stats.averageRating;
+          bValue = b.stats.averageRating;
+          break;
+        case 'lastActive':
+          aValue = a.lastSignInAt ? new Date(a.lastSignInAt).getTime() : 0;
+          bValue = b.lastSignInAt ? new Date(b.lastSignInAt).getTime() : 0;
+          break;
+        default:
+          aValue = a.firstName;
+          bValue = b.firstName;
+      }
+
+      if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
+      if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
+      return 0;
+    });
+  };
+
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
   };
 
   const handleViewUser = (user: UserWithStats) => {
@@ -273,6 +334,15 @@ export default function UserManagement() {
 
   const getInitials = (firstName: string, lastName: string) => {
     return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
+  };
+
+  const getSortIcon = (field: SortField) => {
+    if (sortField !== field) {
+      return <ChevronUp className="h-4 w-4 text-muted-foreground opacity-50" />;
+    }
+    return sortDirection === 'asc' ? 
+      <ChevronUp className="h-4 w-4" /> : 
+      <ChevronDown className="h-4 w-4" />;
   };
 
   const formatLastSignIn = (lastSignIn?: string) => {
@@ -456,12 +526,66 @@ export default function UserManagement() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-[250px]">User</TableHead>
-                  <TableHead>Role</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Appointments</TableHead>
-                  <TableHead>Rating</TableHead>
-                  <TableHead>Last Active</TableHead>
+                  <TableHead className="w-[250px]">
+                    <Button 
+                      variant="ghost" 
+                      className="h-auto p-0 font-semibold hover:bg-transparent"
+                      onClick={() => handleSort('name')}
+                    >
+                      User
+                      {getSortIcon('name')}
+                    </Button>
+                  </TableHead>
+                  <TableHead>
+                    <Button 
+                      variant="ghost" 
+                      className="h-auto p-0 font-semibold hover:bg-transparent"
+                      onClick={() => handleSort('role')}
+                    >
+                      Role
+                      {getSortIcon('role')}
+                    </Button>
+                  </TableHead>
+                  <TableHead>
+                    <Button 
+                      variant="ghost" 
+                      className="h-auto p-0 font-semibold hover:bg-transparent"
+                      onClick={() => handleSort('status')}
+                    >
+                      Status
+                      {getSortIcon('status')}
+                    </Button>
+                  </TableHead>
+                  <TableHead>
+                    <Button 
+                      variant="ghost" 
+                      className="h-auto p-0 font-semibold hover:bg-transparent"
+                      onClick={() => handleSort('appointments')}
+                    >
+                      Appointments
+                      {getSortIcon('appointments')}
+                    </Button>
+                  </TableHead>
+                  <TableHead>
+                    <Button 
+                      variant="ghost" 
+                      className="h-auto p-0 font-semibold hover:bg-transparent"
+                      onClick={() => handleSort('rating')}
+                    >
+                      Rating
+                      {getSortIcon('rating')}
+                    </Button>
+                  </TableHead>
+                  <TableHead>
+                    <Button 
+                      variant="ghost" 
+                      className="h-auto p-0 font-semibold hover:bg-transparent"
+                      onClick={() => handleSort('lastActive')}
+                    >
+                      Last Active
+                      {getSortIcon('lastActive')}
+                    </Button>
+                  </TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -679,7 +803,7 @@ export default function UserManagement() {
               <div>
                 <h4 className="font-medium mb-2">Recent Activity</h4>
                 <div className="text-sm text-muted-foreground">
-                  Detailed activity tracking would be implemented here based on your specific requirements.
+                  Feature coming soon
                 </div>
               </div>
             </div>

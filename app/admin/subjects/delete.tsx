@@ -5,7 +5,6 @@ import { useEffect, useState } from "react";
 import { AlertTriangle, Trash2 } from "lucide-react";
 import { deleteSubjectOption } from "../actions";
 import { Subject } from "./page";
-import { CreatePopup } from "@/app/tutor/alert";
 import {
   Dialog,
   DialogContent,
@@ -16,6 +15,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { toast } from "sonner";
 
 const DeleteSubject = ({
   isOpen,
@@ -44,9 +44,6 @@ const DeleteSubject = ({
   });
 
   useEffect(() => {
-    if (!isOpen) {
-      setSelectedSubject(null);
-    }
     if (isOpen && data) {
       setFormData({
         _id: data._id,
@@ -63,15 +60,20 @@ const DeleteSubject = ({
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    
+    if (!data) return;
 
     setIsOpen(false);
     deleteSubjectOption(formData).then((res) => {
-      CreatePopup("Subject deleted successfully!", "success");
+      toast.success("Subject deleted successfully!");
       updateSubjects();
     });
   }
 
-  if (!data) return null;
+  function handleClose() {
+    setIsOpen(false);
+    setSelectedSubject(null);
+  }
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
@@ -86,39 +88,45 @@ const DeleteSubject = ({
           </DialogDescription>
         </DialogHeader>
 
-        <Card className="border-destructive/20">
-          <CardContent className="pt-6">
-            <div className="space-y-3">
-              <div>
-                <h4 className="font-semibold text-lg">{data.subjectName}</h4>
-                <p className="text-sm text-muted-foreground font-mono">
-                  {data.subjectCode}
-                </p>
-              </div>
-              
-              <div className="flex flex-wrap gap-2">
-                <Badge variant="secondary">
-                  {data.college}
-                </Badge>
-                <Badge variant="outline">
-                  {data.department}
-                </Badge>
-                {data.year && data.semester && (
-                  <Badge variant="outline">
-                    Year {data.year} • Semester {data.semester}
+        {data ? (
+          <Card className="border-destructive/20">
+            <CardContent className="pt-6">
+              <div className="space-y-3">
+                <div>
+                  <h4 className="font-semibold text-lg">{data.subjectName}</h4>
+                  <p className="text-sm text-muted-foreground font-mono">
+                    {data.subjectCode}
+                  </p>
+                </div>
+                
+                <div className="flex flex-wrap gap-2">
+                  <Badge variant="secondary">
+                    {data.college}
                   </Badge>
-                )}
+                  <Badge variant="outline">
+                    {data.department}
+                  </Badge>
+                  {data.year && data.semester && (
+                    <Badge variant="outline">
+                      Year {data.year} • Semester {data.semester}
+                    </Badge>
+                  )}
+                </div>
               </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="py-8 text-center text-muted-foreground">
+            Loading subject details...
+          </div>
+        )}
 
         <form onSubmit={handleSubmit}>
           <div className="flex justify-end gap-3 pt-4 border-t">
             <Button
               type="button"
               variant="outline"
-              onClick={() => setIsOpen(false)}
+              onClick={handleClose}
             >
               Cancel
             </Button>
@@ -126,6 +134,7 @@ const DeleteSubject = ({
               type="submit"
               variant="destructive"
               className="flex items-center gap-2"
+              disabled={!data}
             >
               <Trash2 className="h-4 w-4" />
               Delete Subject

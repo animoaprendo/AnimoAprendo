@@ -487,6 +487,38 @@ export async function updateAppointmentCollectionStatus(params: {
   }
 }
 
+// Cancel appointment (Admin action)
+export async function cancelAppointment(params: {
+  messageId: string;
+  appointmentId?: string;
+}): Promise<{ success: boolean; data?: any; error?: string }> {
+  try {
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_BASE_URL}/api/appointments`,
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          messageId: params.messageId || params.appointmentId,
+          status: 'cancelled',
+          userId: 'admin' // Admin override
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      const text = await response.text();
+      return { success: false, error: `HTTP ${response.status}: ${text}` };
+    }
+
+    const data = await response.json();
+    return { success: true, data };
+  } catch (error) {
+    console.error('Server action: Error cancelling appointment:', error);
+    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+  }
+}
+
 // Submit quiz attempt for tutee
 export async function submitQuizAttempt(params: {
   messageId: string;
