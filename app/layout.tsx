@@ -2,27 +2,12 @@ import { type Metadata } from "next";
 import { ClerkProvider } from "@clerk/nextjs";
 import { NuqsAdapter } from "nuqs/adapters/next/app";
 import "./globals.css";
-import Link from "next/link";
-import { MdOutlineAdminPanelSettings } from "react-icons/md";
-import { currentUser } from "@clerk/nextjs/server";
-import AdminNavBR from "@/components/admin-nav-br";
-
 export const metadata: Metadata = {
   title: "AnimoAprendo",
   description: "Peer to peer learning platform",
 };
-
-import Footer from "@/components/footer";
-import NavLinksTutee from "@/components/navlinkstutee";
-import {
-  SignInButton,
-  SignUpButton,
-  SignedIn,
-  SignedOut,
-  UserButton,
-  useUser,
-} from "@clerk/nextjs";
 import { Geist, Geist_Mono } from "next/font/google";
+import { Toaster } from "sonner";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -52,6 +37,7 @@ export default async function RootLayout({
             {/* <AdminNavBR /> */}
 
             {children}
+            <Toaster position="bottom-right" />
           </NuqsAdapter>
         </body>
       </html>

@@ -1,7 +1,9 @@
+'use client';
 import Link from 'next/link';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { CheckCircle, AlertTriangle, Settings, ExternalLink } from 'lucide-react';
+import { toast } from 'sonner';
 
 export default function TestingIndexPage() {
 
@@ -168,6 +170,9 @@ export default function TestingIndexPage() {
                 <CheckCircle className="h-4 w-4 text-indigo-600" />
                 <span>Return to Tutor Dashboard</span>
               </Link>
+              <button onClick={() => toast.success('Test Toast')} className='flex items-center gap-2 p-2 border border-gray-300 rounded hover:bg-gray-50 transition-colors text-sm'>
+                <span>Test Toast</span>
+              </button>
             </div>
           </CardContent>
         </Card>
