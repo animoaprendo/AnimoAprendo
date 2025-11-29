@@ -295,7 +295,7 @@ export default function Browse() {
             {/* Title and Stats */}
             <div className="flex justify-between items-start">
               <div>
-                <h1 className="text-3xl font-bold text-gray-900 mb-2">
+                <h1 className="text-xl md:text-3xl font-bold text-gray-900 mb-2">
                   Discover Amazing Tutors
                 </h1>
                 <p className="text-gray-600">
@@ -539,7 +539,7 @@ export default function Browse() {
       <div className="max-w-7xl mx-auto px-4 py-8">
         {/* Category Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-4 mb-8">
+          <TabsList className="grid w-full grid-cols-2 lg:grid-cols-4 gap-2 mb-8">
             <TabsTrigger value="all" className="gap-2">
               <BookOpen className="w-4 h-4" />
               All Tutors
