@@ -13,7 +13,7 @@ import { Label } from "@/components/ui/label";
 import { AlertTriangle, ChevronDown, ChevronUp, Crown, RotateCcw, Search, Shield, ShieldCheck, Users, UserPlus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { getCollectionData } from "@/app/actions";
-import { createAdmin, updateAdminRole, removeAdmin, getAdmins } from "@/app/admin/actions";
+import { createAdminAccount, updateAdminRole, removeAdmin, getAdmins } from "@/app/admin/actions";
 
 export type Admin = {
   id: string;
@@ -39,16 +39,6 @@ export type College = {
   }>;
 };
 
-export type RegularUser = {
-  id: string;
-  email?: string;
-  firstName?: string;
-  lastName?: string;
-  username?: string;
-  imageUrl?: string;
-  publicMetadata?: any;
-};
-
 type SortField = 'email' | 'firstName' | 'lastName' | 'adminRole' | 'college' | 'department' | 'createdAt' | 'lastSignInAt';
 type SortOrder = 'asc' | 'desc';
 
@@ -56,7 +46,6 @@ export default function AdminManagement() {
   const { user } = useUser();
   const [admins, setAdmins] = useState<Admin[]>([]);
   const [colleges, setColleges] = useState<College[]>([]);
-  const [users, setUsers] = useState<RegularUser[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [roleFilter, setRoleFilter] = useState("");
   const [collegeFilter, setCollegeFilter] = useState("");
@@ -74,14 +63,15 @@ export default function AdminManagement() {
 
   // Form states
   const [createForm, setCreateForm] = useState({
-    userId: '',
-    adminRole: 'admin' as 'admin',
+    email: '',
+    firstName: '',
+    lastName: '',
+    username: '',
+    password: '',
+    adminRole: 'admin' as 'admin' | 'superadmin',
     college: '',
     department: ''
   });
-
-  // User search state
-  const [userSearchTerm, setUserSearchTerm] = useState("");
 
   const [editForm, setEditForm] = useState({
     adminRole: 'admin' as 'admin' | 'superadmin',
@@ -101,10 +91,9 @@ export default function AdminManagement() {
   async function fetchData() {
     try {
       setLoading(true);
-      const [adminsData, collegesData, usersData] = await Promise.all([
-        getAdmins(),
-        getCollectionData("colleges"),
-        getCollectionData("users")
+      const [adminsData, collegesData] = await Promise.all([
+        getAdmins(user!.id),
+        getCollectionData("colleges")
       ]);
 
       if (adminsData.success && adminsData.admins) {
@@ -113,15 +102,6 @@ export default function AdminManagement() {
 
       if (collegesData?.success) {
         setColleges(collegesData.data || []);
-      }
-
-      if (usersData?.success) {
-        // Filter out users who are already admins
-        const nonAdminUsers = usersData.data?.filter((userData: any) => {
-          const metadata = userData.publicMetadata || {};
-          return !metadata.isAdmin;
-        }) || [];
-        setUsers(nonAdminUsers);
       }
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -133,12 +113,15 @@ export default function AdminManagement() {
 
   function handleCreateAdmin() {
     setCreateForm({
-      userId: '',
+      email: '',
+      firstName: '',
+      lastName: '',
+      username: '',
+      password: '',
       adminRole: 'admin',
       college: '',
       department: ''
     });
-    setUserSearchTerm("");
     setIsCreateDialogOpen(true);
   }
 
@@ -163,37 +146,53 @@ export default function AdminManagement() {
   }
 
   async function confirmCreateAdmin() {
-    if (!createForm.userId) {
-      toast.error('Please select a user');
+    if (!createForm.email || !createForm.firstName || !createForm.lastName || !createForm.password) {
+      toast.error('Please fill in all required fields');
+      return;
+    }
+
+    if (createForm.adminRole === 'admin' && !createForm.college) {
+      toast.error('Regular admins must have a college assigned');
       return;
     }
 
     try {
-      const result = await createAdmin({
-        userId: createForm.userId,
+      const result = await createAdminAccount({
+        userId: user!.id,
+        email: createForm.email,
+        firstName: createForm.firstName,
+        lastName: createForm.lastName,
+        username: createForm.username || undefined,
+        password: createForm.password,
         adminRole: createForm.adminRole,
         college: createForm.college || undefined,
         department: createForm.department || undefined
       });
 
       if (result.success) {
-        toast.success('Admin created successfully');
+        toast.success('Admin account created successfully');
         setIsCreateDialogOpen(false);
         fetchData(); // Refresh the list
       } else {
-        throw new Error(result.error || 'Failed to create admin');
+        throw new Error(result.error || 'Failed to create admin account');
       }
     } catch (error) {
-      console.error('Error creating admin:', error);
-      toast.error(error instanceof Error ? error.message : 'Failed to create admin');
+      console.error('Error creating admin account:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to create admin account');
     }
   }
 
   async function confirmEditAdmin() {
     if (!selectedAdmin) return;
 
+    if (editForm.adminRole === 'admin' && !editForm.college) {
+      toast.error('Regular admins must have a college assigned');
+      return;
+    }
+
     try {
       const result = await updateAdminRole({
+        editorId: user!.id,
         userId: selectedAdmin.id,
         adminRole: editForm.adminRole,
         college: editForm.college || undefined,
@@ -218,19 +217,19 @@ export default function AdminManagement() {
     if (!selectedAdmin) return;
 
     try {
-      const result = await removeAdmin(selectedAdmin.id);
+      const result = await removeAdmin(selectedAdmin.id, user!.id);
 
       if (result.success) {
-        toast.success('Admin removed successfully');
+        toast.success('Admin user deleted successfully');
         setIsRemoveDialogOpen(false);
         setSelectedAdmin(null);
         fetchData(); // Refresh the list
       } else {
-        throw new Error(result.error || 'Failed to remove admin');
+        throw new Error(result.error || 'Failed to delete admin user');
       }
     } catch (error) {
-      console.error('Error removing admin:', error);
-      toast.error(error instanceof Error ? error.message : 'Failed to remove admin');
+      console.error('Error deleting admin user:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to delete admin user');
     }
   }
 
@@ -298,18 +297,6 @@ export default function AdminManagement() {
   const createFormDepartments = colleges.find(c => c.abbreviation === createForm.college)?.departments || [];
   const editFormDepartments = colleges.find(c => c.abbreviation === editForm.college)?.departments || [];
 
-  // Filter users for create dialog based on search
-  const filteredUsers = users.filter(userData => {
-    const fullName = `${userData.firstName || ''} ${userData.lastName || ''}`.toLowerCase();
-    const email = userData.email?.toLowerCase() || '';
-    const username = userData.username?.toLowerCase() || '';
-    const searchLower = userSearchTerm.toLowerCase();
-    
-    return fullName.includes(searchLower) || 
-           email.includes(searchLower) || 
-           username.includes(searchLower);
-  }).slice(0, 50); // Limit to first 50 results for performance
-
   // Access control
   if (!isSuperAdmin) {
     return (
@@ -352,7 +339,7 @@ export default function AdminManagement() {
             Admin Management
           </CardTitle>
           <CardDescription>
-            Manage administrator accounts and permissions (Superadmin Only)
+            Create and manage administrator accounts and permissions (Superadmin Only)
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -406,8 +393,8 @@ export default function AdminManagement() {
                   <SelectValue placeholder="All Colleges" />
                 </SelectTrigger>
                 <SelectContent>
-                  {colleges.map((college) => (
-                    <SelectItem key={college._id.$oid} value={college.abbreviation}>
+                  {colleges.map((college, i) => (
+                    <SelectItem key={`${college._id.$oid}-${i}`} value={college.abbreviation}>
                       {college.abbreviation}
                     </SelectItem>
                   ))}
@@ -420,7 +407,7 @@ export default function AdminManagement() {
 
               <Button onClick={handleCreateAdmin} className="whitespace-nowrap">
                 <UserPlus className="w-4 h-4 mr-2" />
-                Create Admin
+                Create Admin Account
               </Button>
             </div>
           </div>
@@ -563,7 +550,13 @@ export default function AdminManagement() {
                       </TableCell>
                       <TableCell>
                         {admin.department ? (
-                          <Badge variant="outline">{admin.department}</Badge>
+                          admin.department === 'ALL_DEPARTMENTS' ? (
+                            <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                              All Departments
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline">{admin.department}</Badge>
+                          )
                         ) : (
                           <span className="text-muted-foreground">All Departments</span>
                         )}
@@ -596,7 +589,7 @@ export default function AdminManagement() {
                               onClick={() => handleRemoveAdmin(admin)}
                               className="text-red-600 hover:text-red-700 hover:bg-red-50"
                             >
-                              Remove
+                              Delete
                             </Button>
                           )}
                         </div>
@@ -612,142 +605,155 @@ export default function AdminManagement() {
 
       {/* Create Admin Dialog */}
       <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <UserPlus className="h-5 w-5" />
-              Create New Admin
+              Create New Admin Account
             </DialogTitle>
             <DialogDescription>
-              Grant administrator privileges to an existing user
+              Create a new user account with administrator privileges
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4">
-            <div className="space-y-2">
-              <Label>Select User</Label>
+            <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-                  <Input
-                    placeholder="Search users by username"
-                    value={userSearchTerm}
-                    onChange={(e) => setUserSearchTerm(e.target.value)}
-                    className="pl-10"
-                  />
-                </div>
-                <Select 
-                  value={createForm.userId} 
-                  onValueChange={(value) => setCreateForm({ ...createForm, userId: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Choose a user..." />
-                  </SelectTrigger>
-                  <SelectContent className="max-h-[300px] overflow-y-auto">
-                    {filteredUsers.length > 0 ? (
-                      filteredUsers.map((userData) => (
-                        <SelectItem key={userData.id} value={userData.id}>
-                          <div className="flex items-center gap-2">
-                            {userData.imageUrl && (
-                              <img
-                                src={userData.imageUrl}
-                                alt="User"
-                                className="w-6 h-6 rounded-full"
-                              />
-                            )}
-                            <div>
-                              <div className="font-medium">
-                                {userData.firstName} {userData.lastName}
-                              </div>
-                              <div className="text-sm text-muted-foreground">
-                                {userData.email}
-                              </div>
-                              {userData.username && (
-                                <div className="text-xs text-muted-foreground">
-                                  @{userData.username}
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        </SelectItem>
-                      ))
-                    ) : (
-                      <div className="p-4 text-center text-muted-foreground">
-                        {userSearchTerm ? `No users found matching "${userSearchTerm}"` : "No users available"}
-                      </div>
-                    )}
-                    {userSearchTerm && filteredUsers.length === 50 && (
-                      <div className="p-2 text-xs text-muted-foreground text-center border-t">
-                        Showing first 50 results. Use search to narrow down.
-                      </div>
-                    )}
-                  </SelectContent>
-                </Select>
+                <Label htmlFor="firstName">First Name *</Label>
+                <Input
+                  id="firstName"
+                  placeholder="Enter first name"
+                  value={createForm.firstName}
+                  onChange={(e) => setCreateForm({ ...createForm, firstName: e.target.value })}
+                />
               </div>
+              <div className="space-y-2">
+                <Label htmlFor="lastName">Last Name *</Label>
+                <Input
+                  id="lastName"
+                  placeholder="Enter last name"
+                  value={createForm.lastName}
+                  onChange={(e) => setCreateForm({ ...createForm, lastName: e.target.value })}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="email">Email Address *</Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="Enter email address"
+                value={createForm.email}
+                onChange={(e) => setCreateForm({ ...createForm, email: e.target.value })}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="username">Username (Optional)</Label>
+              <Input
+                id="username"
+                placeholder="Enter username"
+                value={createForm.username}
+                onChange={(e) => setCreateForm({ ...createForm, username: e.target.value })}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="password">Password *</Label>
+              <Input
+                id="password"
+                type="password"
+                placeholder="Enter password"
+                value={createForm.password}
+                onChange={(e) => setCreateForm({ ...createForm, password: e.target.value })}
+              />
+              <p className="text-xs text-muted-foreground">
+                Password must be at least 8 characters long and secure.
+              </p>
             </div>
 
             <div className="space-y-2">
               <Label>Admin Role</Label>
               <Select 
                 value={createForm.adminRole} 
-                onValueChange={(value: 'admin') => setCreateForm({ ...createForm, adminRole: value })}
+                onValueChange={(value: 'admin' | 'superadmin') => setCreateForm({ ...createForm, adminRole: value })}
               >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="admin">Regular Admin</SelectItem>
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-muted-foreground">
-                Only superadmins can create other superadmins through direct database access.
-              </p>
-            </div>
-
-            <div className="space-y-2">
-              <Label>College (Optional)</Label>
-              <Select 
-                value={createForm.college} 
-                onValueChange={(value) => {
-                  const college = colleges.find(c => c.abbreviation === value);
-                  setCreateForm({ 
-                    ...createForm, 
-                    college: value,
-                    department: college?.departments[0]?.name || ''
-                  });
-                }}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Leave empty for all colleges" />
-                </SelectTrigger>
-                <SelectContent>
-                  {colleges.map((college) => (
-                    <SelectItem key={college._id.$oid} value={college.abbreviation}>
-                      {college.abbreviation} - {college.name}
-                    </SelectItem>
-                  ))}
+                  <SelectItem value="superadmin">Superadmin</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
-            {createForm.college && (
-              <div className="space-y-2">
-                <Label>Department (Optional)</Label>
-                <Select 
-                  value={createForm.department} 
-                  onValueChange={(value) => setCreateForm({ ...createForm, department: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Leave empty for all departments" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {createFormDepartments.map((dept) => (
-                      <SelectItem key={dept.name} value={dept.name}>
-                        {dept.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+            {createForm.adminRole === 'admin' && (
+              <>
+                <div className="space-y-2">
+                  <Label>College {createForm.adminRole === 'admin' ? '*' : '(Optional)'}</Label>
+                  <Select 
+                    value={createForm.college || undefined} 
+                    onValueChange={(value) => {
+                      const college = colleges.find(c => c.abbreviation === value);
+                      setCreateForm({ 
+                        ...createForm, 
+                        college: value || '',
+                        department: value ? (college?.departments[0]?.name || '') : ''
+                      });
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder={createForm.adminRole === 'admin' ? "Select a college" : "All colleges (no restriction)"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {colleges.map((college) => (
+                        <SelectItem key={college._id.$oid} value={college.abbreviation}>
+                          {college.abbreviation} - {college.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {createForm.adminRole === 'admin' && (
+                    <p className="text-xs text-muted-foreground">
+                      Regular admins must be assigned to a specific college.
+                    </p>
+                  )}
+                </div>
+
+                {createForm.college && (
+                  <div className="space-y-2">
+                    <Label>Department Restriction (Optional)</Label>
+                    <Select 
+                      value={createForm.department || undefined} 
+                      onValueChange={(value) => setCreateForm({ ...createForm, department: value || '' })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="All departments (no restriction)" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="ALL_DEPARTMENTS">All Departments</SelectItem>
+                        {createFormDepartments.map((dept) => (
+                          <SelectItem key={dept.name} value={dept.name}>
+                            {dept.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">
+                      Select "All Departments" for deans who need college-wide access.
+                    </p>
+                  </div>
+                )}
+              </>
+            )}
+
+            {createForm.adminRole === 'superadmin' && (
+              <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                <p className="text-sm text-yellow-800">
+                  <strong>Warning:</strong> Superadmins have unrestricted access to all system functions and can manage other administrators.
+                </p>
               </div>
             )}
           </div>
@@ -764,7 +770,7 @@ export default function AdminManagement() {
               className="flex items-center gap-2"
             >
               <ShieldCheck className="h-4 w-4" />
-              Create Admin
+              Create Admin Account
             </Button>
           </div>
         </DialogContent>
@@ -804,23 +810,22 @@ export default function AdminManagement() {
               {editForm.adminRole === 'admin' && (
                 <>
                   <div className="space-y-2">
-                    <Label>College Restriction</Label>
+                    <Label>College {editForm.adminRole === 'admin' ? '*' : '(Optional)'}</Label>
                     <Select 
-                      value={editForm.college} 
+                      value={editForm.college || undefined} 
                       onValueChange={(value) => {
                         const college = colleges.find(c => c.abbreviation === value);
                         setEditForm({ 
                           ...editForm, 
-                          college: value,
+                          college: value || '',
                           department: value ? (college?.departments[0]?.name || '') : ''
                         });
                       }}
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder="All colleges (no restriction)" />
+                        <SelectValue placeholder={editForm.adminRole === 'admin' ? "Select a college" : "All colleges (no restriction)"} />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">No restriction</SelectItem>
                         {colleges.map((college) => (
                           <SelectItem key={college._id.$oid} value={college.abbreviation}>
                             {college.abbreviation} - {college.name}
@@ -828,20 +833,25 @@ export default function AdminManagement() {
                         ))}
                       </SelectContent>
                     </Select>
+                    {editForm.adminRole === 'admin' && (
+                      <p className="text-xs text-muted-foreground">
+                        Regular admins must be assigned to a specific college.
+                      </p>
+                    )}
                   </div>
 
                   {editForm.college && (
                     <div className="space-y-2">
                       <Label>Department Restriction</Label>
                       <Select 
-                        value={editForm.department} 
-                        onValueChange={(value) => setEditForm({ ...editForm, department: value })}
+                        value={editForm.department || undefined} 
+                        onValueChange={(value) => setEditForm({ ...editForm, department: value || '' })}
                       >
                         <SelectTrigger>
                           <SelectValue placeholder="All departments (no restriction)" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">No restriction</SelectItem>
+                          <SelectItem value="ALL_DEPARTMENTS">All Departments</SelectItem>
                           {editFormDepartments.map((dept) => (
                             <SelectItem key={dept.name} value={dept.name}>
                               {dept.name}
@@ -849,6 +859,9 @@ export default function AdminManagement() {
                           ))}
                         </SelectContent>
                       </Select>
+                      <p className="text-xs text-muted-foreground">
+                        Select "All Departments" for deans who need college-wide access.
+                      </p>
                     </div>
                   )}
                 </>
@@ -882,16 +895,16 @@ export default function AdminManagement() {
         </DialogContent>
       </Dialog>
 
-      {/* Remove Admin Dialog */}
+      {/* Delete Admin Dialog */}
       <Dialog open={isRemoveDialogOpen} onOpenChange={setIsRemoveDialogOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-destructive">
               <AlertTriangle className="h-5 w-5" />
-              Remove Admin Privileges
+              Delete Admin User
             </DialogTitle>
             <DialogDescription>
-              This will remove all administrative privileges from this user. They will become a regular user.
+              This will permanently delete this admin user account. This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
 
@@ -935,7 +948,7 @@ export default function AdminManagement() {
               className="flex items-center gap-2"
             >
               <Trash2 className="h-4 w-4" />
-              Remove Admin
+              Delete User
             </Button>
           </div>
         </DialogContent>
@@ -1046,7 +1059,13 @@ export default function AdminManagement() {
                       {selectedAdmin.department && (
                         <div>
                           <span className="text-sm font-medium">Department: </span>
-                          <Badge variant="outline">{selectedAdmin.department}</Badge>
+                          {selectedAdmin.department === 'ALL_DEPARTMENTS' ? (
+                            <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                              All Departments
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline">{selectedAdmin.department}</Badge>
+                          )}
                         </div>
                       )}
                     </div>

@@ -90,12 +90,11 @@ export default function AppSidebar({ userData, ...props }: AppSidebarProps) {
       email: "m@example.com",
       avatar: "/avatars/shadcn.jpg",
     },
-    navMain: [
+    navAdmin: [
       {
         title: "Dashboard",
         url: "/admin/dashboard",
         icon: LayoutDashboard,
-        isActive: true,
       },
       {
         title: "Appointments",
@@ -120,7 +119,38 @@ export default function AppSidebar({ userData, ...props }: AppSidebarProps) {
       {
         title: "Users",
         icon: UserCog,
-        isActive: true,
+        url: "/admin/users/user-management",
+      },
+    ],
+    navSuperAdmin: [
+      {
+        title: "Dashboard",
+        url: "/admin/dashboard",
+        icon: LayoutDashboard,
+      },
+      {
+        title: "Appointments",
+        url: "/admin/appointments",
+        icon: Bot,
+      },
+      {
+        title: "Colleges",
+        url: "/admin/colleges",
+        icon: GraduationCap,
+      },
+      {
+        title: "Subjects",
+        url: "/admin/subjects",
+        icon: BookOpen,
+      },
+      {
+        title: "Approvals",
+        url: "/admin/approval",
+        icon: CheckSquare2,
+      },
+      {
+        title: "Users",
+        icon: UserCog,
         url: "",
         items: [
           {
@@ -174,7 +204,11 @@ export default function AppSidebar({ userData, ...props }: AppSidebarProps) {
         </div>
       </SidebarHeader>
       <SidebarContent>
-        <NavMain items={data.navMain} />
+        {userData?.publicMetadata?.adminRole === "superadmin" ? (
+          <NavMain items={data.navSuperAdmin} />
+        ) : (
+          <NavMain items={data.navAdmin} />
+        )}
         {/* <NavProjects projects={data.projects} /> */}
       </SidebarContent>
       <SidebarFooter>

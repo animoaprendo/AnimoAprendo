@@ -501,7 +501,7 @@ export async function cancelAppointment(params: {
         body: JSON.stringify({
           messageId: params.messageId || params.appointmentId,
           status: 'cancelled',
-          userId: 'admin' // Admin override
+          userId: process.env.ADMIN_KEY // Admin override
         }),
       }
     );

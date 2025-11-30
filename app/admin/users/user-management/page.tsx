@@ -395,7 +395,7 @@ export default function UserManagement() {
       </div>
 
       {/* Statistics Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+      <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-3">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Users</CardTitle>
@@ -407,7 +407,7 @@ export default function UserManagement() {
           </CardContent>
         </Card>
 
-        <Card>
+        {/* <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Tutors</CardTitle>
             <GraduationCap className="h-4 w-4 text-muted-foreground" />
@@ -420,9 +420,9 @@ export default function UserManagement() {
               }% of users
             </p>
           </CardContent>
-        </Card>
+        </Card> */}
 
-        <Card>
+        {/* <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Tutees</CardTitle>
             <BookOpen className="h-4 w-4 text-muted-foreground" />
@@ -435,7 +435,7 @@ export default function UserManagement() {
               }% of users
             </p>
           </CardContent>
-        </Card>
+        </Card> */}
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -536,7 +536,7 @@ export default function UserManagement() {
                       {getSortIcon('name')}
                     </Button>
                   </TableHead>
-                  <TableHead>
+                  {/* <TableHead>
                     <Button 
                       variant="ghost" 
                       className="h-auto p-0 font-semibold hover:bg-transparent"
@@ -545,7 +545,7 @@ export default function UserManagement() {
                       Role
                       {getSortIcon('role')}
                     </Button>
-                  </TableHead>
+                  </TableHead> */}
                   <TableHead>
                     <Button 
                       variant="ghost" 
@@ -610,7 +610,7 @@ export default function UserManagement() {
                         </div>
                       </div>
                     </TableCell>
-                    <TableCell>
+                    {/* <TableCell>
                       <Badge 
                         variant={user.role === 'tutor' ? 'default' : 'secondary'}
                       >
@@ -626,7 +626,7 @@ export default function UserManagement() {
                           </>
                         )}
                       </Badge>
-                    </TableCell>
+                    </TableCell> */}
                     <TableCell>
                       <Badge 
                         variant={

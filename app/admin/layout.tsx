@@ -19,8 +19,6 @@ import {
 } from "@/components/ui/sidebar";
 import { useState, useEffect } from "react";
 import { useUser } from "@clerk/nextjs";
-import AlertFragment from "../tutor/alert";
-import { Toaster } from "sonner";
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const { isLoaded, isSignedIn, user } = useUser();
@@ -71,16 +69,21 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
                   if (index < pathSegments.length - 1) {
                     return (
-                      <>
-                        <BreadcrumbLink
+                      <div key={index} className="flex items-center">
+                        {/* <BreadcrumbLink
                           key={index}
                           href={`/${pathSegments.slice(1, index + 1).join("/")}`}
                           className="capitalize"
                         >
                           {segment}
-                        </BreadcrumbLink>
+                        </BreadcrumbLink> */}
+                        <BreadcrumbItem key={index}>
+                        <BreadcrumbPage className="capitalize">
+                          {segment}
+                        </BreadcrumbPage>
+                      </BreadcrumbItem>
                         <BreadcrumbSeparator className="hidden md:block" />
-                      </>
+                      </div>
                     );
                   } else {
                     return (
@@ -98,13 +101,9 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         </header>
 
         <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
-          <div className="fixed bottom-0 right-0 m-4 z-4">
-            <AlertFragment />
-          </div>
           {children}
         </div>
       </SidebarInset>
-      {/* <Toaster position="bottom-right" /> */}
     </SidebarProvider>
   );
 }

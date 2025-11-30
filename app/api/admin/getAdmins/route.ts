@@ -3,15 +3,17 @@ import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(req: NextRequest) {
   try {
-    const { userId: currentUserId } = await auth();
+    const { searchParams } = new URL(req.url);
+    const userId = searchParams.get('userId');
+    const adminKey = searchParams.get('adminKey');
     
-    if (!currentUserId) {
+    if (!adminKey || adminKey !== process.env.ADMIN_KEY || !userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     // Get current user to verify they are superadmin
     const client = await clerkClient();
-    const currentUser = await client.users.getUser(currentUserId);
+    const currentUser = await client.users.getUser(userId)
     const currentUserMetadata = currentUser.publicMetadata as any;
     
     if (!currentUserMetadata?.isAdmin || currentUserMetadata?.adminRole !== "superadmin") {

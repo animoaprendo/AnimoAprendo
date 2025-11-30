@@ -22,10 +22,10 @@ export default function ChatSidebar({
 }: ChatSidebarProps) {
   return (
     <div className="bg-white rounded-2xl shadow p-4 col-span-1 h-full flex flex-col overflow-hidden">
-      <div className="flex-shrink-0">
+      <div className="shrink-0">
         <UserInformation activeUser={activeUser} />
       </div>
-      <div className="flex-shrink-0 mt-4">
+      <div className="shrink-0 mt-4">
         <InquiryInformation inquiry={inquiry} />
       </div>
       <div className="flex-1 mt-4 min-h-0">
@@ -49,7 +49,7 @@ function UserInformation({ activeUser }: { activeUser: User | null }) {
       {activeUser ? (
         <div className="space-y-3">
           <div className="flex items-center gap-3 mb-3">
-            <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center overflow-hidden flex-shrink-0">
+            <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center overflow-hidden shrink-0">
               {activeUser.imageUrl ? (
                 <img
                   src={activeUser.imageUrl}
@@ -155,7 +155,7 @@ function RemindersSection({
 
   return (
     <div className="h-full flex flex-col">
-      <h4 className="font-semibold text-green-900 text-sm mb-2 flex-shrink-0">
+      <h4 className="font-semibold text-green-900 text-sm mb-2 shrink-0">
         Reminders
       </h4>
       {hasReminders ? (
@@ -217,7 +217,7 @@ function RemindersSection({
 
           {/* Regular Appointment Reminders Card - Show ALL appointments */}
           {upcomingAppointments.length > 0 && (
-            <div className="bg-green-700 text-white/95 px-3 py-4 rounded-md flex-shrink-0">
+            <div className="bg-green-700 text-white/95 px-3 py-4 rounded-md shrink-0">
               <div className="font-medium text-green-100 mb-2">
                 📅 Appointment Reminders
               </div>
@@ -237,7 +237,7 @@ function RemindersSection({
           )}
         </div>
       ) : (
-        <div className="w-full bg-gray-50 rounded-xl p-4 text-center flex-shrink-0">
+        <div className="w-full bg-gray-50 rounded-xl p-4 text-center shrink-0">
           <p className="text-sm text-gray-500">No reminders yet</p>
         </div>
       )}
