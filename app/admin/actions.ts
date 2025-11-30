@@ -84,7 +84,7 @@ export async function approveOffer(offerId: string) {
         body: JSON.stringify({
           collection: "subjects",
           id: offerId,
-          data: { status: "available" }
+          data: { status: "available" },
         }),
       }
     );
@@ -112,7 +112,7 @@ export async function rejectOffer(offerId: string) {
         body: JSON.stringify({
           collection: "subjects",
           id: offerId,
-          data: { status: "rejected" }
+          data: { status: "rejected" },
         }),
       }
     );
@@ -145,18 +145,62 @@ export async function getPendingOffers() {
     const result = await response.json();
     return {
       success: true,
-      data: result.data?.filter((offer: any) => offer.status === "pending") || []
+      data:
+        result.data?.filter((offer: any) => offer.status === "pending") || [],
     };
   } catch (error) {
     console.error("Error fetching pending offers:", error);
-    return { success: false, data: [], error: error instanceof Error ? error.message : "Unknown error" };
+    return {
+      success: false,
+      data: [],
+      error: error instanceof Error ? error.message : "Unknown error",
+    };
   }
 }
 
 // Admin Management Functions
+export async function createAdminAccount(data: {
+  userId: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  username?: string;
+  password: string;
+  adminRole: "admin" | "superadmin";
+  college?: string;
+  department?: string;
+}): Promise<{ success: boolean; data?: any; error?: string }> {
+  try {
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_BASE_URL}/api/admin/createAdminAccount`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(data),
+      }
+    );
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || "Failed to create admin account");
+    }
+
+    const result = await response.json();
+    return { success: true, data: result };
+  } catch (error) {
+    console.error("Error creating admin account:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error",
+    };
+  }
+}
+
 export async function createAdmin(data: {
   userId: string;
-  adminRole: 'admin';
+  adminRole: "admin";
   college?: string;
   department?: string;
 }): Promise<{ success: boolean; data?: any; error?: string }> {
@@ -181,13 +225,17 @@ export async function createAdmin(data: {
     return { success: true, data: result };
   } catch (error) {
     console.error("Error creating admin:", error);
-    return { success: false, error: error instanceof Error ? error.message : "Unknown error" };
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error",
+    };
   }
 }
 
 export async function updateAdminRole(data: {
+  editorId: string;
   userId: string;
-  adminRole?: 'admin' | 'superadmin';
+  adminRole?: "admin" | "superadmin";
   college?: string;
   department?: string;
 }): Promise<{ success: boolean; data?: any; error?: string }> {
@@ -199,7 +247,7 @@ export async function updateAdminRole(data: {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(data),
+        body: JSON.stringify({ ...data, adminKey: process.env.ADMIN_KEY }),
       }
     );
 
@@ -212,11 +260,17 @@ export async function updateAdminRole(data: {
     return { success: true, data: result };
   } catch (error) {
     console.error("Error updating admin:", error);
-    return { success: false, error: error instanceof Error ? error.message : "Unknown error" };
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error",
+    };
   }
 }
 
-export async function removeAdmin(userId: string): Promise<{ success: boolean; data?: any; error?: string }> {
+export async function removeAdmin(
+  userId: string,
+  editorId: string
+): Promise<{ success: boolean; data?: any; error?: string }> {
   try {
     const response = await fetch(
       `${process.env.NEXT_PUBLIC_BASE_URL}/api/admin/removeAdmin`,
@@ -225,7 +279,7 @@ export async function removeAdmin(userId: string): Promise<{ success: boolean; d
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ userId }),
+        body: JSON.stringify({ userId, editorId, adminKey: process.env.ADMIN_KEY }),
       }
     );
 
@@ -238,14 +292,21 @@ export async function removeAdmin(userId: string): Promise<{ success: boolean; d
     return { success: true, data: result };
   } catch (error) {
     console.error("Error removing admin:", error);
-    return { success: false, error: error instanceof Error ? error.message : "Unknown error" };
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error",
+    };
   }
 }
 
-export async function getAdmins(): Promise<{ success: boolean; admins?: any[]; error?: string }> {
+export async function getAdmins(userId: string): Promise<{
+  success: boolean;
+  admins?: any[];
+  error?: string;
+}> {
   try {
     const response = await fetch(
-      `${process.env.NEXT_PUBLIC_BASE_URL}/api/admin/getAdmins`,
+      `${process.env.NEXT_PUBLIC_BASE_URL}/api/admin/getAdmins?userId=${userId}&adminKey=${process.env.ADMIN_KEY}`,
       {
         method: "GET",
         cache: "no-store",
@@ -261,6 +322,9 @@ export async function getAdmins(): Promise<{ success: boolean; admins?: any[]; e
     return { success: true, admins: result.admins || [] };
   } catch (error) {
     console.error("Error fetching admins:", error);
-    return { success: false, error: error instanceof Error ? error.message : "Unknown error" };
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error",
+    };
   }
 }

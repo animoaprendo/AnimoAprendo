@@ -3,30 +3,55 @@ import { NextRequest, NextResponse } from "next/server";
 
 export async function PATCH(req: NextRequest) {
   try {
-    const { userId: currentUserId } = await auth();
-    
-    if (!currentUserId) {
+    const {
+      userId: targetUserId,
+      editorId,
+      adminKey,
+      adminRole,
+      college,
+      department,
+    } = await req.json();
+    const { searchParams } = new URL(req.url);
+
+    if (!adminKey || adminKey !== process.env.ADMIN_KEY || !editorId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     // Get current user to verify they are superadmin
     const client = await clerkClient();
-    const currentUser = await client.users.getUser(currentUserId);
+    const currentUser = await client.users.getUser(editorId);
     const currentUserMetadata = currentUser.publicMetadata as any;
-    
-    if (!currentUserMetadata?.isAdmin || currentUserMetadata?.adminRole !== "superadmin") {
-      return NextResponse.json({ error: "Access denied. Superadmin required." }, { status: 403 });
+
+    if (
+      !currentUserMetadata?.isAdmin ||
+      currentUserMetadata?.adminRole !== "superadmin"
+    ) {
+      return NextResponse.json(
+        { error: "Access denied. Superadmin required." },
+        { status: 403 }
+      );
     }
 
-    const { userId: targetUserId, adminRole, college, department } = await req.json();
-
     if (!targetUserId) {
-      return NextResponse.json({ error: "User ID is required" }, { status: 400 });
+      return NextResponse.json(
+        { error: "User ID is required" },
+        { status: 400 }
+      );
+    }
+
+    // Validate college requirement for regular admins
+    if (adminRole === "admin" && !college) {
+      return NextResponse.json(
+        {
+          error: "Regular admins must have a college assigned",
+        },
+        { status: 400 }
+      );
     }
 
     // Get the target user
     const targetUser = await client.users.getUser(targetUserId);
-    
+
     if (!targetUser) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
@@ -43,24 +68,30 @@ export async function PATCH(req: NextRequest) {
     }
 
     // Update college/department for regular admins
-    if (adminRole === 'admin' || (targetUser.publicMetadata as any)?.adminRole === 'admin') {
+    if (
+      adminRole === "admin" ||
+      (targetUser.publicMetadata as any)?.adminRole === "admin"
+    ) {
       if (college !== undefined) publicMetadata.college = college;
-      if (department !== undefined) publicMetadata.department = department;
+      if (department !== undefined) {
+        publicMetadata.department =
+          department === "ALL_DEPARTMENTS" ? "ALL_DEPARTMENTS" : department;
+      }
     }
 
     // If upgrading to superadmin, remove college/department restrictions
-    if (adminRole === 'superadmin') {
+    if (adminRole === "superadmin") {
       delete publicMetadata.college;
       delete publicMetadata.department;
     }
 
     // Update user metadata
     await client.users.updateUserMetadata(targetUserId, {
-      publicMetadata
+      publicMetadata,
     });
 
-    return NextResponse.json({ 
-      success: true, 
+    return NextResponse.json({
+      success: true,
       message: `Admin ${targetUser.emailAddresses[0]?.emailAddress} has been updated`,
       user: {
         id: targetUser.id,
@@ -69,10 +100,9 @@ export async function PATCH(req: NextRequest) {
         lastName: targetUser.lastName,
         adminRole: publicMetadata.adminRole,
         college: publicMetadata.college,
-        department: publicMetadata.department
-      }
+        department: publicMetadata.department,
+      },
     });
-
   } catch (error) {
     console.error("Error updating admin:", error);
     return NextResponse.json(

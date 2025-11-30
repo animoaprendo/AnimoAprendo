@@ -28,7 +28,6 @@ export type Appointment = {
   quizAttempts?: any[];
   createdAt: string;
   updatedAt: string;
-  // Populated fields
   tutorName?: string;
   tuteeName?: string;
 };
@@ -545,7 +544,7 @@ export default function AdminAppointments() {
                   </CardHeader>
                   <CardContent>
                     <p className="font-medium">{selectedAppointment.tuteeName}</p>
-                    <p className="text-sm text-muted-foreground">{selectedAppointment.tuteeId}</p>
+                    <p className="text-[0.6rem] -mx-4 md:mx-0 md:text-[0.65rem] text-muted-foreground">{selectedAppointment.tuteeId}</p>
                   </CardContent>
                 </Card>
                 <Card>
@@ -554,7 +553,7 @@ export default function AdminAppointments() {
                   </CardHeader>
                   <CardContent>
                     <p className="font-medium">{selectedAppointment.tutorName}</p>
-                    <p className="text-sm text-muted-foreground">{selectedAppointment.tutorId}</p>
+                    <p className="text-[0.6rem] -mx-4 md:mx-0 md:text-[0.65rem] text-muted-foreground">{selectedAppointment.tutorId}</p>
                   </CardContent>
                 </Card>
               </div>
