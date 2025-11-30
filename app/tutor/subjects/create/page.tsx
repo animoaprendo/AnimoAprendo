@@ -1,18 +1,18 @@
 "use client";
 
-import { useState } from "react";
-import OfferDetails from "../OfferDetails";
-import CompletionChecklist from "../CompletionChecklist";
-import ActionsBar from "../ActionsBar";
-import { motion, AnimatePresence } from "framer-motion";
-import { useUser } from "@clerk/nextjs";
 import { saveSubjectDraft, submitSubject } from "@/app/tutor/actions";
 import { CreatePopup } from "@/app/tutor/alert";
-import { DotLoader } from "react-spinners";
 import { CircleCheckBig } from "@/components/animate-ui/icons/circle-check-big";
 import { CircleX } from "@/components/animate-ui/icons/circle-x";
-import { useRouter } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useUser } from "@clerk/nextjs";
+import { AnimatePresence, motion } from "framer-motion";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { DotLoader } from "react-spinners";
+import ActionsBar from "../ActionsBar";
+import CompletionChecklist from "../CompletionChecklist";
+import OfferDetails from "../OfferDetails";
 
 let DESCRIPTION_LENGTH = 1;
 let QUIZ_COMPLETED = 1;
@@ -110,10 +110,10 @@ export default function OfferAndQuizPage() {
   }
 
   return (
-    <div className="container mx-auto py-6 px-4 lg:max-w-[100rem]">
+    <div className="container mx-auto py-6 px-4 lg:max-w-400">
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         <div className="lg:col-span-1">
-          <Card className="sticky top-20 shadow-lg border-0 bg-gradient-to-br from-background to-muted/20">
+          <Card className="sticky top-20 shadow-lg border-0 bg-linear-to-br from-background to-muted/20">
             <AnimatePresence>
               {submitState !== "default" && (
                 <motion.div

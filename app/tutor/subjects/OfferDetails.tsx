@@ -1,28 +1,24 @@
 "use client";
 
-import { useState, useRef, useEffect, forwardRef } from "react";
-import dynamic from "next/dynamic";
-import Image from "next/image";
 import {
-  Trash2,
-  Upload,
-  Eye,
-  Edit,
-  Plus,
-  Clock,
   Calendar,
   CheckCircle2,
+  Clock,
+  Edit,
+  Eye,
+  Plus,
+  Trash2,
+  Upload,
   XCircle,
 } from "lucide-react";
+import dynamic from "next/dynamic";
+import Image from "next/image";
+import { forwardRef, useEffect, useRef, useState } from "react";
 import ReactQuill from "react-quill-new";
 // @ts-ignore
-import "react-quill-new/dist/quill.snow.css";
-import { CreatePopup } from "@/app/tutor/alert";
+import { getCollectionData } from "@/app/actions";
 import { uploadBannerServer } from "@/app/tutor/actions";
-import { useUser } from "@clerk/nextjs";
-import { ClipLoader, MoonLoader, RiseLoader } from "react-spinners";
-import { CircleCheckBig } from "@/components/animate-ui/icons/circle-check-big";
-import { CircleX } from "@/components/animate-ui/icons/circle-x";
+import { CreatePopup } from "@/app/tutor/alert";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -32,6 +28,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -39,9 +36,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { getCollectionData } from "@/app/actions";
+import { useUser } from "@clerk/nextjs";
+import "react-quill-new/dist/quill.snow.css";
+import { ClipLoader } from "react-spinners";
 
 const QuillEditor = dynamic(
   async () => {
@@ -426,7 +424,7 @@ export default function OfferDetails({
               className="w-full h-full object-cover"
               unoptimized
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+            <div className="absolute inset-0 bg-linear-to-t from-black/60 to-transparent" />
             <div className="absolute bottom-4 left-6 text-white">
               <h1 className="text-3xl font-bold mb-2">
                 {subject || "Subject Title"}

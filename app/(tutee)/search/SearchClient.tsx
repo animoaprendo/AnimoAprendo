@@ -1,18 +1,18 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
-import Link from "next/link";
-import { useQueryState } from "nuqs";
-import { Search, Filter, X, SearchX } from "lucide-react";
 import { searchOfferings } from "@/app/actions";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { useUser } from "@clerk/nextjs";
+import { Filter, Search, SearchX } from "lucide-react";
+import Link from "next/link";
+import { useQueryState } from "nuqs";
+import React, { useEffect, useState } from "react";
 
 interface Availability {
   id: string;
@@ -296,7 +296,7 @@ export default function SearchClient({ initialOfferings }: SearchClientProps) {
                 <Card className="text-xs text-green-700 mt-auto bg-green-50 border-green-200">
                   <CardContent className="p-2">
                     <p className="font-semibold mb-1">Availability:</p>
-                    <p className="break-words text-xs">
+                    <p className="wrap-break-word text-xs">
                       {formatAvailability(item.availability)}
                     </p>
                   </CardContent>

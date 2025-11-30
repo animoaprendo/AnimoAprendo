@@ -1,15 +1,15 @@
 'use client';
 
-import { motion } from 'motion/react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { BookOpen, Users, Award, GraduationCap, Target, Clock, Calendar, CheckCircle } from 'lucide-react';
+import { Award, BookOpen, Calendar, GraduationCap, Users } from 'lucide-react';
+import { motion } from 'motion/react';
 
 export default function ComingSoonPage() {
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
+    <div className="min-h-screen bg-linear-to-br from-blue-50 via-indigo-50 to-purple-50">
       {/* Navigation */}
       <nav className="absolute top-0 left-0 right-0 z-10 p-6">
         <div className="max-w-6xl mx-auto flex justify-between items-center">
@@ -38,7 +38,7 @@ export default function ComingSoonPage() {
               </Badge>
               <h1 className="text-5xl md:text-6xl font-bold text-gray-900 mb-6 leading-tight">
                 The Future of
-                <span className="bg-gradient-to-r from-green-600 via-green-400 to-blue-500 bg-clip-text text-transparent"> Peer Learning</span>
+                <span className="bg-linear-to-r from-green-600 via-green-400 to-blue-500 bg-clip-text text-transparent"> Peer Learning</span>
               </h1>
               <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto leading-relaxed">
                 Connect with top tutors from De La Salle University-Dasmariñas. 

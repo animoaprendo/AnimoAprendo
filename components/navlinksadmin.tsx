@@ -1,21 +1,20 @@
-import { SignOutButton } from '@clerk/nextjs'
-import { currentUser } from '@clerk/nextjs/server'
-import Link from 'next/link'
-import React from 'react'
+import { SignOutButton } from '@clerk/nextjs';
+import { currentUser } from '@clerk/nextjs/server';
+import Link from 'next/link';
 
+import { FiLogOut, FiUser, FiUsers } from "react-icons/fi";
 import {
-  RiDashboardLine,
   RiBookLine,
-  RiCalendar2Line
+  RiCalendar2Line,
+  RiDashboardLine
 } from "react-icons/ri";
-import { FiUsers, FiLogOut, FiUser } from "react-icons/fi";
 
 async function NavLinksAdmin() {
   const user = await currentUser()
   return (
     <div className='flex flex-col select-none'>
       <div className='flex items-center'>
-        <ul className="group flex flex-col items-center h-screen p-2 gap-5 bg-gradient-to-b from-green-700 to-green-900 text-white transition-[width, padding] duration-500 overflow-hidden w-15 hover:w-60 hover:p-5 hover:items-stretch hover:gap-5">
+        <ul className="group flex flex-col items-center h-screen p-2 gap-5 bg-linear-to-b from-green-700 to-green-900 text-white transition-[width, padding] duration-500 overflow-hidden w-15 hover:w-60 hover:p-5 hover:items-stretch hover:gap-5">
           <div className="rounded-full mx-auto">
             <img
               className="rounded-full w-full max-w-20"

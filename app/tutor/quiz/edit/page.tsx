@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
-import { ArrowLeft, Save, Calendar, Clock, Users } from "lucide-react";
-import { useUser } from "@clerk/nextjs";
 import { fetchAppointments, updateAppointmentQuiz } from "@/app/actions";
+import { useUser } from "@clerk/nextjs";
+import { ArrowLeft, Calendar, Clock, Save, Users } from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
 
 // Define Question type locally to avoid import issues
 type Question = {
@@ -24,9 +24,9 @@ if (process.env.NEXT_PUBLIC_DEVELOPMENT_MODE === "false") {
 }
 
 // Import QuizEditor components inline to avoid import issues
+import { AnimatePresence, motion } from "framer-motion";
 import { X } from "lucide-react";
 import { useRef } from "react";
-import { AnimatePresence, motion } from "framer-motion";
 
 // Function to check if a question has missing information
 const getQuestionValidation = (q: Question) => {

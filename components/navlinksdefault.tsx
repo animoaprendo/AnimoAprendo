@@ -1,11 +1,10 @@
 "use client"
 
-import { useState } from "react"
-import { SignInButton, SignUpButton } from "@clerk/nextjs"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
-import { Badge } from "@/components/ui/badge"
-import { Menu, GraduationCap, LogIn, UserPlus } from "lucide-react"
+import { SignInButton, SignUpButton } from "@clerk/nextjs"
+import { GraduationCap, LogIn, Menu, UserPlus } from "lucide-react"
+import { useState } from "react"
 
 export default function NavLinksGuest() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)

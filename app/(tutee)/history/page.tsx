@@ -1,9 +1,8 @@
-import React from "react";
 import { fetchTuteeHistory } from "@/app/actions";
-import { auth } from "@clerk/nextjs/server";
-import TuteeHistoryClient from "./TuteeHistoryClient";
 import { Card, CardContent } from "@/components/ui/card";
+import { auth } from "@clerk/nextjs/server";
 import { AlertCircle, Lock } from "lucide-react";
+import TuteeHistoryClient from "./TuteeHistoryClient";
 
 export default async function History() {
   const { userId } = await auth();

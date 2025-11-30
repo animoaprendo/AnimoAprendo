@@ -55,10 +55,10 @@ export default function SubjectCardTemplate(item: CardInfo, i: Key) {
         </div>
         <hr />
         <span className="flex flex-row items-center gap-1 font-semibold text-black/80"><StarIcon className="size-5"/> {item.Rating.toFixed(1)}</span>
-        <h2 className="line-clamp-2 font-bold text-lg grow-1 max-h-[3em]">
+        <h2 className="line-clamp-2 font-bold text-lg grow max-h-[3em]">
           {item.Title}
         </h2>
-        <ul className="flex flex-wrap mt-auto gap-1 *:rounded-full *:shadow-md *:px-2 *:py-0.5 *w-fit-content *:text-nowrap overflow-x-auto overflow-y-visible scroll no-scrollbar *:grow-1 *:basis-0 *:text-center">
+        <ul className="flex flex-wrap mt-auto gap-1 *:rounded-full *:shadow-md *:px-2 *:py-0.5 *w-fit-content *:text-nowrap overflow-x-auto overflow-y-visible scroll no-scrollbar *:grow *:basis-0 *:text-center">
           {item.ExtraInfo.map((info, i) => (
             <li
               key={i}

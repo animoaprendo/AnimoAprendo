@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
-import { ArrowLeft, Clock, Calendar, User, CheckCircle, AlertCircle } from "lucide-react";
+import { fetchAppointments, fetchUsers, submitQuizAttempt } from "@/app/actions";
 import { useUser } from "@clerk/nextjs";
-import { fetchAppointments, submitQuizAttempt, fetchUsers } from "@/app/actions";
+import { AlertCircle, ArrowLeft, Calendar, CheckCircle, Clock, User } from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
 
 // Define Question and Answer types
 type Question = {
@@ -429,7 +429,7 @@ export default function TuteeQuizPage() {
                     : ''
                 }`}>
                   <div className="flex items-start space-x-4">
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium flex-shrink-0 ${
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium shrink-0 ${
                       quizCompleted && currentAttempt === 2
                         ? isCorrect
                           ? 'bg-green-100 text-green-600'

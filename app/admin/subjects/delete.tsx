@@ -1,21 +1,21 @@
 "use client";
 
-import { useUser } from "@clerk/nextjs";
-import { useEffect, useState } from "react";
-import { AlertTriangle, Trash2 } from "lucide-react";
-import { deleteSubjectOption } from "../actions";
-import { Subject } from "./page";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { useUser } from "@clerk/nextjs";
+import { AlertTriangle, Trash2 } from "lucide-react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { deleteSubjectOption } from "../actions";
+import { Subject } from "./page";
 
 const DeleteSubject = ({
   isOpen,

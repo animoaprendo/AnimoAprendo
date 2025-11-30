@@ -1,30 +1,30 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
-import { InfoIcon, Menu, X } from "lucide-react";
+import { InfoIcon, X } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 // Import all our new components
-import UserList from "./UserList";
-import MessagesContainer from "./MessagesContainer";
+import AppointmentModal from "./AppointmentModal";
 import ChatInput, { ChatInputRef } from "./ChatInput";
 import ChatSidebar from "./ChatSidebar";
+import MessagesContainer from "./MessagesContainer";
 import MobileSidebar from "./MobileSidebar";
-import AppointmentModal from "./AppointmentModal";
+import UserList from "./UserList";
 
 // Import types and hooks
-import { Message, User, Inquiry, UserData, getMessageId } from "./types";
+import { Inquiry, Message, User, UserData, getMessageId } from "./types";
 import { useChatSeenStatus } from "./useChatSeenStatus";
 import { useMessageManagement } from "./useMessageManagement";
 
 // Import server actions
 import {
+  fetchAppointments,
   fetchChats,
   fetchUsers,
-  sendMessage,
   getInquiry,
   getInquiryByOffering,
+  sendMessage,
   updateAppointmentStatus,
-  fetchAppointments,
 } from "@/app/actions";
 
 // Import socket hook

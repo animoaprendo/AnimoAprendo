@@ -1,26 +1,9 @@
 "use client";
-import React, { useEffect, useState } from "react";
-import {
-  Search,
-  ShieldCheck,
-  Users,
-  BookOpen,
-  Star,
-  Clock,
-  GraduationCap,
-  ChevronRight,
-  Award,
-} from "lucide-react";
-import { redirect } from "next/navigation";
-import TextType from "@/components/reactbits/texttype";
-import LogoLoop from "@/components/reactbits/logoloop";
-import Image from "next/image";
-import { motion } from "framer-motion";
-import { SignInButton, SignUpButton } from "@clerk/nextjs";
-import { getCollectionData, fetchAppointments } from "../actions";
 import SkeletonFAQs from "@/components/landing/faqskeleton";
+import LogoLoop from "@/components/reactbits/logoloop";
+import TextType from "@/components/reactbits/texttype";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
   Card,
   CardContent,
@@ -28,13 +11,29 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
+import { SignInButton, SignUpButton } from "@clerk/nextjs";
+import { motion } from "framer-motion";
+import {
+  Award,
+  BookOpen,
+  ChevronRight,
+  GraduationCap,
+  Search,
+  ShieldCheck,
+  Star,
+  Users
+} from "lucide-react";
+import Image from "next/image";
+import { redirect } from "next/navigation";
+import React, { useEffect, useState } from "react";
+import { getCollectionData } from "../actions";
 
 export type FAQs = {
   q: string;
@@ -175,7 +174,7 @@ export default function Landing() {
       {/* Hero Section */}
       <section className="w-full">
         <div
-          className="hero w-full min-h-[44rem] relative"
+          className="hero w-full min-h-176 relative"
           style={{
             backgroundImage: "url(/images/DLSUD-rotonda.jpg)",
           }}

@@ -1,6 +1,6 @@
 "use client";
 
-import { CheckCircle2, XCircle, Clock } from "lucide-react";
+import { CheckCircle2, XCircle } from "lucide-react";
 
 type Props = {
   titleComplete: boolean;
@@ -60,9 +60,9 @@ export default function CompletionChecklist({
               className="flex items-center gap-3 text-sm"
             >
               {item.complete ? (
-                <CheckCircle2 className="w-4 h-4 text-primary flex-shrink-0" />
+                <CheckCircle2 className="w-4 h-4 text-primary shrink-0" />
               ) : (
-                <XCircle className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                <XCircle className="w-4 h-4 text-muted-foreground shrink-0" />
               )}
               <span className={item.complete ? "text-foreground" : "text-muted-foreground"}>
                 {item.label}
