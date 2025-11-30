@@ -19,14 +19,14 @@ export default function AdminNavBR() {
     <>
       {!isAdminPath ? (
         <Link
-          className="fixed bottom-5 right-5 bg-gradient-to-br from-green-500 to-green-700 z-1000 p-4 rounded-full aspect-square text-white"
+          className="fixed bottom-5 right-5 bg-linear-to-br from-green-500 to-green-700 z-1000 p-4 rounded-full aspect-square text-white"
           href="/admin/dashboard"
         >
           <MdOutlineAdminPanelSettings className="text-2xl" />
         </Link>
       ) : (
         <Link
-          className="fixed bottom-5 right-5 bg-gradient-to-br from-green-500 to-green-700 z-1000 p-4 rounded-full aspect-square text-white"
+          className="fixed bottom-5 right-5 bg-linear-to-br from-green-500 to-green-700 z-1000 p-4 rounded-full aspect-square text-white"
           href="/tutee/home"
         >
           <PiStudent className="text-2xl" />

@@ -296,7 +296,7 @@ export default function SearchClient({ initialOfferings }: SearchClientProps) {
                 <Card className="text-xs text-green-700 mt-auto bg-green-50 border-green-200">
                   <CardContent className="p-2">
                     <p className="font-semibold mb-1">Availability:</p>
-                    <p className="break-words text-xs">
+                    <p className="wrap-break-word text-xs">
                       {formatAvailability(item.availability)}
                     </p>
                   </CardContent>

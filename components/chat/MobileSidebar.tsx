@@ -43,7 +43,7 @@ export default function MobileSidebar({
           {activeUser ? (
             <div className="space-y-3">
               <div className="flex items-center gap-3 mb-3">
-                <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center overflow-hidden flex-shrink-0">
+                <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center overflow-hidden shrink-0">
                   {activeUser.imageUrl ? (
                     <img
                       src={activeUser.imageUrl}
@@ -134,7 +134,7 @@ export default function MobileSidebar({
           {/* Check if we have any reminders */}
           {appointmentsWithoutQuiz.length > 0 ||
           upcomingAppointments.length > 0 ? (
-            <div className="space-y-2 overflow-y-auto max-h-[20rem]">
+            <div className="space-y-2 overflow-y-auto max-h-80">
               {/* Quiz Reminders Card */}
               {upcomingAppointments.filter(
                 (apt: any) => apt.quiz && apt.quiz.length > 0

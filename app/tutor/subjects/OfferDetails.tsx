@@ -424,7 +424,7 @@ export default function OfferDetails({
               className="w-full h-full object-cover"
               unoptimized
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+            <div className="absolute inset-0 bg-linear-to-t from-black/60 to-transparent" />
             <div className="absolute bottom-4 left-6 text-white">
               <h1 className="text-3xl font-bold mb-2">
                 {subject || "Subject Title"}

@@ -141,7 +141,7 @@ export default function MicrosoftAccountConnection() {
                 {status.guidance && status.guidance.length > 0 && (
                   <div className="bg-blue-50 p-3 rounded-lg">
                     <div className="flex items-start gap-2">
-                      <Info className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                      <Info className="w-4 h-4 text-blue-600 mt-0.5 shrink-0" />
                       <div className="space-y-1">
                         <p className="text-xs font-medium text-blue-900">Setup Required:</p>
                         <ul className="text-xs text-blue-800 space-y-1">

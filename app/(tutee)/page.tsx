@@ -174,7 +174,7 @@ export default function Landing() {
       {/* Hero Section */}
       <section className="w-full">
         <div
-          className="hero w-full min-h-[44rem] relative"
+          className="hero w-full min-h-176 relative"
           style={{
             backgroundImage: "url(/images/DLSUD-rotonda.jpg)",
           }}

@@ -429,7 +429,7 @@ export default function TuteeQuizPage() {
                     : ''
                 }`}>
                   <div className="flex items-start space-x-4">
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium flex-shrink-0 ${
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium shrink-0 ${
                       quizCompleted && currentAttempt === 2
                         ? isCorrect
                           ? 'bg-green-100 text-green-600'

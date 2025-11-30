@@ -150,7 +150,7 @@ function MessagesHeader({
         )}
 
         {activeUser && (
-          <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center overflow-hidden flex-shrink-0">
+          <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center overflow-hidden shrink-0">
             {activeUser.imageUrl ? (
               <img
                 src={activeUser.imageUrl}
