@@ -69,6 +69,10 @@ export default function AdminDashboard() {
     colleges: [],
     appointments: [],
   });
+  
+  // Check if user is superadmin
+  const isSuperAdmin = user?.publicMetadata?.isAdmin === true && user?.publicMetadata?.adminRole === "superadmin";
+  const userCollege = user?.publicMetadata?.college as string | undefined;
   const [stats, setStats] = useState<DashboardStats>({
     totalUsers: 0,
     totalSubjects: 0,
@@ -90,7 +94,7 @@ export default function AdminDashboard() {
         const [usersRes, subjectsRes, collegesRes, appointmentsRes] =
           await Promise.all([
             getCollectionData("users"),
-            getCollectionData("subjects"),
+            getCollectionData("subjectOptions"),
             getCollectionData("colleges"),
             fetchAppointments(),
           ]);
@@ -111,11 +115,43 @@ export default function AdminDashboard() {
         const tutees = dashboardData.users.filter(
           (user: any) => user.role === "tutee"
         );
-        const totalDepartments = dashboardData.colleges.reduce(
-          (acc: number, college: any) =>
-            acc + (college.departments?.length || 0),
-          0
-        );
+        
+        // Calculate subjects based on admin role
+        let totalSubjects: number;
+        if (!isSuperAdmin && userCollege) {
+          // For regular admins, filter subjects to their college only
+          const filteredSubjects = dashboardData.subjects.filter(
+            (subject: any) => subject.college === userCollege
+          );
+          totalSubjects = filteredSubjects.length;
+        } else {
+          // For superadmins, count all subjects
+          totalSubjects = dashboardData.subjects.length;
+        }
+        
+        // Calculate departments based on admin role
+        let totalDepartments: number;
+        let filteredColleges = dashboardData.colleges;
+        
+        if (!isSuperAdmin && userCollege) {
+          // For regular admins, filter to their college only
+          filteredColleges = dashboardData.colleges.filter(
+            (college: any) => college.abbreviation === userCollege
+          );
+          // Count departments only from the admin's assigned college
+          totalDepartments = filteredColleges.reduce(
+            (acc: number, college: any) =>
+              acc + (college.departments?.length || 0),
+            0
+          );
+        } else {
+          // For superadmins, count all departments from all colleges
+          totalDepartments = dashboardData.colleges.reduce(
+            (acc: number, college: any) =>
+              acc + (college.departments?.length || 0),
+            0
+          );
+        }
 
         const activeAppointments = dashboardData.appointments.filter(
           (apt: any) => apt.status === "active" || apt.status === "scheduled"
@@ -129,23 +165,26 @@ export default function AdminDashboard() {
 
         setStats({
           totalUsers: dashboardData.users.length,
-          totalSubjects: dashboardData.subjects.length,
-          totalColleges: dashboardData.colleges.length,
+          totalSubjects,
+          totalColleges: isSuperAdmin ? dashboardData.colleges.length : filteredColleges.length,
           totalDepartments,
           totalAppointments: dashboardData.appointments.length,
           activeAppointments,
           completedAppointments,
           pendingAppointments,
         });
+        console.log("Fetching dashboard data...", dashboardData);
       } catch (error) {
         console.error("Error fetching dashboard data:", error);
       } finally {
         setLoading(false);
       }
+      
     };
 
+    
     fetchDashboardData();
-  }, []);
+  }, [user, isSuperAdmin, userCollege]);
 
   // Generate sample activity data for the last 7 days
   const generateActivityData = () => {
@@ -242,24 +281,45 @@ export default function AdminDashboard() {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Total Colleges
-            </CardTitle>
-            <GraduationCap className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {stats.totalColleges.toLocaleString()}
-            </div>
-            <div className="flex items-center space-x-1 text-xs text-muted-foreground">
-              <span className="text-green-600">
-                +{stats.totalDepartments} departments
-              </span>
-            </div>
-          </CardContent>
-        </Card>
+        {isSuperAdmin ? (
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">
+                Total Colleges
+              </CardTitle>
+              <GraduationCap className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {stats.totalColleges.toLocaleString()}
+              </div>
+              <div className="flex items-center space-x-1 text-xs text-muted-foreground">
+                <span className="text-green-600">
+                  +{stats.totalDepartments} departments
+                </span>
+              </div>
+            </CardContent>
+          </Card>
+        ) : (
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">
+                Total Departments
+              </CardTitle>
+              <GraduationCap className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {stats.totalDepartments.toLocaleString()}
+              </div>
+              <div className="flex items-center space-x-1 text-xs text-muted-foreground">
+                <span className="text-blue-600">
+                  {userCollege && `in ${userCollege}`}
+                </span>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">

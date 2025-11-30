@@ -15,6 +15,7 @@ export async function PUT(request: NextRequest) {
       );
     }
 
+    console.log(`Updating document in collection '${collection}' with ID '${id}'`);
     const client = await clientPromise;
     const db = client.db("main");
     const collectionRef = db.collection(collection);

@@ -53,9 +53,10 @@ import {
   Star,
   TrendingUp,
   UserCheck,
-  Users
+  Users,
 } from "lucide-react";
 import { useEffect, useState } from "react";
+import { useUser } from "@clerk/nextjs";
 
 type User = {
   id: string;
@@ -70,6 +71,7 @@ type User = {
   updatedAt: string;
   lastSignInAt?: string;
   onboarded?: boolean;
+  publicMetadata?: any; // Include publicMetadata to access collegeInformation
 };
 
 type UserStats = {
@@ -84,10 +86,17 @@ type UserWithStats = User & {
   stats: UserStats;
 };
 
-type SortField = 'name' | 'role' | 'status' | 'appointments' | 'rating' | 'lastActive';
-type SortDirection = 'asc' | 'desc';
+type SortField =
+  | "name"
+  | "role"
+  | "status"
+  | "appointments"
+  | "rating"
+  | "lastActive";
+type SortDirection = "asc" | "desc";
 
 export default function UserManagement() {
+  const { user } = useUser();
   const [users, setUsers] = useState<UserWithStats[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<UserWithStats[]>([]);
   const [loading, setLoading] = useState(true);
@@ -96,8 +105,15 @@ export default function UserManagement() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [selectedUser, setSelectedUser] = useState<UserWithStats | null>(null);
   const [showUserDetails, setShowUserDetails] = useState(false);
-  const [sortField, setSortField] = useState<SortField>('name');
-  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
+  const [sortField, setSortField] = useState<SortField>("name");
+  const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
+
+  // Check if user is superadmin
+  const isSuperAdmin =
+    user?.publicMetadata?.isAdmin === true &&
+    user?.publicMetadata?.adminRole === "superadmin";
+  const userCollege = user?.publicMetadata?.college as string | undefined;
+  const userDepartment = user?.publicMetadata?.department as string | undefined;
 
   const [overallStats, setOverallStats] = useState({
     totalUsers: 0,
@@ -108,17 +124,30 @@ export default function UserManagement() {
   });
 
   useEffect(() => {
-    fetchUserData();
-  }, []);
+    // Only fetch data if user is an admin
+    if (user?.publicMetadata?.isAdmin) {
+      fetchUserData();
+    }
+  }, [user, isSuperAdmin, userCollege, userDepartment]);
 
   useEffect(() => {
     filterUsers();
-  }, [users, searchTerm, roleFilter, statusFilter, sortField, sortDirection]);
+  }, [
+    users,
+    searchTerm,
+    roleFilter,
+    statusFilter,
+    sortField,
+    sortDirection,
+    isSuperAdmin,
+    userCollege,
+    userDepartment,
+  ]);
 
   const fetchUserData = async () => {
     try {
       setLoading(true);
-      
+
       // Fetch users and appointments
       const [usersResponse, appointmentsResponse] = await Promise.all([
         getCollectionData("users"),
@@ -127,31 +156,30 @@ export default function UserManagement() {
 
       const usersData = usersResponse.data || [];
       const appointmentsData = appointmentsResponse.appointments || [];
-      
+
       // Filter out admin users (focusing on regular users only)
       // Make filtering more flexible to catch users regardless of data structure
       const regularUsers = usersData.filter((user: any) => {
-        const isAdmin = user.isAdmin || 
-                       user.publicMetadata?.isAdmin || 
-                       user.publicMetadata?.adminRole;
-        const hasRole = user.role || 
-                       user.publicMetadata?.role;
-        
-        return !isAdmin && (hasRole === 'tutor' || hasRole === 'tutee' || !hasRole);
+        const isAdmin = user.public_metadata?.isAdmin;
+        const hasRole = user.role || user.publicMetadata?.role;
+
+        return (
+          !isAdmin && (hasRole === "tutor" || hasRole === "tutee" || !hasRole)
+        );
       });
-      
+
       // If no regular users found, show all users as fallback
       const usersToProcess = regularUsers.length > 0 ? regularUsers : usersData;
 
       // Calculate statistics for each user
       const usersWithStats: UserWithStats[] = await Promise.all(
         usersToProcess.map(async (user: any) => {
-          const userAppointments = appointmentsData.filter((apt: any) => 
-            apt.tutorId === user.id || apt.tuteeId === user.id
+          const userAppointments = appointmentsData.filter(
+            (apt: any) => apt.tutorId === user.id || apt.tuteeId === user.id
           );
 
-          const completedAppointments = userAppointments.filter((apt: any) => 
-            apt.status === 'completed'
+          const completedAppointments = userAppointments.filter(
+            (apt: any) => apt.status === "completed"
           );
 
           // Calculate average rating (this would need to be implemented based on your review system)
@@ -159,9 +187,9 @@ export default function UserManagement() {
 
           // Get user's subjects if they're a tutor
           let subjects: string[] = [];
-          if (user.role === 'tutor') {
+          if (user.role === "tutor") {
             // This would come from their offerings/subjects
-            subjects = ['Mathematics', 'Science']; // Placeholder
+            subjects = ["Mathematics", "Science"]; // Placeholder
           }
 
           const stats: UserStats = {
@@ -175,44 +203,92 @@ export default function UserManagement() {
           return {
             id: user.id || user._id || user.userId,
             _id: user._id || user.id,
-            firstName: user.firstName || user.first_name || user.given_name || 'Unknown',
-            lastName: user.lastName || user.last_name || user.family_name || '',
-            username: user.username || user.email_addresses?.[0]?.email_address?.split('@')[0] || 'user',
-            emailAddresses: user.emailAddresses || user.email_addresses || 
-                          (user.primaryEmailAddress ? [user.primaryEmailAddress] : []),
+            firstName:
+              user.firstName || user.first_name || user.given_name || "Unknown",
+            lastName: user.lastName || user.last_name || user.family_name || "",
+            username:
+              user.username ||
+              user.email_addresses?.[0]?.email_address?.split("@")[0] ||
+              "user",
+            emailAddresses:
+              user.emailAddresses ||
+              user.email_addresses ||
+              (user.primaryEmailAddress ? [user.primaryEmailAddress] : []),
             imageUrl: user.imageUrl || user.image_url || user.profileImageUrl,
-            role: user.role || user.publicMetadata?.role || 'tutee',
-            createdAt: user.createdAt || user.created_at || user.createdAt || new Date().toISOString(),
-            updatedAt: user.updatedAt || user.updated_at || user.lastUpdatedAt || new Date().toISOString(),
-            lastSignInAt: user.lastSignInAt || user.last_sign_in_at || user.lastActiveAt,
-            onboarded: user.onboarded !== false && user.publicMetadata?.onboarded !== false,
+            role: user.role || user.publicMetadata?.role || "tutee",
+            createdAt:
+              user.createdAt ||
+              user.created_at ||
+              user.createdAt ||
+              new Date().toISOString(),
+            updatedAt:
+              user.updatedAt ||
+              user.updated_at ||
+              user.lastUpdatedAt ||
+              new Date().toISOString(),
+            lastSignInAt:
+              user.lastSignInAt || user.last_sign_in_at || user.lastActiveAt,
+            onboarded:
+              user.onboarded !== false &&
+              user.publicMetadata?.onboarded !== false,
+            publicMetadata: user.public_metadata, // Preserve the full publicMetadata including collegeInformation
             stats,
-          };
+          } as UserWithStats;
         })
       );
 
       setUsers(usersWithStats);
 
-      // Calculate overall statistics
-      const tutors = usersWithStats.filter(user => user.role === 'tutor');
-      const tutees = usersWithStats.filter(user => user.role === 'tutee');
+      // Apply admin role-based filtering for statistics
+      let statsUsers = usersWithStats;
+      if (!isSuperAdmin && (userCollege || userDepartment)) {
+        statsUsers = usersWithStats.filter((user) => {
+          // Get user's college and department information
+          const userCollegeInfo = (user as any).publicMetadata
+            ?.collegeInformation;
+          const userCollegeName = userCollegeInfo?.college;
+          const userDepartmentName = userCollegeInfo?.department;
+
+          // If admin has a specific college, only show users from that college
+          if (userCollege && userCollegeName !== userCollege) {
+            return false;
+          }
+
+          // If admin has a specific department (not ALL_DEPARTMENTS), only show users from that department
+          if (
+            userDepartment &&
+            userDepartment !== "ALL_DEPARTMENTS" &&
+            userDepartmentName !== userDepartment
+          ) {
+            return false;
+          }
+
+          return true;
+        });
+      }
+
+      // Calculate overall statistics from filtered users
+      const tutors = statsUsers.filter((user) => user.role === "tutor");
+      const tutees = statsUsers.filter((user) => user.role === "tutee");
       const now = new Date();
       const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1);
-      const newUsers = usersWithStats.filter(user => 
-        new Date(user.createdAt) > lastMonth
+      const newUsers = statsUsers.filter(
+        (user) => new Date(user.createdAt) > lastMonth
       );
-      const activeUsers = usersWithStats.filter(user => 
-        user.lastSignInAt && new Date(user.lastSignInAt) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+      const activeUsers = statsUsers.filter(
+        (user) =>
+          user.lastSignInAt &&
+          new Date(user.lastSignInAt) >
+            new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
       );
 
       setOverallStats({
-        totalUsers: usersWithStats.length,
+        totalUsers: statsUsers.length,
         totalTutors: tutors.length,
         totalTutees: tutees.length,
         activeUsers: activeUsers.length,
         newUsersThisMonth: newUsers.length,
       });
-
     } catch (error) {
       console.error("Error fetching user data:", error);
       // Set empty arrays to prevent crashes
@@ -232,36 +308,66 @@ export default function UserManagement() {
   const filterUsers = () => {
     let filtered = [...users];
 
+    // Apply admin role-based filtering first
+    if (!isSuperAdmin && (userCollege || userDepartment)) {
+      filtered = filtered.filter((user) => {
+        // Get user's college and department information
+        const userCollegeInfo = (user as any).publicMetadata
+          ?.collegeInformation;
+        const userCollegeName = userCollegeInfo?.college;
+        const userDepartmentName = userCollegeInfo?.department;
+
+        // If admin has a specific college, only show users from that college
+        if (userCollege && userCollegeName !== userCollege) {
+          return false;
+        }
+
+        // If admin has a specific department (not ALL_DEPARTMENTS), only show users from that department
+        if (
+          userDepartment &&
+          userDepartment !== "ALL_DEPARTMENTS" &&
+          userDepartmentName !== userDepartment
+        ) {
+          return false;
+        }
+
+        return true;
+      });
+    }
+
     // Search filter
     if (searchTerm) {
-      filtered = filtered.filter(user =>
-        `${user.firstName} ${user.lastName}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.username.toLowerCase().includes(searchTerm.toLowerCase())
+      filtered = filtered.filter(
+        (user) =>
+          `${user.firstName} ${user.lastName}`
+            .toLowerCase()
+            .includes(searchTerm.toLowerCase()) ||
+          user.username.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
 
     // Role filter
     if (roleFilter !== "all") {
-      filtered = filtered.filter(user => user.role === roleFilter);
+      filtered = filtered.filter((user) => user.role === roleFilter);
     }
 
     // Status filter
     if (statusFilter !== "all") {
       const now = new Date();
       const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-      
+
       if (statusFilter === "active") {
-        filtered = filtered.filter(user => 
-          user.lastSignInAt && new Date(user.lastSignInAt) > weekAgo
+        filtered = filtered.filter(
+          (user) => user.lastSignInAt && new Date(user.lastSignInAt) > weekAgo
         );
       } else if (statusFilter === "inactive") {
-        filtered = filtered.filter(user => 
-          !user.lastSignInAt || new Date(user.lastSignInAt) <= weekAgo
+        filtered = filtered.filter(
+          (user) => !user.lastSignInAt || new Date(user.lastSignInAt) <= weekAgo
         );
       } else if (statusFilter === "new") {
         const monthAgo = new Date(now.getFullYear(), now.getMonth() - 1);
-        filtered = filtered.filter(user => 
-          new Date(user.createdAt) > monthAgo
+        filtered = filtered.filter(
+          (user) => new Date(user.createdAt) > monthAgo
         );
       }
     }
@@ -277,29 +383,29 @@ export default function UserManagement() {
       let bValue: any;
 
       switch (sortField) {
-        case 'name':
+        case "name":
           aValue = `${a.firstName} ${a.lastName}`.toLowerCase();
           bValue = `${b.firstName} ${b.lastName}`.toLowerCase();
           break;
-        case 'role':
+        case "role":
           aValue = a.role;
           bValue = b.role;
           break;
-        case 'status':
+        case "status":
           const now = new Date();
           const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
           aValue = a.lastSignInAt && new Date(a.lastSignInAt) > weekAgo ? 1 : 0;
           bValue = b.lastSignInAt && new Date(b.lastSignInAt) > weekAgo ? 1 : 0;
           break;
-        case 'appointments':
+        case "appointments":
           aValue = a.stats.totalAppointments;
           bValue = b.stats.totalAppointments;
           break;
-        case 'rating':
+        case "rating":
           aValue = a.stats.averageRating;
           bValue = b.stats.averageRating;
           break;
-        case 'lastActive':
+        case "lastActive":
           aValue = a.lastSignInAt ? new Date(a.lastSignInAt).getTime() : 0;
           bValue = b.lastSignInAt ? new Date(b.lastSignInAt).getTime() : 0;
           break;
@@ -308,18 +414,18 @@ export default function UserManagement() {
           bValue = b.firstName;
       }
 
-      if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
-      if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
+      if (aValue < bValue) return sortDirection === "asc" ? -1 : 1;
+      if (aValue > bValue) return sortDirection === "asc" ? 1 : -1;
       return 0;
     });
   };
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
-      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
     } else {
       setSortField(field);
-      setSortDirection('asc');
+      setSortDirection("asc");
     }
   };
 
@@ -332,24 +438,54 @@ export default function UserManagement() {
     return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
   };
 
+  // Security check - only admins can access this page
+  if (!user) {
+    return (
+      <div className="container mx-auto py-6 px-4">
+        <Card>
+          <CardContent className="p-6 text-center">
+            <div className="text-muted-foreground">Loading...</div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (!user.publicMetadata?.isAdmin) {
+    return (
+      <div className="container mx-auto py-6 px-4">
+        <Card>
+          <CardContent className="p-6 text-center">
+            <div className="text-red-600 font-medium">Access Denied</div>
+            <div className="text-muted-foreground mt-2">
+              You do not have permission to access this page.
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   const getSortIcon = (field: SortField) => {
     if (sortField !== field) {
       return <ChevronUp className="h-4 w-4 text-muted-foreground opacity-50" />;
     }
-    return sortDirection === 'asc' ? 
-      <ChevronUp className="h-4 w-4" /> : 
-      <ChevronDown className="h-4 w-4" />;
+    return sortDirection === "asc" ? (
+      <ChevronUp className="h-4 w-4" />
+    ) : (
+      <ChevronDown className="h-4 w-4" />
+    );
   };
 
   const formatLastSignIn = (lastSignIn?: string) => {
-    if (!lastSignIn) return 'Never';
+    if (!lastSignIn) return "Never";
     const date = new Date(lastSignIn);
     const now = new Date();
     const diff = now.getTime() - date.getTime();
     const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-    
-    if (days === 0) return 'Today';
-    if (days === 1) return 'Yesterday';
+
+    if (days === 0) return "Today";
+    if (days === 1) return "Yesterday";
     if (days < 7) return `${days} days ago`;
     return date.toLocaleDateString();
   };
@@ -399,7 +535,9 @@ export default function UserManagement() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{overallStats.totalUsers}</div>
-            <p className="text-xs text-muted-foreground">Regular platform users</p>
+            <p className="text-xs text-muted-foreground">
+              Regular platform users
+            </p>
           </CardContent>
         </Card>
 
@@ -439,19 +577,29 @@ export default function UserManagement() {
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-orange-600">{overallStats.activeUsers}</div>
-            <p className="text-xs text-muted-foreground">Active in last 7 days</p>
+            <div className="text-2xl font-bold text-orange-600">
+              {overallStats.activeUsers}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Active in last 7 days
+            </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">New This Month</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              New This Month
+            </CardTitle>
             <UserCheck className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-purple-600">{overallStats.newUsersThisMonth}</div>
-            <p className="text-xs text-muted-foreground">Recent registrations</p>
+            <div className="text-2xl font-bold text-purple-600">
+              {overallStats.newUsersThisMonth}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Recent registrations
+            </p>
           </CardContent>
         </Card>
       </div>
@@ -459,9 +607,17 @@ export default function UserManagement() {
       {/* Filters */}
       <Card>
         <CardHeader>
-          <CardTitle>User Directory</CardTitle>
+          <CardTitle>User Management</CardTitle>
           <CardDescription>
             Manage and view all tutors and tutees on the platform
+            {!isSuperAdmin && userCollege && (
+              <span className="block mt-1 text-blue-600">
+                Viewing users from {userCollege}
+                {userDepartment && userDepartment !== "ALL_DEPARTMENTS"
+                  ? ` - ${userDepartment} department`
+                  : " - All departments"}
+              </span>
+            )}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -477,7 +633,7 @@ export default function UserManagement() {
                 />
               </div>
             </div>
-            <Select value={roleFilter} onValueChange={setRoleFilter}>
+            {/* <Select value={roleFilter} onValueChange={setRoleFilter}>
               <SelectTrigger className="w-[140px]">
                 <SelectValue placeholder="Filter by role" />
               </SelectTrigger>
@@ -486,7 +642,7 @@ export default function UserManagement() {
                 <SelectItem value="tutor">Tutors</SelectItem>
                 <SelectItem value="tutee">Tutees</SelectItem>
               </SelectContent>
-            </Select>
+            </Select> */}
             <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger className="w-[140px]">
                 <SelectValue placeholder="Filter by status" />
@@ -509,10 +665,9 @@ export default function UserManagement() {
             <div>
               <CardTitle>Users ({filteredUsers.length})</CardTitle>
               <CardDescription>
-                {searchTerm || roleFilter !== "all" || statusFilter !== "all" 
+                {searchTerm || roleFilter !== "all" || statusFilter !== "all"
                   ? `Filtered results from ${users.length} total users`
-                  : "All registered users"
-                }
+                  : "All registered users"}
               </CardDescription>
             </div>
           </div>
@@ -523,63 +678,54 @@ export default function UserManagement() {
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-[250px]">
-                    <Button 
-                      variant="ghost" 
+                    <Button
+                      variant="ghost"
                       className="h-auto p-0 font-semibold hover:bg-transparent"
-                      onClick={() => handleSort('name')}
+                      onClick={() => handleSort("name")}
                     >
                       User
-                      {getSortIcon('name')}
+                      {getSortIcon("name")}
                     </Button>
                   </TableHead>
-                  {/* <TableHead>
-                    <Button 
-                      variant="ghost" 
-                      className="h-auto p-0 font-semibold hover:bg-transparent"
-                      onClick={() => handleSort('role')}
-                    >
-                      Role
-                      {getSortIcon('role')}
-                    </Button>
-                  </TableHead> */}
+                  <TableHead>College/Department</TableHead>
                   <TableHead>
-                    <Button 
-                      variant="ghost" 
+                    <Button
+                      variant="ghost"
                       className="h-auto p-0 font-semibold hover:bg-transparent"
-                      onClick={() => handleSort('status')}
+                      onClick={() => handleSort("status")}
                     >
                       Status
-                      {getSortIcon('status')}
+                      {getSortIcon("status")}
                     </Button>
                   </TableHead>
                   <TableHead>
-                    <Button 
-                      variant="ghost" 
+                    <Button
+                      variant="ghost"
                       className="h-auto p-0 font-semibold hover:bg-transparent"
-                      onClick={() => handleSort('appointments')}
+                      onClick={() => handleSort("appointments")}
                     >
                       Appointments
-                      {getSortIcon('appointments')}
+                      {getSortIcon("appointments")}
                     </Button>
                   </TableHead>
                   <TableHead>
-                    <Button 
-                      variant="ghost" 
+                    <Button
+                      variant="ghost"
                       className="h-auto p-0 font-semibold hover:bg-transparent"
-                      onClick={() => handleSort('rating')}
+                      onClick={() => handleSort("rating")}
                     >
                       Rating
-                      {getSortIcon('rating')}
+                      {getSortIcon("rating")}
                     </Button>
                   </TableHead>
                   <TableHead>
-                    <Button 
-                      variant="ghost" 
+                    <Button
+                      variant="ghost"
                       className="h-auto p-0 font-semibold hover:bg-transparent"
-                      onClick={() => handleSort('lastActive')}
+                      onClick={() => handleSort("lastActive")}
                     >
                       Last Active
-                      {getSortIcon('lastActive')}
+                      {getSortIcon("lastActive")}
                     </Button>
                   </TableHead>
                   <TableHead className="text-right">Actions</TableHead>
@@ -606,34 +752,48 @@ export default function UserManagement() {
                         </div>
                       </div>
                     </TableCell>
-                    {/* <TableCell>
-                      <Badge 
-                        variant={user.role === 'tutor' ? 'default' : 'secondary'}
-                      >
-                        {user.role === 'tutor' ? (
-                          <>
-                            <GraduationCap className="w-3 h-3 mr-1" />
-                            Tutor
-                          </>
-                        ) : (
-                          <>
-                            <BookOpen className="w-3 h-3 mr-1" />
-                            Tutee
-                          </>
-                        )}
-                      </Badge>
-                    </TableCell> */}
                     <TableCell>
-                      <Badge 
+                      {(() => {
+                        const collegeInfo = (user as any).publicMetadata
+                          ?.collegeInformation;
+                        if (collegeInfo?.college || collegeInfo?.department) {
+                          return (
+                            <div className="space-y-1">
+                              {collegeInfo.college && (
+                                <Badge variant="outline" className="text-xs">
+                                  {collegeInfo.college}
+                                </Badge>
+                              )}
+                              {collegeInfo.department && (
+                                <Badge variant="secondary" className="text-xs">
+                                  {collegeInfo.department}
+                                </Badge>
+                              )}
+                            </div>
+                          );
+                        }
+                        return (
+                          <span className="text-muted-foreground text-sm">
+                            Not set
+                          </span>
+                        );
+                      })()}
+                    </TableCell>
+                    <TableCell>
+                      <Badge
                         variant={
-                          user.lastSignInAt && 
-                          new Date(user.lastSignInAt) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) 
-                            ? 'default' : 'outline'
+                          user.lastSignInAt &&
+                          new Date(user.lastSignInAt) >
+                            new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+                            ? "default"
+                            : "outline"
                         }
                       >
-                        {user.lastSignInAt && 
-                        new Date(user.lastSignInAt) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) 
-                          ? 'Active' : 'Inactive'}
+                        {user.lastSignInAt &&
+                        new Date(user.lastSignInAt) >
+                          new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+                          ? "Active"
+                          : "Inactive"}
                       </Badge>
                     </TableCell>
                     <TableCell>
@@ -648,7 +808,7 @@ export default function UserManagement() {
                       </div>
                     </TableCell>
                     <TableCell>
-                      {user.role === 'tutor' && user.stats.averageRating > 0 ? (
+                      {user.role === "tutor" && user.stats.averageRating > 0 ? (
                         <div className="flex items-center space-x-1">
                           <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
                           <span>{user.stats.averageRating.toFixed(1)}</span>
@@ -672,13 +832,17 @@ export default function UserManagement() {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                          <DropdownMenuItem onClick={() => handleViewUser(user)}>
+                          <DropdownMenuItem
+                            onClick={() => handleViewUser(user)}
+                          >
                             <Eye className="mr-2 h-4 w-4" />
                             View Details
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
-                          <DropdownMenuItem 
-                            onClick={() => navigator.clipboard.writeText(user.id)}
+                          <DropdownMenuItem
+                            onClick={() =>
+                              navigator.clipboard.writeText(user.id)
+                            }
                           >
                             Copy User ID
                           </DropdownMenuItem>
@@ -690,7 +854,7 @@ export default function UserManagement() {
               </TableBody>
             </Table>
           </div>
-          
+
           {filteredUsers.length === 0 && (
             <div className="text-center py-10">
               <Users className="mx-auto h-12 w-12 text-muted-foreground" />
@@ -698,8 +862,7 @@ export default function UserManagement() {
               <p className="text-muted-foreground">
                 {searchTerm || roleFilter !== "all" || statusFilter !== "all"
                   ? "Try adjusting your search or filter criteria."
-                  : "No users match the current filters."
-                }
+                  : "No users match the current filters."}
               </p>
             </div>
           )}
@@ -714,11 +877,15 @@ export default function UserManagement() {
               <Avatar className="h-10 w-10">
                 <AvatarImage src={selectedUser?.imageUrl} />
                 <AvatarFallback>
-                  {selectedUser ? getInitials(selectedUser.firstName, selectedUser.lastName) : ''}
+                  {selectedUser
+                    ? getInitials(selectedUser.firstName, selectedUser.lastName)
+                    : ""}
                 </AvatarFallback>
               </Avatar>
               <div>
-                <div>{selectedUser?.firstName} {selectedUser?.lastName}</div>
+                <div>
+                  {selectedUser?.firstName} {selectedUser?.lastName}
+                </div>
                 <div className="text-sm text-muted-foreground font-normal">
                   @{selectedUser?.username}
                 </div>
@@ -728,7 +895,7 @@ export default function UserManagement() {
               Detailed information about this user
             </DialogDescription>
           </DialogHeader>
-          
+
           {selectedUser && (
             <div className="space-y-6">
               {/* Basic Info */}
@@ -738,43 +905,86 @@ export default function UserManagement() {
                   <div className="space-y-2 text-sm">
                     <div>
                       <span className="text-muted-foreground">Email: </span>
-                      {selectedUser.emailAddresses?.[0]?.emailAddress || 'No email'}
+                      {selectedUser.emailAddresses?.[0]?.emailAddress ||
+                        "No email"}
                     </div>
                     <div>
-                      <span className="text-muted-foreground">Role: </span>
-                      <Badge variant={selectedUser.role === 'tutor' ? 'default' : 'secondary'}>
-                        {selectedUser.role}
-                      </Badge>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">Member since: </span>
+                      <span className="text-muted-foreground">
+                        Member since:{" "}
+                      </span>
                       {new Date(selectedUser.createdAt).toLocaleDateString()}
                     </div>
+                    {/* College and Department Information */}
+                    {(() => {
+                      const collegeInfo = (selectedUser as any).publicMetadata
+                        ?.collegeInformation;
+                      if (collegeInfo?.college || collegeInfo?.department) {
+                        return (
+                          <>
+                            {collegeInfo.college && (
+                              <div>
+                                <span className="text-muted-foreground">
+                                  College:{" "}
+                                </span>
+                                <Badge variant="outline">
+                                  {collegeInfo.college}
+                                </Badge>
+                              </div>
+                            )}
+                            {collegeInfo.department && (
+                              <div>
+                                <span className="text-muted-foreground">
+                                  Department:{" "}
+                                </span>
+                                <Badge variant="outline">
+                                  {collegeInfo.department}
+                                </Badge>
+                              </div>
+                            )}
+                            {collegeInfo.yearLevel && (
+                              <div>
+                                <span className="text-muted-foreground">
+                                  Year Level:{" "}
+                                </span>
+                                <Badge variant="secondary">
+                                  {collegeInfo.yearLevel}
+                                </Badge>
+                              </div>
+                            )}
+                          </>
+                        );
+                      }
+                      return null;
+                    })()}
                   </div>
                 </div>
-                
+
                 <div>
                   <h4 className="font-medium mb-2">Activity Stats</h4>
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Total Appointments:</span>
+                      <span className="text-muted-foreground">
+                        Total Appointments:
+                      </span>
                       <span>{selectedUser.stats.totalAppointments}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Completed:</span>
                       <span>{selectedUser.stats.completedAppointments}</span>
                     </div>
-                    {selectedUser.role === 'tutor' && (
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Average Rating:</span>
-                        <span className="flex items-center">
-                          <Star className="w-3 h-3 fill-yellow-400 text-yellow-400 mr-1" />
-                          {selectedUser.stats.averageRating.toFixed(1)}
-                        </span>
-                      </div>
-                    )}
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Last Active:</span>
+                      <span className="text-muted-foreground">
+                        Average Rating:
+                      </span>
+                      <span className="flex items-center">
+                        <Star className="w-3 h-3 fill-yellow-400 text-yellow-400 mr-1" />
+                        {selectedUser.stats.averageRating.toFixed(1)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">
+                        Last Active:
+                      </span>
                       <span>{formatLastSignIn(selectedUser.lastSignInAt)}</span>
                     </div>
                   </div>
@@ -782,7 +992,7 @@ export default function UserManagement() {
               </div>
 
               {/* Subjects (for tutors) */}
-              {selectedUser.role === 'tutor' && selectedUser.stats.subjects && (
+              {selectedUser.role === "tutor" && selectedUser.stats.subjects && (
                 <div>
                   <h4 className="font-medium mb-2">Teaching Subjects</h4>
                   <div className="flex flex-wrap gap-2">

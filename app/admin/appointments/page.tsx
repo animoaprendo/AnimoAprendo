@@ -11,6 +11,7 @@ import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, Tabl
 import { AlertTriangle, Calendar, ChevronDown, ChevronUp, Clock, MapPin, RotateCcw, Search, Users, Video, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { useUser } from "@clerk/nextjs";
 
 export type Appointment = {
   _id: string;
@@ -36,6 +37,7 @@ type SortField = 'datetimeISO' | 'status' | 'mode' | 'subject' | 'tutorName' | '
 type SortOrder = 'asc' | 'desc';
 
 export default function AdminAppointments() {
+  const { user } = useUser();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [users, setUsers] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
@@ -49,9 +51,16 @@ export default function AdminAppointments() {
   const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
   const [loading, setLoading] = useState(true);
 
+  // Check if user is superadmin
+  const isSuperAdmin = user?.publicMetadata?.isAdmin === true && user?.publicMetadata?.adminRole === "superadmin";
+  const userCollege = user?.publicMetadata?.college as string | undefined;
+  const userDepartment = user?.publicMetadata?.department as string | undefined;
+
   useEffect(() => {
-    fetchAppointments();
-  }, []);
+    if (user?.publicMetadata?.isAdmin) {
+      fetchAppointments();
+    }
+  }, [user, isSuperAdmin, userCollege, userDepartment]);
 
   async function fetchAppointments() {
     try {
@@ -61,15 +70,53 @@ export default function AdminAppointments() {
         getCollectionData("users")
       ]);
 
+      console.log(appointmentsData, usersData);
       if (appointmentsData.success) {
-        const appointmentsWithNames = appointmentsData.data.map((apt: any) => {
+        let filteredAppointments = appointmentsData.data;
+
+        // Apply admin role-based filtering
+        if (!isSuperAdmin && (userCollege || userDepartment)) {
+          filteredAppointments = appointmentsData.data.filter((apt: any) => {
+            const tutor = usersData.data?.find((u: any) => u.id === apt.tutorId);
+            const tutee = usersData.data?.find((u: any) => u.id === apt.tuteeId);
+            
+            // Check if either tutor or tutee belongs to admin's college/department
+            const tutorCollegeInfo = tutor?.public_metadata?.collegeInformation;
+            const tuteeCollegeInfo = tutee?.public_metadata?.collegeInformation;
+            
+            const isUserInScope = (userInfo: any) => {
+              if (!userInfo) return false;
+              
+              // If admin has a specific college, check if user is from that college
+              if (userCollege && userInfo.college !== userCollege) {
+                return false;
+              }
+              
+              // If admin has a specific department (not ALL_DEPARTMENTS), check department
+              if (userDepartment && userDepartment !== 'ALL_DEPARTMENTS' && userInfo.department !== userDepartment) {
+                return false;
+              }
+              
+              return true;
+            };
+            
+            // Include appointment if either tutor or tutee is in admin's scope
+            return isUserInScope(tutorCollegeInfo) || isUserInScope(tuteeCollegeInfo);
+          });
+        }
+
+        const appointmentsWithNames = filteredAppointments.map((apt: any) => {
           const tutor = usersData.data?.find((u: any) => u.id === apt.tutorId);
           const tutee = usersData.data?.find((u: any) => u.id === apt.tuteeId);
           
           return {
             ...apt,
             tutorName: tutor ? `${tutor.firstName || ''} ${tutor.lastName || ''}`.trim() || tutor.username || 'Unknown Tutor' : 'Unknown Tutor',
-            tuteeName: tutee ? `${tutee.firstName || ''} ${tutee.lastName || ''}`.trim() || tutee.username || 'Unknown Tutee' : 'Unknown Tutee'
+            tuteeName: tutee ? `${tutee.firstName || ''} ${tutee.lastName || ''}`.trim() || tutee.username || 'Unknown Tutee' : 'Unknown Tutee',
+            tutorCollege: tutor?.publicMetadata?.collegeInformation?.college,
+            tutorDepartment: tutor?.publicMetadata?.collegeInformation?.department,
+            tuteeCollege: tutee?.publicMetadata?.collegeInformation?.college,
+            tuteeDepartment: tutee?.publicMetadata?.collegeInformation?.department
           };
         });
         
@@ -141,6 +188,32 @@ export default function AdminAppointments() {
   function getSortIcon(field: SortField) {
     if (sortField !== field) return null;
     return sortOrder === 'asc' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />;
+  }
+
+  // Security check - only admins can access this page
+  if (!user) {
+    return (
+      <div className="container mx-auto py-6 px-4">
+        <Card>
+          <CardContent className="p-6 text-center">
+            <div className="text-muted-foreground">Loading...</div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (!user.publicMetadata?.isAdmin) {
+    return (
+      <div className="container mx-auto py-6 px-4">
+        <Card>
+          <CardContent className="p-6 text-center">
+            <div className="text-red-600 font-medium">Access Denied</div>
+            <div className="text-muted-foreground mt-2">You do not have permission to access this page.</div>
+          </CardContent>
+        </Card>
+      </div>
+    );
   }
 
   function getDateFilteredAppointments(appointments: Appointment[]) {
@@ -243,6 +316,12 @@ export default function AdminAppointments() {
           </CardTitle>
           <CardDescription>
             Monitor and manage all tutoring appointments in the system
+            {!isSuperAdmin && userCollege && (
+              <span className="block mt-1 text-blue-600">
+                Viewing appointments for {userCollege}
+                {userDepartment && userDepartment !== 'ALL_DEPARTMENTS' ? ` - ${userDepartment} department` : ' - All departments'}
+              </span>
+            )}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -545,6 +624,16 @@ export default function AdminAppointments() {
                   <CardContent>
                     <p className="font-medium">{selectedAppointment.tuteeName}</p>
                     <p className="text-[0.6rem] -mx-4 md:mx-0 md:text-[0.65rem] text-muted-foreground">{selectedAppointment.tuteeId}</p>
+                    {((selectedAppointment as any).tuteeCollege || (selectedAppointment as any).tuteeDepartment) && (
+                      <div className="mt-2 space-y-1">
+                        {(selectedAppointment as any).tuteeCollege && (
+                          <Badge variant="outline" className="text-xs">{(selectedAppointment as any).tuteeCollege}</Badge>
+                        )}
+                        {(selectedAppointment as any).tuteeDepartment && (
+                          <Badge variant="secondary" className="text-xs">{(selectedAppointment as any).tuteeDepartment}</Badge>
+                        )}
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
                 <Card>
@@ -554,6 +643,16 @@ export default function AdminAppointments() {
                   <CardContent>
                     <p className="font-medium">{selectedAppointment.tutorName}</p>
                     <p className="text-[0.6rem] -mx-4 md:mx-0 md:text-[0.65rem] text-muted-foreground">{selectedAppointment.tutorId}</p>
+                    {((selectedAppointment as any).tutorCollege || (selectedAppointment as any).tutorDepartment) && (
+                      <div className="mt-2 space-y-1">
+                        {(selectedAppointment as any).tutorCollege && (
+                          <Badge variant="outline" className="text-xs">{(selectedAppointment as any).tutorCollege}</Badge>
+                        )}
+                        {(selectedAppointment as any).tutorDepartment && (
+                          <Badge variant="secondary" className="text-xs">{(selectedAppointment as any).tutorDepartment}</Badge>
+                        )}
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               </div>

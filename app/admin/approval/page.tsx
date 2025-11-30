@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { useUser } from "@clerk/nextjs";
 
 type Availability = {
   id: string;
@@ -46,15 +47,27 @@ type UserData = {
   lastName?: string;
   emailAddresses?: Array<{ emailAddress: string }>;
   imageUrl?: string;
+  collegeInformation?: {
+    college?: string;
+    department?: string;
+    yearLevel?: number;
+    section?: string;
+  };
 };
 
 const DAYS_ORDER = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
 export default function OfferApprovalsPage() {
+  const { user } = useUser();
   const [pendingOffers, setPendingOffers] = useState<PendingOffer[]>([]);
   const [loading, setLoading] = useState(true);
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [usersData, setUsersData] = useState<Record<string, UserData>>({});
+
+  // Check if user is superadmin
+  const isSuperAdmin = user?.publicMetadata?.isAdmin === true && user?.publicMetadata?.adminRole === "superadmin";
+  const userCollege = user?.publicMetadata?.college as string | undefined;
+  const userDepartment = user?.publicMetadata?.department as string | undefined;
 
   const fetchPendingOffers = async () => {
     try {
@@ -62,7 +75,40 @@ export default function OfferApprovalsPage() {
       
       // Fetch subjects using your action
       const result = await getCollectionData("subjects");
-      const pendingOffers = result?.data?.filter((offer: any) => offer.status === "pending") || [];
+      let pendingOffers = result?.data?.filter((offer: any) => offer.status === "pending") || [];
+      
+      // Apply admin role-based filtering
+      if (!isSuperAdmin && (userCollege || userDepartment)) {
+        // First get all user data to check college/department
+        const allUserIds = [...new Set(pendingOffers.map((offer: PendingOffer) => offer.userId))] as string[];
+        const tempUsersResult = await fetchUsers(allUserIds);
+        
+        if (tempUsersResult.success && tempUsersResult.data?.users) {
+          const fetchedUsers = tempUsersResult.data.users;
+          
+          pendingOffers = pendingOffers.filter((offer: PendingOffer) => {
+            const offerUser = fetchedUsers.find((u: any) => u.id === offer.userId);
+            if (!offerUser) return false;
+            console.log(offerUser);
+            
+            const userCollegeInfo = offerUser.collegeInformation;
+            console.log(userCollegeInfo);
+            if (!userCollegeInfo) return false;
+            
+            // If admin has a specific college, check if user is from that college
+            if (userCollege && userCollegeInfo.college !== userCollege) {
+              return false;
+            }
+            
+            // If admin has a specific department (not ALL_DEPARTMENTS), check department
+            if (userDepartment && userDepartment !== 'ALL_DEPARTMENTS' && userCollegeInfo.department !== userDepartment) {
+              return false;
+            }
+            
+            return true;
+          });
+        }
+      }
       
       setPendingOffers(pendingOffers);
         
@@ -103,7 +149,8 @@ export default function OfferApprovalsPage() {
             firstName: user.firstName,
             lastName: user.lastName,
             emailAddresses: user.emailAddresses || [{ emailAddress: user.email }],
-            imageUrl: user.imageUrl
+            imageUrl: user.imageUrl,
+            collegeInformation: user.public_metadata?.collegeInformation
           };
         } else {
           // Fallback for users not found
@@ -184,8 +231,34 @@ export default function OfferApprovalsPage() {
   };
 
   useEffect(() => {
-    fetchPendingOffers();
-  }, []);
+    if (user?.publicMetadata?.isAdmin) {
+      fetchPendingOffers();
+    }
+  }, [user, isSuperAdmin, userCollege, userDepartment]);
+
+  // Security check - only admins can access this page
+  if (!user) {
+    return (
+      <div className="container mx-auto py-6">
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-muted-foreground">Loading...</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user.publicMetadata?.isAdmin) {
+    return (
+      <div className="container mx-auto py-6">
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <div className="text-red-600 font-medium">Access Denied</div>
+            <div className="text-muted-foreground mt-2">You do not have permission to access this page.</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (loading) {
     return (
@@ -208,6 +281,12 @@ export default function OfferApprovalsPage() {
           <h1 className="text-3xl font-bold tracking-tight">Offer Approvals</h1>
           <p className="text-muted-foreground mt-2">
             Review and approve pending tutor offers
+            {!isSuperAdmin && userCollege && (
+              <span className="block mt-1 text-blue-600">
+                Viewing offers from {userCollege}
+                {userDepartment && userDepartment !== 'ALL_DEPARTMENTS' ? ` - ${userDepartment} department` : ' - All departments'}
+              </span>
+            )}
           </p>
         </div>
         <div className="flex items-center space-x-2">
@@ -258,7 +337,21 @@ export default function OfferApprovalsPage() {
                           {user ? `${user.firstName} ${user.lastName}` : 'Loading...'}
                         </CardTitle>
                         <CardDescription>
-                          {user?.emailAddresses?.[0]?.emailAddress || offer.userId}
+                          <div>{user?.emailAddresses?.[0]?.emailAddress || offer.userId}</div>
+                          {user?.collegeInformation && (
+                            <div className="flex gap-1 mt-1">
+                              {user.collegeInformation.college && (
+                                <Badge variant="outline" className="text-xs">
+                                  {user.collegeInformation.college}
+                                </Badge>
+                              )}
+                              {user.collegeInformation.department && (
+                                <Badge variant="secondary" className="text-xs">
+                                  {user.collegeInformation.department}
+                                </Badge>
+                              )}
+                            </div>
+                          )}
                         </CardDescription>
                       </div>
                     </div>

@@ -39,6 +39,11 @@ type SortOrder = 'asc' | 'desc';
 export default function Subjects() {
   const { user } = useUser();
   const [subjects, setSubjects] = useState<Subject[]>([]);
+  
+  // Check if user is superadmin
+  const isSuperAdmin = user?.publicMetadata?.isAdmin === true && user?.publicMetadata?.adminRole === "superadmin";
+  const userCollege = user?.publicMetadata?.college as string | undefined;
+  const userDepartment = user?.publicMetadata?.department as string | undefined;
   const [searchTerm, setSearchTerm] = useState("");
   const [collegeFilter, setCollegeFilter] = useState("");
   const [departmentFilter, setDepartmentFilter] = useState("");
@@ -58,7 +63,7 @@ export default function Subjects() {
 
   useEffect(() => {
     updateSubjects();
-  }, []);
+  }, [user, isSuperAdmin, userCollege, userDepartment]);
 
   function handleEdit(subject: Subject) {
     setSelectedSubject(subject);
@@ -88,13 +93,34 @@ export default function Subjects() {
     setSortOrder('asc');
   }
 
-  // Get unique values for filters
-  const uniqueColleges = [...new Set(subjects.map(s => s.college))].sort();
-  const uniqueDepartments = [...new Set(subjects.map(s => s.department))].sort();
-  const uniqueYears = [...new Set(subjects.map(s => s.year))].sort((a, b) => a - b);
+  // Filter subjects based on admin role first
+  const adminFilteredSubjects = subjects.filter(subject => {
+    if (isSuperAdmin) {
+      // Superadmins can see all subjects
+      return true;
+    } else {
+      // Regular admins can only see subjects from their assigned college
+      if (subject.college !== userCollege) {
+        return false;
+      }
+      
+      // If admin has ALL_DEPARTMENTS, they can see all departments in their college
+      if (userDepartment === 'ALL_DEPARTMENTS') {
+        return true;
+      }
+      
+      // Otherwise, only show subjects from their specific department
+      return subject.department === userDepartment;
+    }
+  });
+
+  // Get unique values for filters (only from admin-filtered subjects)
+  const uniqueColleges = [...new Set(adminFilteredSubjects.map(s => s.college))].sort();
+  const uniqueDepartments = [...new Set(adminFilteredSubjects.map(s => s.department))].sort();
+  const uniqueYears = [...new Set(adminFilteredSubjects.map(s => s.year))].sort((a, b) => a - b);
 
   // Filter and sort subjects
-  const filteredAndSortedSubjects = subjects
+  const filteredAndSortedSubjects = adminFilteredSubjects
     .filter(subject => {
       const matchesSearch = subject.subjectName.toLowerCase().includes(searchTerm.toLowerCase()) ||
                            subject.subjectCode.toLowerCase().includes(searchTerm.toLowerCase());
@@ -126,6 +152,28 @@ export default function Subjects() {
     return sortOrder === 'asc' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />;
   }
 
+  // Helper function to get year level colors
+  function getYearColor(year: number) {
+    switch (year) {
+      case 1: return 'bg-green-100 text-green-800 border-green-300 hover:bg-green-200';
+      case 2: return 'bg-blue-100 text-blue-800 border-blue-300 hover:bg-blue-200';
+      case 3: return 'bg-purple-100 text-purple-800 border-purple-300 hover:bg-purple-200';
+      case 4: return 'bg-orange-100 text-orange-800 border-orange-300 hover:bg-orange-200';
+      case 5: return 'bg-red-100 text-red-800 border-red-300 hover:bg-red-200';
+      default: return 'bg-gray-100 text-gray-800 border-gray-300 hover:bg-gray-200';
+    }
+  }
+
+  // Helper function to get semester colors
+  function getSemesterColor(semester: number) {
+    switch (semester) {
+      case 1: return 'bg-emerald-100 text-emerald-800 border-emerald-300 hover:bg-emerald-200';
+      case 2: return 'bg-amber-100 text-amber-800 border-amber-300 hover:bg-amber-200';
+      case 3: return 'bg-rose-100 text-rose-800 border-rose-300 hover:bg-rose-200';
+      default: return 'bg-gray-100 text-gray-800 border-gray-300 hover:bg-gray-200';
+    }
+  }
+
   return (
     <div className="container mx-auto py-6 px-4 space-y-6">
       <Card>
@@ -133,6 +181,12 @@ export default function Subjects() {
           <CardTitle className="text-2xl font-bold">Subject Management</CardTitle>
           <CardDescription>
             Manage academic subjects, departments, and course offerings
+            {!isSuperAdmin && userCollege && (
+              <span className="block mt-1 text-blue-600">
+                Viewing subjects for {userCollege}
+                {userDepartment && userDepartment !== 'ALL_DEPARTMENTS' ? ` - ${userDepartment} department` : ' - All departments'}
+              </span>
+            )}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -224,7 +278,13 @@ export default function Subjects() {
           <div className="border rounded-lg">
             <Table>
               <TableCaption className="text-center py-4">
-                Showing {filteredAndSortedSubjects.length} of {subjects.length} subjects
+                Showing {filteredAndSortedSubjects.length} of {adminFilteredSubjects.length} subjects
+                {!isSuperAdmin && userCollege && (
+                  <span className="text-muted-foreground ml-2">
+                    (filtered to {userCollege}
+                    {userDepartment && userDepartment !== 'ALL_DEPARTMENTS' ? ` - ${userDepartment}` : ' - All Departments'})
+                  </span>
+                )}
               </TableCaption>
               <TableHeader>
                 <TableRow>
@@ -313,10 +373,20 @@ export default function Subjects() {
                       <TableCell>{subject.department}</TableCell>
                       <TableCell>{subject.college}</TableCell>
                       <TableCell>
-                        <Badge variant="secondary">Year {subject.year}</Badge>
+                        <Badge 
+                          variant="outline" 
+                          className={`font-medium ${getYearColor(subject.year)}`}
+                        >
+                          Year {subject.year}
+                        </Badge>
                       </TableCell>
                       <TableCell>
-                        <Badge variant="secondary">Sem {subject.semester}</Badge>
+                        <Badge 
+                          variant="outline" 
+                          className={`font-medium ${getSemesterColor(subject.semester)}`}
+                        >
+                          Sem {subject.semester}
+                        </Badge>
                       </TableCell>
                       <TableCell className="text-muted-foreground">
                         {new Date(subject.updatedAt).toLocaleDateString()}

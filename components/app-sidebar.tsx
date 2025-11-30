@@ -6,6 +6,7 @@ import {
   CheckSquare2,
   GraduationCap,
   LayoutDashboard,
+  Trophy,
   UserCog
 } from "lucide-react";
 import * as React from "react";
@@ -107,6 +108,11 @@ export default function AppSidebar({ userData, ...props }: AppSidebarProps) {
         icon: CheckSquare2,
       },
       {
+        title: "Leaderboards",
+        url: "/admin/leaderboards",
+        icon: Trophy,
+      },
+      {
         title: "Users",
         icon: UserCog,
         url: "/admin/users/user-management",
@@ -137,6 +143,11 @@ export default function AppSidebar({ userData, ...props }: AppSidebarProps) {
         title: "Approvals",
         url: "/admin/approval",
         icon: CheckSquare2,
+      },
+      {
+        title: "Leaderboards",
+        url: "/admin/leaderboards",
+        icon: Trophy,
       },
       {
         title: "Users",

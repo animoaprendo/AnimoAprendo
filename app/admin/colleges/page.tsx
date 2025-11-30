@@ -26,9 +26,7 @@ export type Department = {
 };
 
 export type College = {
-  _id: {
-    $oid: string;
-  };
+  _id: string;
   name: string;
   abbreviation: string;
   departments: Department[];
@@ -42,6 +40,11 @@ type SortOrder = 'asc' | 'desc';
 export default function Colleges() {
   const { user } = useUser();
   const [colleges, setColleges] = useState<College[]>([]);
+  
+  // Check if user is superadmin
+  const isSuperAdmin = user?.publicMetadata?.isAdmin === true && user?.publicMetadata?.adminRole === "superadmin";
+  const userCollege = user?.publicMetadata?.college as string | undefined;
+  const userDepartment = user?.publicMetadata?.department as string | undefined;
   const [searchTerm, setSearchTerm] = useState("");
   const [expandedColleges, setExpandedColleges] = useState<Set<string>>(new Set());
   const [sortField, setSortField] = useState<SortField>('name');
@@ -59,7 +62,7 @@ export default function Colleges() {
 
   useEffect(() => {
     updateColleges();
-  }, []);
+  }, [user, isSuperAdmin, userCollege, userDepartment]);
 
   function handleEdit(college: College) {
     setSelectedCollege(college);
@@ -96,8 +99,32 @@ export default function Colleges() {
     setSortOrder('asc');
   }
 
+  // Filter colleges based on admin role first
+  const adminFilteredColleges = colleges
+    .filter(college => {
+      if (isSuperAdmin) {
+        // Superadmins can see all colleges
+        return true;
+      } else {
+        // Regular admins can only see their assigned college
+        return college.abbreviation === userCollege;
+      }
+    })
+    .map(college => {
+      if (isSuperAdmin || !userDepartment || userDepartment === 'ALL_DEPARTMENTS') {
+        // Superadmins or admins with ALL_DEPARTMENTS can see all departments
+        return college;
+      } else {
+        // Filter departments to show only the admin's assigned department
+        return {
+          ...college,
+          departments: college.departments.filter(dept => dept.name === userDepartment)
+        };
+      }
+    });
+
   // Filter and sort colleges
-  const filteredAndSortedColleges = colleges
+  const filteredAndSortedColleges = adminFilteredColleges
     .filter(college => {
       const matchesSearch = college.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                            college.abbreviation.toLowerCase().includes(searchTerm.toLowerCase());
@@ -140,6 +167,12 @@ export default function Colleges() {
           </CardTitle>
           <CardDescription>
             Manage colleges, their departments, and academic programs
+            {!isSuperAdmin && userCollege && (
+              <span className="block mt-1 text-blue-600">
+                Managing {userCollege}
+                {userDepartment && userDepartment !== 'ALL_DEPARTMENTS' ? ` - ${userDepartment} department` : ' - All departments'}
+              </span>
+            )}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -160,10 +193,12 @@ export default function Colleges() {
                 <RotateCcw className="w-4 h-4" />
               </Button>
 
-              <Button onClick={() => setIsOpenCreate(true)} className="whitespace-nowrap">
-                <Plus className="w-4 h-4 mr-2" />
-                Add College
-              </Button>
+              {isSuperAdmin && (
+                <Button onClick={() => setIsOpenCreate(true)} className="whitespace-nowrap">
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add College
+                </Button>
+              )}
             </div>
           </div>
 
@@ -181,7 +216,12 @@ export default function Colleges() {
           <div className="border rounded-lg">
             <Table>
               <TableCaption className="text-center py-4">
-                Showing {filteredAndSortedColleges.length} of {colleges.length} colleges
+                Showing {filteredAndSortedColleges.length} of {adminFilteredColleges.length} colleges
+                {!isSuperAdmin && userCollege && (
+                  <span className="text-muted-foreground ml-2">
+                    (filtered to your assigned {userCollege})
+                  </span>
+                )}
               </TableCaption>
               <TableHeader>
                 <TableRow>
@@ -228,15 +268,15 @@ export default function Colleges() {
                 ) : (
                   filteredAndSortedColleges.map((college: College) => (
                     <>
-                      <TableRow key={college._id.$oid} className="hover:bg-muted/50">
+                      <TableRow key={college._id} className="hover:bg-muted/50">
                         <TableCell>
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => toggleCollege(college._id.$oid)}
+                            onClick={() => toggleCollege(college._id)}
                             className="p-0 h-8 w-8"
                           >
-                            {expandedColleges.has(college._id.$oid) ? (
+                            {expandedColleges.has(college._id) ? (
                               <ChevronDown className="w-4 h-4" />
                             ) : (
                               <ChevronRight className="w-4 h-4" />
@@ -269,20 +309,22 @@ export default function Colleges() {
                             >
                               Edit
                             </Button>
-                            <Button 
-                              variant="ghost" 
-                              size="sm"
-                              onClick={() => handleDelete(college)}
-                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                            >
-                              Delete
-                            </Button>
+                            {isSuperAdmin && (
+                              <Button 
+                                variant="ghost" 
+                                size="sm"
+                                onClick={() => handleDelete(college)}
+                                className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                              >
+                                Delete
+                              </Button>
+                            )}
                           </div>
                         </TableCell>
                       </TableRow>
                       
                       {/* Expanded Department Details */}
-                      {expandedColleges.has(college._id.$oid) && (
+                      {expandedColleges.has(college._id) && (
                         <TableRow>
                           <TableCell colSpan={5} className="bg-muted/30 p-0">
                             <div className="p-4 space-y-3">
@@ -326,6 +368,8 @@ export default function Colleges() {
         setIsOpen={setIsOpenEdit} 
         college={selectedCollege}
         onCollegeUpdated={updateColleges}
+        userRole={isSuperAdmin ? 'superadmin' : 'admin'}
+        userDepartment={userDepartment}
       />
       <DeleteCollegeModal 
         isOpen={isOpenDelete} 

@@ -22,9 +22,7 @@ type Department = {
 };
 
 type College = {
-  _id: {
-    $oid: string;
-  };
+  _id: string;
   name: string;
   abbreviation: string;
   departments: Department[];
@@ -35,6 +33,8 @@ interface EditCollegeModalProps {
   setIsOpen: (isOpen: boolean) => void;
   college: College | null;
   onCollegeUpdated: () => void;
+  userRole?: 'superadmin' | 'admin';
+  userDepartment?: string;
 }
 
 const EditCollegeModal = ({
@@ -42,6 +42,8 @@ const EditCollegeModal = ({
   setIsOpen,
   college,
   onCollegeUpdated,
+  userRole = 'superadmin',
+  userDepartment,
 }: EditCollegeModalProps) => {
   const [formData, setFormData] = useState({
     name: "",
@@ -54,17 +56,24 @@ const EditCollegeModal = ({
   // Populate form when college data changes
   useEffect(() => {
     if (college && isOpen) {
+      let departmentsToShow = college.departments;
+      
+      // Filter departments for regular admins with specific department assignment
+      if (userRole === 'admin' && userDepartment && userDepartment !== 'ALL_DEPARTMENTS') {
+        departmentsToShow = college.departments.filter(dept => dept.name === userDepartment);
+      }
+      
       setFormData({
         name: college.name,
         abbreviation: college.abbreviation,
-        departments: college.departments.map(dept => ({
+        departments: departmentsToShow.map(dept => ({
           name: dept.name,
           yearLevel: [...dept.yearLevel]
         })),
       });
       setErrors({});
     }
-  }, [college, isOpen]);
+  }, [college, isOpen, userRole, userDepartment]);
 
   const validateForm = () => {
     const newErrors: { [key: string]: string } = {};
@@ -177,10 +186,11 @@ const EditCollegeModal = ({
         departments: formData.departments.map(dept => ({
           name: dept.name.trim(),
           yearLevel: dept.yearLevel
-        }))
+        })),
+        _id: undefined
       };
 
-      await updateCollectionData("colleges", college._id.$oid, updatedCollege);
+      await updateCollectionData("colleges", college._id, updatedCollege);
       
       toast.success("College updated successfully!");
       setIsOpen(false);
@@ -213,7 +223,12 @@ const EditCollegeModal = ({
           {/* Basic Information */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="name">College Name</Label>
+              <Label htmlFor="name">
+                College Name
+                {userRole === 'admin' && userDepartment && userDepartment !== 'ALL_DEPARTMENTS' && (
+                  <Badge variant="secondary" className="text-xs ml-2">Read Only</Badge>
+                )}
+              </Label>
               <Input
                 id="name"
                 value={formData.name}
@@ -225,6 +240,8 @@ const EditCollegeModal = ({
                 }}
                 placeholder="Enter college name"
                 className={errors.name ? "border-red-500" : ""}
+                readOnly={userRole === 'admin' && !!userDepartment && userDepartment !== 'ALL_DEPARTMENTS'}
+                disabled={userRole === 'admin' && !!userDepartment && userDepartment !== 'ALL_DEPARTMENTS'}
               />
               {errors.name && (
                 <p className="text-sm text-red-500 flex items-center gap-1">
@@ -235,7 +252,12 @@ const EditCollegeModal = ({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="abbreviation">Abbreviation</Label>
+              <Label htmlFor="abbreviation">
+                Abbreviation
+                {userRole === 'admin' && userDepartment && userDepartment !== 'ALL_DEPARTMENTS' && (
+                  <Badge variant="secondary" className="text-xs ml-2">Read Only</Badge>
+                )}
+              </Label>
               <Input
                 id="abbreviation"
                 value={formData.abbreviation}
@@ -248,6 +270,8 @@ const EditCollegeModal = ({
                 placeholder="Enter abbreviation"
                 className={errors.abbreviation ? "border-red-500" : ""}
                 maxLength={10}
+                readOnly={userRole === 'admin' && !!userDepartment && userDepartment !== 'ALL_DEPARTMENTS'}
+                disabled={userRole === 'admin' && !!userDepartment && userDepartment !== 'ALL_DEPARTMENTS'}
               />
               {errors.abbreviation && (
                 <p className="text-sm text-red-500 flex items-center gap-1">
@@ -264,17 +288,24 @@ const EditCollegeModal = ({
               <Label className="text-base font-semibold flex items-center gap-2">
                 <GraduationCap className="h-5 w-5" />
                 Departments
+                {userRole === 'admin' && userDepartment && userDepartment !== 'ALL_DEPARTMENTS' && (
+                  <Badge variant="secondary" className="text-xs ml-2">
+                    Editing {userDepartment} only
+                  </Badge>
+                )}
               </Label>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={addDepartment}
-                className="flex items-center gap-2"
-              >
-                <Plus className="h-4 w-4" />
-                Add Department
-              </Button>
+              {(userRole === 'superadmin' || userDepartment === 'ALL_DEPARTMENTS') && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={addDepartment}
+                  className="flex items-center gap-2"
+                >
+                  <Plus className="h-4 w-4" />
+                  Add Department
+                </Button>
+              )}
             </div>
 
             {errors.departments && (
@@ -290,14 +321,16 @@ const EditCollegeModal = ({
                   <CardHeader className="pb-3">
                     <div className="flex items-center justify-between">
                       <CardTitle className="text-lg">Department {index + 1}</CardTitle>
-                      <Button
-                        type="button"
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => removeDepartment(index)}
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
+                      {(userRole === 'superadmin' || userDepartment === 'ALL_DEPARTMENTS') && (
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => removeDepartment(index)}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      )}
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-4">

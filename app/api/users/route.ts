@@ -12,6 +12,14 @@ interface UserDocument {
   }>;
   profile_image_url?: string;
   image_url?: string; // Alternative field name
+  public_metadata?: {
+    collegeInformation?: {
+      college?: string;
+      department?: string;
+      yearLevel?: number;
+      section?: string;
+    };
+  };
 }
 
 export async function GET(request: NextRequest) { 
@@ -61,7 +69,8 @@ export async function GET(request: NextRequest) {
       imageUrl: user.image_url || user.profile_image_url, // Handle both field names
       displayName: user.first_name && user.last_name 
         ? `${user.first_name} ${user.last_name}`
-        : user.username || user.email_addresses?.[0]?.email_address || 'Unknown User'
+        : user.username || user.email_addresses?.[0]?.email_address || 'Unknown User',
+      collegeInformation: user.public_metadata?.collegeInformation || null,
     }));
 
     return NextResponse.json({ users: transformedUsers });
