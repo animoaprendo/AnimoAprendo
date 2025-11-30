@@ -1,5 +1,9 @@
 "use client";
 import { getCollectionData } from "@/app/actions";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import {
   Table,
   TableBody,
@@ -9,18 +13,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { useUser } from "@clerk/nextjs";
+import { Building2, ChevronDown, ChevronRight, ChevronUp, Plus, RotateCcw, School, Search } from "lucide-react";
 import { useEffect, useState } from "react";
 import CreateCollegeModal from "./create";
-import { useUser } from "@clerk/nextjs";
-import EditCollegeModal from "./edit";
 import DeleteCollegeModal from "./delete";
-import { Search, Plus, ChevronUp, ChevronDown, ChevronRight, RotateCcw, School, Building2 } from "lucide-react";
+import EditCollegeModal from "./edit";
 
 export type Department = {
   name: string;

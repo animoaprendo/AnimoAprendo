@@ -1,17 +1,15 @@
 "use client";
-import { SignOutButton, useUser } from "@clerk/nextjs";
-import Link from "next/link";
-import React, { Suspense, useState } from "react";
-import SwitchToTutee from "./ui/switchtotutee";
-import ProfileImageSkeleton from "./ui/profile-skeleton";
-import Image from "next/image";
-import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
-import { Menu, X, MessageCircle, LayoutDashboard, BookOpen, Calendar, History, User, LogOut, GraduationCap } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Separator } from "@/components/ui/separator";
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { SignOutButton, useUser } from "@clerk/nextjs";
+import { BookOpen, Calendar, GraduationCap, History, LayoutDashboard, LogOut, Menu, MessageCircle, User } from "lucide-react";
+import Link from "next/link";
+import { Suspense, useState } from "react";
+import ProfileImageSkeleton from "./ui/profile-skeleton";
+import SwitchToTutee from "./ui/switchtotutee";
 
 function NavLinksTutor() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);

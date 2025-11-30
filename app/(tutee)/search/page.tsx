@@ -1,4 +1,3 @@
-import React from "react";
 import { getAllOfferings } from "@/app/actions";
 import SearchClient from "./SearchClient";
 

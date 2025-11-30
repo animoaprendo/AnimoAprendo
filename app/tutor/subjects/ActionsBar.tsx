@@ -1,12 +1,11 @@
 "use client";
 
-import { useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
-import { redirect, RedirectType } from "next/navigation";
-import { ClipLoader } from "react-spinners";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Save, Send, ArrowLeft, Loader2 } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
+import { ArrowLeft, Loader2, Save, Send } from "lucide-react";
+import { redirect, RedirectType } from "next/navigation";
+import { useState } from "react";
 
 type Props = {
   allComplete: boolean;

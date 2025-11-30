@@ -1,9 +1,8 @@
-import React from "react";
 import { fetchTutorHistory } from "@/app/actions";
+import { Card, CardContent, CardDescription, CardTitle } from "@/components/ui/card";
 import { auth } from "@clerk/nextjs/server";
-import TutorHistoryClient from "./TutorHistoryClient";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { AlertCircle, ShieldAlert } from "lucide-react";
+import TutorHistoryClient from "./TutorHistoryClient";
 
 const TutorHistory = async () => {
   const { userId } = await auth();

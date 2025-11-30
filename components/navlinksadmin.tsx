@@ -1,14 +1,13 @@
-import { SignOutButton } from '@clerk/nextjs'
-import { currentUser } from '@clerk/nextjs/server'
-import Link from 'next/link'
-import React from 'react'
+import { SignOutButton } from '@clerk/nextjs';
+import { currentUser } from '@clerk/nextjs/server';
+import Link from 'next/link';
 
+import { FiLogOut, FiUser, FiUsers } from "react-icons/fi";
 import {
-  RiDashboardLine,
   RiBookLine,
-  RiCalendar2Line
+  RiCalendar2Line,
+  RiDashboardLine
 } from "react-icons/ri";
-import { FiUsers, FiLogOut, FiUser } from "react-icons/fi";
 
 async function NavLinksAdmin() {
   const user = await currentUser()

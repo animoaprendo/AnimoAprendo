@@ -1,17 +1,17 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
-import { Calendar, momentLocalizer } from "react-big-calendar";
-import type { View, Event as RBCEvent } from "react-big-calendar";
 import moment from "moment";
+import React, { useEffect, useState } from "react";
+import type { Event as RBCEvent, View } from "react-big-calendar";
+import { Calendar, momentLocalizer } from "react-big-calendar";
 // @ts-ignore
-import "react-big-calendar/lib/css/react-big-calendar.css";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { CalendarDays, BarChart3, Clock, User, MapPin, Eye, X } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
+import { BarChart3, CalendarDays, Clock, MapPin, User, X } from "lucide-react";
+import "react-big-calendar/lib/css/react-big-calendar.css";
 
 const localizer = momentLocalizer(moment);
 

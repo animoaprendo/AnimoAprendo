@@ -1,6 +1,6 @@
 "use client";
 
-import { CheckCircle2, XCircle, Clock } from "lucide-react";
+import { CheckCircle2, XCircle } from "lucide-react";
 
 type Props = {
   titleComplete: boolean;

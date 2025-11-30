@@ -1,21 +1,18 @@
 "use client";
 
-import * as React from "react";
-import { useEffect, useState } from "react";
-import { Area, AreaChart, CartesianGrid, XAxis, Bar, BarChart, ResponsiveContainer } from "recharts";
 import {
   BookOpen,
-  Users,
-  GraduationCap,
   Calendar,
-  TrendingUp,
-  TrendingDown,
   Clock,
+  GraduationCap,
   Star,
-  ArrowUpRight,
-  ArrowDownRight,
+  TrendingUp,
+  Users
 } from "lucide-react";
+import { useEffect, useState } from "react";
 
+import { fetchAppointments, getCollectionData } from "@/app/actions";
+import { Badge } from "@/components/ui/badge";
 import {
   Card,
   CardContent,
@@ -24,13 +21,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import {
-  ChartConfig,
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
+  ChartConfig
 } from "@/components/ui/chart";
-import { Badge } from "@/components/ui/badge";
-import { getCollectionData, fetchAppointments } from "@/app/actions";
 import { useUser } from "@clerk/nextjs";
 
 type DashboardData = {
@@ -95,12 +87,13 @@ export default function AdminDashboard() {
         setLoading(true);
 
         // Fetch all collections
-        const [usersRes, subjectsRes, collegesRes, appointmentsRes] = await Promise.all([
-          getCollectionData("users"),
-          getCollectionData("subjects"),
-          getCollectionData("colleges"),
-          fetchAppointments(),
-        ]);
+        const [usersRes, subjectsRes, collegesRes, appointmentsRes] =
+          await Promise.all([
+            getCollectionData("users"),
+            getCollectionData("subjects"),
+            getCollectionData("colleges"),
+            fetchAppointments(),
+          ]);
 
         const dashboardData = {
           users: usersRes.data || [],
@@ -112,10 +105,15 @@ export default function AdminDashboard() {
         setData(dashboardData);
 
         // Calculate statistics
-        const tutors = dashboardData.users.filter((user: any) => user.role === "tutor");
-        const tutees = dashboardData.users.filter((user: any) => user.role === "tutee");
+        const tutors = dashboardData.users.filter(
+          (user: any) => user.role === "tutor"
+        );
+        const tutees = dashboardData.users.filter(
+          (user: any) => user.role === "tutee"
+        );
         const totalDepartments = dashboardData.colleges.reduce(
-          (acc: number, college: any) => acc + (college.departments?.length || 0),
+          (acc: number, college: any) =>
+            acc + (college.departments?.length || 0),
           0
         );
 
@@ -139,7 +137,6 @@ export default function AdminDashboard() {
           completedAppointments,
           pendingAppointments,
         });
-
       } catch (error) {
         console.error("Error fetching dashboard data:", error);
       } finally {
@@ -152,8 +149,8 @@ export default function AdminDashboard() {
 
   // Generate sample activity data for the last 7 days
   const generateActivityData = () => {
-    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-    return days.map(day => ({
+    const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+    return days.map((day) => ({
       day,
       tutors: Math.floor(Math.random() * 20) + 5,
       tutees: Math.floor(Math.random() * 40) + 15,
@@ -162,8 +159,8 @@ export default function AdminDashboard() {
 
   // Generate appointment trend data
   const generateAppointmentData = () => {
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
-    return months.map(month => ({
+    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun"];
+    return months.map((month) => ({
       month,
       appointments: Math.floor(Math.random() * 50) + 20,
     }));
@@ -215,7 +212,9 @@ export default function AdminDashboard() {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.totalUsers.toLocaleString()}</div>
+            <div className="text-2xl font-bold">
+              {stats.totalUsers.toLocaleString()}
+            </div>
             <div className="flex items-center space-x-1 text-xs text-muted-foreground">
               <TrendingUp className="h-3 w-3" />
               <span>+12% from last month</span>
@@ -225,27 +224,39 @@ export default function AdminDashboard() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Subjects</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Total Subjects
+            </CardTitle>
             <BookOpen className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.totalSubjects.toLocaleString()}</div>
+            <div className="text-2xl font-bold">
+              {stats.totalSubjects.toLocaleString()}
+            </div>
             <div className="flex items-center space-x-1 text-xs text-muted-foreground">
               <TrendingUp className="h-3 w-3" />
-              <span>+{stats.totalSubjects > 50 ? '8' : '23'}% from last month</span>
+              <span>
+                +{stats.totalSubjects > 50 ? "8" : "23"}% from last month
+              </span>
             </div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Colleges</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Total Colleges
+            </CardTitle>
             <GraduationCap className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.totalColleges.toLocaleString()}</div>
+            <div className="text-2xl font-bold">
+              {stats.totalColleges.toLocaleString()}
+            </div>
             <div className="flex items-center space-x-1 text-xs text-muted-foreground">
-              <span className="text-green-600">+{stats.totalDepartments} departments</span>
+              <span className="text-green-600">
+                +{stats.totalDepartments} departments
+              </span>
             </div>
           </CardContent>
         </Card>
@@ -256,7 +267,9 @@ export default function AdminDashboard() {
             <Calendar className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.totalAppointments.toLocaleString()}</div>
+            <div className="text-2xl font-bold">
+              {stats.totalAppointments.toLocaleString()}
+            </div>
             <div className="flex items-center space-x-1 text-xs text-muted-foreground">
               <Clock className="h-3 w-3" />
               <span>{stats.activeAppointments} active</span>
@@ -265,24 +278,38 @@ export default function AdminDashboard() {
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Completed Sessions</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Completed Sessions
+            </CardTitle>
             <Star className="h-4 w-4 text-yellow-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-yellow-600">{stats.completedAppointments.toLocaleString()}</div>
+            <div className="text-2xl font-bold text-yellow-600">
+              {stats.completedAppointments.toLocaleString()}
+            </div>
             <p className="text-xs text-muted-foreground">
-              {stats.totalAppointments > 0 ? Math.round((stats.completedAppointments / stats.totalAppointments) * 100) : 0}% completion rate
+              {stats.totalAppointments > 0
+                ? Math.round(
+                    (stats.completedAppointments / stats.totalAppointments) *
+                      100
+                  )
+                : 0}
+              % completion rate
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Pending Sessions</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Pending Sessions
+            </CardTitle>
             <Clock className="h-4 w-4 text-orange-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-orange-600">{stats.pendingAppointments.toLocaleString()}</div>
+            <div className="text-2xl font-bold text-orange-600">
+              {stats.pendingAppointments.toLocaleString()}
+            </div>
             <p className="text-xs text-muted-foreground">
               Awaiting confirmation
             </p>
@@ -291,9 +318,7 @@ export default function AdminDashboard() {
       </div>
 
       {/* User Breakdown */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        
-      </div>
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3"></div>
 
       {/* Charts */}
       {/* <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
@@ -421,7 +446,9 @@ export default function AdminDashboard() {
             </div>
             <div className="flex items-center justify-between">
               <span className="text-sm font-medium">Active Sessions</span>
-              <span className="text-sm text-muted-foreground">{stats.activeAppointments} ongoing</span>
+              <span className="text-sm text-muted-foreground">
+                {stats.activeAppointments} ongoing
+              </span>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-sm font-medium">User Engagement</span>
@@ -437,14 +464,14 @@ export default function AdminDashboard() {
         <Card>
           <CardHeader>
             <CardTitle>Quick Stats</CardTitle>
-            <CardDescription>
-              Key metrics at a glance
-            </CardDescription>
+            <CardDescription>Key metrics at a glance</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between">
               <span className="text-sm font-medium">Departments</span>
-              <span className="text-sm font-bold">{stats.totalDepartments}</span>
+              <span className="text-sm font-bold">
+                {stats.totalDepartments}
+              </span>
             </div>
             {/* <div className="flex items-center justify-between">
               <span className="text-sm font-medium">Tutor-to-Tutee Ratio</span>
@@ -453,15 +480,25 @@ export default function AdminDashboard() {
               </span>
             </div> */}
             <div className="flex items-center justify-between">
-              <span className="text-sm font-medium">Avg. Sessions per User</span>
+              <span className="text-sm font-medium">
+                Avg. Sessions per User
+              </span>
               <span className="text-sm font-bold">
-                {stats.totalUsers > 0 ? (stats.totalAppointments / stats.totalUsers).toFixed(1) : "0"}
+                {stats.totalUsers > 0
+                  ? (stats.totalAppointments / stats.totalUsers).toFixed(1)
+                  : "0"}
               </span>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-sm font-medium">Success Rate</span>
               <span className="text-sm font-bold text-green-600">
-                {stats.totalAppointments > 0 ? Math.round((stats.completedAppointments / stats.totalAppointments) * 100) : 0}%
+                {stats.totalAppointments > 0
+                  ? Math.round(
+                      (stats.completedAppointments / stats.totalAppointments) *
+                        100
+                    )
+                  : 0}
+                %
               </span>
             </div>
           </CardContent>

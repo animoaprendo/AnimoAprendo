@@ -1,8 +1,8 @@
 "use client";
 
-import { X } from "lucide-react";
-import { useState, useRef, useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
+import { X } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 
 export type Question = {
   id: string;

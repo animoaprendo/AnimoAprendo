@@ -1,7 +1,6 @@
-import React from "react";
+import { fetchAppointments, fetchUsers } from "@/app/actions";
 import { currentUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
-import { fetchAppointments, fetchUsers } from "@/app/actions";
 import ClientCalendar from "./ClientCalendar";
 
 export default async function TutorAppointmentsPage() {

@@ -1,5 +1,10 @@
 "use client";
 import { getCollectionData } from "@/app/actions";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -9,17 +14,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useUser } from "@clerk/nextjs";
+import { ChevronDown, ChevronUp, Plus, RotateCcw, Search } from "lucide-react";
 import { useEffect, useState } from "react";
 import CreateSubject from "./create";
-import { useUser } from "@clerk/nextjs";
-import EditSubject from "./edit";
 import DeleteSubject from "./delete";
-import { Search, Plus, ChevronUp, ChevronDown, Filter, RotateCcw } from "lucide-react";
+import EditSubject from "./edit";
 
 export type Subject = {
   _id: string;

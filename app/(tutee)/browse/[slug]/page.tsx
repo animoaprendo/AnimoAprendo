@@ -1,19 +1,19 @@
 "use client";
-import { useParams, useRouter } from "next/navigation";
-import React, { use, useState, useEffect } from "react";
-import { ArrowLeft, Clock, Star, MessageCircle, Users, Calendar, MapPin } from "lucide-react";
+import { createInquiry, getOfferingById, getReviewsByOfferingId } from "@/app/actions";
 import Stepper, { Step } from "@/components/reactbits/stepper";
-import { PiPauseCircle, PiWarningBold } from "react-icons/pi";
-import Link from "next/link";
-import { getOfferingById, getReviewsByOfferingId, createInquiry } from "@/app/actions";
-import { useUser } from "@clerk/nextjs";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Separator } from "@/components/ui/separator";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useUser } from "@clerk/nextjs";
+import { ArrowLeft, Calendar, Clock, MessageCircle, Star, Users } from "lucide-react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { use, useEffect, useState } from "react";
+import { PiPauseCircle } from "react-icons/pi";
 
 interface Availability {
   id: string;

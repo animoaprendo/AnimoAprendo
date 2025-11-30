@@ -1,21 +1,11 @@
-import RatingGFX from "@/components/star-rating";
-import { currentUser } from "@clerk/nextjs/server";
-import Image from "next/image";
-import Link from "next/link";
-import React from "react";
-import {
-  CalendarDays,
-  CheckCircle,
-  Clock,
-  User,
-  Award,
-  MapPin,
-  Eye,
-  TrendingUp,
-} from "lucide-react";
-import { Progress } from "@/components/ui/progress";
-import { redirect, RedirectType } from "next/navigation";
 import { fetchAppointments, fetchUsers } from "@/app/actions";
+import { getUserGamificationProfile } from '@/app/gamification-actions';
+import { AchievementSystem } from '@/components/gamification/achievement-system';
+import { LevelCard } from '@/components/gamification/level-card';
+import { StatsOverview } from '@/components/gamification/progress-tracking';
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -23,15 +13,21 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import { getMicrosoftAccessToken } from '@/lib/microsoft-oauth';
-import { LevelCard } from '@/components/gamification/level-card';
-import { AchievementSystem } from '@/components/gamification/achievement-system';
-import { StatsOverview, WeeklyGoals } from '@/components/gamification/progress-tracking';
-import { getUserGamificationProfile } from '@/app/gamification-actions';
+import { currentUser } from "@clerk/nextjs/server";
+import {
+  Award,
+  CalendarDays,
+  CheckCircle,
+  Clock,
+  Eye,
+  MapPin,
+  User
+} from "lucide-react";
+import Link from "next/link";
+import { redirect, RedirectType } from "next/navigation";
 
 // Utility function to calculate XP required for a level
 function getXPForLevel(level: number): number {

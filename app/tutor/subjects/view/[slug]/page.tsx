@@ -1,7 +1,6 @@
 "use client";
-import { getOffer, getOffers } from "@/app/tutor/actions";
+import { getOffer } from "@/app/tutor/actions";
 import RadialProgress from "@/components/radial-progress";
-import RatingGFX from "@/components/star-rating";
 import { useUser } from "@clerk/nextjs";
 import Image from "next/image";
 import Link from "next/link";

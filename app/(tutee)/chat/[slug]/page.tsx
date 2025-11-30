@@ -1,5 +1,4 @@
-import ChatContainer from '@/components/chat/ChatContainer'
-import React from 'react'
+import ChatContainer from '@/components/chat/ChatContainer';
 import { currentUser } from "@clerk/nextjs/server";
 
 export default async function TuteeChat ({

@@ -1,26 +1,25 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Separator } from "@/components/ui/separator";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { 
-  Check, 
-  X, 
-  Clock, 
-  User, 
-  Calendar, 
-  MapPin, 
-  BookOpen, 
-  AlertCircle,
-  RefreshCw
-} from "lucide-react";
-import { toast } from "sonner";
-import { getCollectionData, fetchUsers } from "@/app/actions";
+import { fetchUsers, getCollectionData } from "@/app/actions";
 import { approveOffer, rejectOffer } from "@/app/admin/actions";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Separator } from "@/components/ui/separator";
+import {
+  AlertCircle,
+  BookOpen,
+  Calendar,
+  Check,
+  Clock,
+  RefreshCw,
+  User,
+  X
+} from "lucide-react";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
 
 type Availability = {
   id: string;

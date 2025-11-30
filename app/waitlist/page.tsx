@@ -1,10 +1,10 @@
 'use client';
 
-import { motion } from 'motion/react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { BookOpen, Users, Award, GraduationCap, Target, Clock, Calendar, CheckCircle } from 'lucide-react';
+import { Award, BookOpen, Calendar, GraduationCap, Users } from 'lucide-react';
+import { motion } from 'motion/react';
 
 export default function ComingSoonPage() {
 

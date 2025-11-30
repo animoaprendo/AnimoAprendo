@@ -1,9 +1,8 @@
-import React from "react";
 import { fetchTuteeAppointments } from "@/app/actions";
-import { auth } from "@clerk/nextjs/server";
-import TuteeAppointmentsClient from "./TuteeAppointmentsClient";
 import { Card, CardContent } from "@/components/ui/card";
-import { Lock, AlertCircle } from "lucide-react";
+import { auth } from "@clerk/nextjs/server";
+import { AlertCircle, Lock } from "lucide-react";
+import TuteeAppointmentsClient from "./TuteeAppointmentsClient";
 
 export default async function AppointmentsPage() {
   const { userId } = await auth();

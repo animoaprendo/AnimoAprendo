@@ -1,19 +1,12 @@
 import ConditionalFooter from "@/components/ConditionalFooter";
+import NavLinksDefault from "@/components/navlinksdefault";
 import NavLinksTutee from "@/components/navlinkstutee";
 import {
-  ClerkProvider,
-  SignInButton,
-  SignUpButton,
   SignedIn,
-  SignedOut,
-  UserButton,
-  useUser,
+  SignedOut
 } from "@clerk/nextjs";
-import Link from "next/link";
-import { Geist, Geist_Mono } from "next/font/google";
 import { currentUser } from "@clerk/nextjs/server";
 import { permanentRedirect } from "next/navigation";
-import NavLinksDefault from "@/components/navlinksdefault";
 
 export default async function Layout({
   children,

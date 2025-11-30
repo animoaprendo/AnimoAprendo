@@ -1,32 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import {
-  Search,
-  Filter,
-  Users,
-  GraduationCap,
-  BookOpen,
-  Calendar,
-  Star,
-  TrendingUp,
-  Eye,
-  UserCheck,
-  UserX,
-  MoreHorizontal,
-  RefreshCw,
-  ChevronUp,
-  ChevronDown,
-} from "lucide-react";
-import { getCollectionData, fetchAppointments, fetchUsers } from "@/app/actions";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { fetchAppointments, getCollectionData } from "@/app/actions";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -34,8 +11,21 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -45,21 +35,27 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+  Calendar,
+  ChevronDown,
+  ChevronUp,
+  Eye,
+  MoreHorizontal,
+  RefreshCw,
+  Search,
+  Star,
+  TrendingUp,
+  UserCheck,
+  Users
+} from "lucide-react";
+import { useEffect, useState } from "react";
 
 type User = {
   id: string;

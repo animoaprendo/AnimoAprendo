@@ -1,18 +1,18 @@
 "use client";
 
-import { useState } from "react";
-import { Trash2, AlertTriangle } from "lucide-react";
 import { deleteCollectionData } from "@/app/actions";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { AlertTriangle, Trash2 } from "lucide-react";
+import { useState } from "react";
 import { toast } from "sonner";
 
 type Department = {
