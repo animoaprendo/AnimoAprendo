@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import clientPromise from '@/lib/mongodb';
+import { calculateAvailabilityDiversity } from '@/lib/subject-sorting';
 
 export async function GET(request: NextRequest) {
   try {
@@ -17,11 +18,11 @@ export async function GET(request: NextRequest) {
       })
       .toArray();
 
-    // Get collections for rating calculations
+    // Get collections for rating calculations and booking statistics
     const reviewsCollection = db.collection('reviews');
     const appointmentsCollection = db.collection('appointments');
 
-    // Get user details and ratings for each offering
+    // Get user details, ratings, and booking stats for each offering
     const offeringsWithUsers = await Promise.all(
       offerings.map(async (offering) => {
         // Look for user by both _id and id fields to handle different ID formats
@@ -46,12 +47,52 @@ export async function GET(request: NextRequest) {
           averageRating = totalRating / tutorReviews.length;
         }
 
+        // Get booking statistics for this offering
+        
+        // Repeat Bookings: Count unique tutees who booked this offering 2+ times
+        const allAppointmentsForOffering = await appointmentsCollection.find({
+          offeringId: offering._id.toString(),
+          status: { $in: ['accepted', 'completed'] }
+        }).toArray();
+
+        const tuteeBookingCounts = new Map<string, number>();
+        allAppointmentsForOffering.forEach(apt => {
+          const tuteeId = apt.tuteeId;
+          if (tuteeId) {
+            tuteeBookingCounts.set(tuteeId, (tuteeBookingCounts.get(tuteeId) || 0) + 1);
+          }
+        });
+        const repeatBookingsCount = Array.from(tuteeBookingCounts.values())
+          .filter(count => count >= 2).length;
+
+        // Booking Frequency: Count bookings in the last 30 days
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+        const recentAppointments = await appointmentsCollection.countDocuments({
+          offeringId: offering._id.toString(),
+          status: { $in: ['accepted', 'completed'] },
+          $or: [
+            { createdAt: { $gte: thirtyDaysAgo } },
+            { startDate: { $gte: thirtyDaysAgo.toISOString() } },
+            { datetimeISO: { $gte: thirtyDaysAgo.toISOString() } }
+          ]
+        });
+        const totalBookingsCount = recentAppointments;
+
+        // Calculate availability diversity (unique days)
+        const availabilityCount = calculateAvailabilityDiversity(offering.availability);
+
         return {
           ...offering,
           _id: offering._id.toString(),
           averageRating: averageRating > 0 ? Math.round(averageRating * 10) / 10 : 0, // Round to 1 decimal
           totalReviews: tutorReviews.length,
           createdAt: offering.createdAt, // Include createdAt for sorting
+          // Booking statistics for weighted sorting
+          totalBookingsCount,
+          repeatBookingsCount,
+          availabilityCount,
           user: user ? {
             id: user.id || user._id,
             firstName: user.first_name || user.firstName,
@@ -66,26 +107,9 @@ export async function GET(request: NextRequest) {
       })
     );
 
-    // Sort offerings by rating (highest first, treating null/undefined as 0)
-    // Then by creation date (oldest first) for same ratings
-    const sortedOfferings = offeringsWithUsers.sort((a, b) => {
-      const aRating = a.averageRating || 0;
-      const bRating = b.averageRating || 0;
-      
-      // Primary sort: by rating (highest first)
-      if (bRating !== aRating) {
-        return bRating - aRating;
-      }
-      
-      // Secondary sort: by creation date (oldest first) for same ratings
-      const aDate = new Date(a.createdAt || a._id).getTime(); // Fallback to ObjectId if no createdAt
-      const bDate = new Date(b.createdAt || b._id).getTime();
-      return aDate - bDate; // oldest first
-    });
-
-
-
-    return Response.json({ success: true, data: sortedOfferings });
+    // Note: Sorting is now handled by the weighted algorithm in the client
+    // We return unsorted data to allow flexible sorting on the frontend
+    return Response.json({ success: true, data: offeringsWithUsers });
 
   } catch (error) {
     console.error('Error fetching all offerings:', error);
