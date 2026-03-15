@@ -26,6 +26,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { sortOfferingsByScore, DEFAULT_WEIGHTS, getScoreBreakdown } from "@/lib/subject-sorting";
 
 interface CardInfo {
   _id: string;
@@ -38,6 +39,9 @@ interface CardInfo {
   averageRating?: number;
   totalReviews?: number;
   createdAt?: string;
+  totalBookingsCount?: number;
+  repeatBookingsCount?: number;
+  availabilityCount?: number;
   user?: {
     id: string;
     firstName?: string;
@@ -81,7 +85,7 @@ export default function Browse() {
     selectedDays: [],
     subjects: [],
     status: "all",
-    sortBy: "rating"
+    sortBy: "weighted"
   });
 
   // Fetch offerings from MongoDB on component mount
@@ -170,6 +174,22 @@ export default function Browse() {
 
     // Sort
     switch (filters.sortBy) {
+      case "weighted":
+        // Use the weighted algorithm for smart sorting
+        filtered = sortOfferingsByScore(filtered, DEFAULT_WEIGHTS) as CardInfo[];
+        
+        // Log score breakdowns for debugging (temporary)
+        // console.log('\n=== WEIGHTED SORTING BREAKDOWN ===');
+        // filtered.slice(0, 10).forEach((offering, index) => {
+        //   const breakdown = getScoreBreakdown(offering, DEFAULT_WEIGHTS);
+        //   console.log(`\n#${index + 1}: ${offering.subject}`);
+        //   console.log(`Total Score: ${breakdown.totalScore.toFixed(2)}`);
+        //   breakdown.breakdown.forEach(item => {
+        //     console.log(`  ${item.metric}: ${item.value} → ${item.normalized.toFixed(2)} × ${item.weight}% = ${item.contribution.toFixed(2)}`);
+        //   });
+        // });
+        // console.log('\n=================================\n');
+        break;
       case "rating":
         filtered.sort((a, b) => (b.averageRating || 0) - (a.averageRating || 0));
         break;
@@ -207,7 +227,7 @@ export default function Browse() {
       selectedDays: [],
       subjects: [],
       status: "all",
-      sortBy: "rating"
+      sortBy: "weighted"
     });
   };
 
@@ -325,10 +345,11 @@ export default function Browse() {
                   value={filters.sortBy}
                   onValueChange={(value) => setFilters(prev => ({ ...prev, sortBy: value }))}
                 >
-                  <SelectTrigger className="w-40">
+                  <SelectTrigger className="w-48">
                     <SelectValue placeholder="Sort by" />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="weighted">Smart Sort (Recommended)</SelectItem>
                     <SelectItem value="rating">Rating</SelectItem>
                     <SelectItem value="newest">Newest</SelectItem>
                     <SelectItem value="subject">Subject</SelectItem>

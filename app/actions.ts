@@ -1030,6 +1030,11 @@ export async function searchOfferings(params: {
     // Sort results
     if (sortBy) {
       switch (sortBy) {
+        case "weighted":
+          // Use weighted algorithm for smart sorting
+          const { sortOfferingsByScore, DEFAULT_WEIGHTS } = await import('@/lib/subject-sorting');
+          filtered = sortOfferingsByScore(filtered, DEFAULT_WEIGHTS);
+          break;
         case "highest-rated":
           filtered.sort((a, b) => (b.averageRating || 0) - (a.averageRating || 0));
           break;
@@ -1038,18 +1043,15 @@ export async function searchOfferings(params: {
             new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
           );
           break;
-        case "tutor-rank":
-          // Sort by tutor experience or creation date as proxy for rank
-          filtered.sort((a, b) => 
-            new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime()
-          );
-          break;
         default:
-          // Default to most recent
-          filtered.sort((a, b) => 
-            new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
-          );
+          // Default to weighted sorting for best results
+          const { sortOfferingsByScore: sortDefault, DEFAULT_WEIGHTS: weightsDefault } = await import('@/lib/subject-sorting');
+          filtered = sortDefault(filtered, weightsDefault);
       }
+    } else {
+      // No sortBy specified, use weighted as default
+      const { sortOfferingsByScore: sortDefault, DEFAULT_WEIGHTS: weightsDefault } = await import('@/lib/subject-sorting');
+      filtered = sortDefault(filtered, weightsDefault);
     }
 
     return { success: true, data: filtered };

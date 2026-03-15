@@ -33,7 +33,7 @@ export function StatsOverview({ stats }: StatsOverviewProps) {
       icon: Calendar,
       color: "text-blue-600",
       bgColor: "bg-blue-50",
-      change: "+3 this week"
+      // change: "+3 this week"
     },
     {
       label: "Average Rating",

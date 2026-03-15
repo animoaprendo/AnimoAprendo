@@ -1,18 +1,22 @@
 "use client";
 
 import { searchOfferings } from "@/app/actions";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useUser } from "@clerk/nextjs";
-import { Filter, Search, SearchX } from "lucide-react";
+import { Calendar, Clock, Filter, Loader2, Search, SearchX, Star, User } from "lucide-react";
 import Link from "next/link";
 import { useQueryState } from "nuqs";
 import React, { useEffect, useState } from "react";
+import { getScoreBreakdown, DEFAULT_WEIGHTS } from "@/lib/subject-sorting";
 
 interface Availability {
   id: string;
@@ -32,6 +36,10 @@ interface Offering {
   availability?: Availability[];
   averageRating?: number;
   createdAt?: string;
+  // Booking statistics for weighted sorting
+  totalBookingsCount?: number;
+  repeatBookingsCount?: number;
+  availabilityCount?: number;
   user?: {
     id: string;
     firstName: string;
@@ -78,8 +86,36 @@ export default function SearchClient({ initialOfferings }: SearchClientProps) {
 
           if(user) {
             setResults(filteredSubjects);
+            
+            // Log weighted sorting breakdown (temporary)
+            // if (sortBy === 'weighted' || !sortBy) {
+            //   console.log('\n=== SEARCH WEIGHTED SORTING BREAKDOWN ===');
+            //   filteredSubjects.slice(0, 10).forEach((offering, index) => {
+            //     const breakdown = getScoreBreakdown(offering, DEFAULT_WEIGHTS);
+            //     console.log(`\n#${index + 1}: ${offering.subject}`);
+            //     console.log(`Total Score: ${breakdown.totalScore.toFixed(2)}`);
+            //     breakdown.breakdown.forEach(item => {
+            //       console.log(`  ${item.metric}: ${item.value.toFixed(2)} → ${item.normalized.toFixed(2)} × ${item.weight}% = ${item.contribution.toFixed(2)}`);
+            //     });
+            //   });
+            //   console.log('\n=========================================\n');
+            // }
           } else {
             setResults(response.data);
+            
+            // Log weighted sorting breakdown (temporary)
+            // if (sortBy === 'weighted' || !sortBy) {
+            //   console.log('\n=== SEARCH WEIGHTED SORTING BREAKDOWN ===');
+            //   response.data.slice(0, 10).forEach((offering: Offering, index: number) => {
+            //     const breakdown = getScoreBreakdown(offering, DEFAULT_WEIGHTS);
+            //     console.log(`\n#${index + 1}: ${offering.subject}`);
+            //     console.log(`Total Score: ${breakdown.totalScore.toFixed(2)}`);
+            //     breakdown.breakdown.forEach(item => {
+            //       console.log(`  ${item.metric}: ${item.value.toFixed(2)} → ${item.normalized.toFixed(2)} × ${item.weight}% = ${item.contribution.toFixed(2)}`);
+            //     });
+            //   });
+            //   console.log('\n=========================================\n');
+            // }
           }
         } else {
           console.error("Error fetching filtered results:", response.error);
@@ -119,47 +155,81 @@ export default function SearchClient({ initialOfferings }: SearchClientProps) {
   };
 
   return (
-    <div className="flex flex-col gap-6 py-6 w-11/12 lg:w-10/12 mx-auto max-w-[1600px]">
-      <div className="flex flex-col lg:flex-row items-stretch gap-4 w-full">
-        <Card className="flex-1 lg:max-w-xl">
-          <form onSubmit={handleSubmit} className="flex">
-            <Input
-              type="text"
-              name="query"
-              placeholder="Search by course code or subject name"
-              className="rounded-r-none border-r-0 text-lg font-medium focus-visible:ring-0 focus-visible:ring-offset-0"
-              defaultValue={search}
-            />
-            <Button
-              type="submit"
-              className="bg-green-900 hover:bg-green-950 rounded-l-none px-4"
-              disabled={isLoading}
-            >
-              <Search className="h-5 w-5" />
-            </Button>
-          </form>
+    <div className="container mx-auto px-4 py-8 max-w-7xl">
+      {/* Search Header */}
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">Find Your Perfect Tutor</h1>
+        <p className="text-gray-600">Discover expert tutors for your academic needs</p>
+      </div>
+
+      {/* Search and Filters */}
+      <div className="flex flex-col lg:flex-row items-stretch gap-4 mb-8">
+        <Card className="flex-1">
+          <CardContent className="p-0">
+            <form onSubmit={handleSubmit} className="flex">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Input
+                  type="text"
+                  name="query"
+                  placeholder="Search by course code, subject name, or tutor..."
+                  className="pl-10 rounded-r-none border-r-0 h-12 text-base focus-visible:ring-0 focus-visible:ring-offset-0"
+                  defaultValue={search}
+                />
+              </div>
+              <Button
+                type="submit"
+                size="lg"
+                className="bg-green-700 hover:bg-green-800 rounded-l-none px-6"
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Search className="h-4 w-4" />
+                )}
+              </Button>
+            </form>
+          </CardContent>
         </Card>
 
-        <div className="flex gap-3 items-center justify-end w-full lg:w-auto">
+        <div className="flex flex-col sm:flex-row gap-3 lg:w-auto">
           <Sheet open={filtersOpen} onOpenChange={setFiltersOpen}>
             <SheetTrigger asChild>
               <Button
-                variant="default"
-                className="bg-green-900 hover:bg-green-950 text-white flex items-center gap-2"
+                variant="outline"
+                size="lg"
+                className="border-green-200 text-green-700 hover:bg-green-50 flex items-center gap-2"
               >
-                <Filter size={16} /> Filters
+                <Filter className="h-4 w-4" />
+                Filters
+                {(day || rating) && (
+                  <Badge variant="secondary" className="ml-1 h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs">
+                    {(day ? 1 : 0) + (rating ? 1 : 0)}
+                  </Badge>
+                )}
               </Button>
             </SheetTrigger>
-            <SheetContent>
-              <SheetHeader>
-                <SheetTitle className="text-green-900">Filters</SheetTitle>
+            <SheetContent className="w-[400px] sm:w-[540px]">
+              <SheetHeader className="space-y-3">
+                <SheetTitle className="flex items-center gap-2 text-xl">
+                  <Filter className="h-5 w-5 text-green-700" />
+                  Filter Results
+                </SheetTitle>
+                <SheetDescription>
+                  Refine your search to find the perfect tutor for your needs
+                </SheetDescription>
               </SheetHeader>
-              <div className="py-6 flex flex-col gap-6 mx-3">
-                <div>
-                  <h3 className="font-semibold mb-2">Day</h3>
+              
+              <div className="py-6 space-y-6 px-4">
+                <div className="space-y-3">
+                  <Label className="text-base font-medium flex items-center gap-2">
+                    <Calendar className="h-4 w-4" />
+                    Availability Day
+                  </Label>
                   <Select value={day || "any"} onValueChange={(value) => setDay(value === "any" ? "" : value)}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Any Day" />
+                    <SelectTrigger className="h-11">
+                      <SelectValue placeholder="Select a day" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="any">Any Day</SelectItem>
@@ -174,11 +244,16 @@ export default function SearchClient({ initialOfferings }: SearchClientProps) {
                   </Select>
                 </div>
 
-                <div>
-                  <h3 className="font-semibold mb-2">Minimum Rating</h3>
+                <Separator />
+
+                <div className="space-y-3">
+                  <Label className="text-base font-medium flex items-center gap-2">
+                    <Star className="h-4 w-4" />
+                    Minimum Rating
+                  </Label>
                   <Select value={rating || "any"} onValueChange={(value) => setRating(value === "any" ? "" : value)}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Any Rating" />
+                    <SelectTrigger className="h-11">
+                      <SelectValue placeholder="Select minimum rating" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="any">Any Rating</SelectItem>
@@ -191,9 +266,9 @@ export default function SearchClient({ initialOfferings }: SearchClientProps) {
                 </div>
               </div>
 
-              <div className="flex gap-3 mt-6 mx-3">
+              <div className="flex gap-3 pt-6 border-t px-4">
                 <Button
-                  variant="destructive"
+                  variant="outline"
                   className="flex-1"
                   onClick={() => {
                     setDay("");
@@ -202,107 +277,144 @@ export default function SearchClient({ initialOfferings }: SearchClientProps) {
                     setSearch("");
                   }}
                 >
-                  Reset
+                  Clear All
                 </Button>
                 <Button
-                  className="flex-1 bg-green-900 hover:bg-green-950"
+                  className="flex-1 bg-green-700 hover:bg-green-800"
                   onClick={() => setFiltersOpen(false)}
                 >
-                  Apply
+                  Apply Filters
                 </Button>
               </div>
             </SheetContent>
           </Sheet>
-          <Select value={sortBy || "relevance"} onValueChange={(value) => setSortBy(value === "relevance" ? "" : value)}>
-            <SelectTrigger className="w-[200px]">
-              <SelectValue placeholder="Sort by relevance" />
+          
+          <Select value={sortBy || "weighted"} onValueChange={(value) => setSortBy(value === "weighted" ? "" : value)}>
+            <SelectTrigger className="w-full sm:w-[260px] h-11">
+              <SelectValue placeholder="Smart sort" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="relevance">Sort by relevance</SelectItem>
+              <SelectItem value="weighted">Smart Sort (Recommended)</SelectItem>
               <SelectItem value="highest-rated">Highest Rated</SelectItem>
               <SelectItem value="most-recent">Most Recent</SelectItem>
-              <SelectItem value="tutor-rank">Tutor Experience</SelectItem>
             </SelectContent>
           </Select>
         </div>
       </div>
 
-      <div className="flex justify-between items-center">
-        <h1 className="text-xl lg:text-2xl font-semibold text-green-900">
-          {search ? (
-            <>
-              Showing results for <strong>"{search}"</strong>{" "}
-            </>
-          ) : (
-            "All Available Subjects "
-          )}
-          <Badge variant="secondary" className="ml-2">
-            {results.length} found
-          </Badge>
-          {isLoading && (
-            <span className="ml-2 text-sm text-green-600">Searching...</span>
-          )}
-        </h1>
+      {/* Results Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+        <div className="space-y-1">
+          <h2 className="text-2xl font-semibold text-gray-900">
+            {search ? (
+              <>
+                Results for <span className="text-green-700">"{search}"</span>
+              </>
+            ) : (
+              "Available Tutoring Sessions"
+            )}
+          </h2>
+          <div className="flex items-center gap-2">
+            <Badge variant="secondary" className="bg-green-100 text-green-800">
+              {results.length} {results.length === 1 ? 'session' : 'sessions'} found
+            </Badge>
+            {isLoading && (
+              <div className="flex items-center gap-2 text-sm text-green-600">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Searching...
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
-      <Separator />
+      <Separator className="mb-8" />
 
-      {results.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-8 justify-items-center">
+      {isLoading ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <Card key={i} className="overflow-hidden">
+              <Skeleton className="h-48 w-full" />
+              <CardContent className="p-4 space-y-3">
+                <Skeleton className="h-6 w-3/4" />
+                <Skeleton className="h-4 w-1/2" />
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-2/3" />
+                <Skeleton className="h-10 w-full mt-4" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      ) : results.length > 0 ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {results.map((item) => (
             <Card
               key={item._id}
-              className="min-w-[280px] max-w-[300px] hover:shadow-xl hover:scale-105 transition-all duration-200 flex flex-col"
+              className="group overflow-hidden transition-all duration-300 border-0 shadow-md hover:shadow-xl hover:-translate-y-1"
             >
-              <div className="relative">
+              <div className="relative overflow-hidden">
                 <img
-                  src={item.banner || "https://picsum.photos/300/200?random=" + item._id}
+                  src={item.banner || `https://picsum.photos/400/240?random=${item._id}`}
                   alt={item.subject || item.title || "Subject"}
-                  className="w-full h-40 object-cover rounded-t-lg"
+                  className="w-full h-48 object-cover transition-transform duration-300 group-hover:scale-105"
                   onError={(e) => {
-                    (e.target as HTMLImageElement).src = `https://picsum.photos/300/200?random=${item._id}`;
+                    (e.target as HTMLImageElement).src = `https://picsum.photos/400/240?random=${item._id}`;
                   }}
                 />
+                <div className="absolute inset-0 bg-linear-to-t from-black/20 to-transparent" />
                 <Badge 
-                  className={`absolute top-3 right-3 ${
-                    item.status === "available" ? "bg-green-700 hover:bg-green-700" : "bg-gray-600 hover:bg-gray-600"
+                  className={`absolute top-3 right-3 shadow-sm ${
+                    item.status === "available" 
+                      ? "bg-green-600 hover:bg-green-600 border-green-500" 
+                      : "bg-gray-600 hover:bg-gray-600 border-gray-500"
                   }`}
                 >
                   {item.status === "available" ? "Available" : "Paused"}
                 </Badge>
-                <Badge 
-                  variant="secondary"
-                  className="absolute top-3 left-3 bg-white/90 backdrop-blur-sm text-gray-800"
-                >
-                  ⭐ {getDisplayRating(item)}
-                </Badge>
+                <div className="absolute top-3 left-3 flex items-center gap-1 bg-white/95 backdrop-blur-sm rounded-full px-2 py-1">
+                  <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+                  <span className="text-xs font-medium text-gray-900">
+                    {getDisplayRating(item)}
+                  </span>
+                </div>
               </div>
-              <CardContent className="flex flex-col gap-2 p-4 h-full">
-                <h2 className="font-bold text-lg text-green-900">
+              
+              <CardHeader className="pb-2">
+                <CardTitle className="text-lg font-bold text-gray-900 line-clamp-1">
                   {item.subject || item.title || "Untitled Subject"}
-                </h2>
-                
-                <Badge variant="outline" className="text-xs w-fit">
-                  by {item.user?.displayName || "Unknown Tutor"}
-                </Badge>
-                
+                </CardTitle>
+                <div className="flex items-center gap-2 mt-1">
+                  <Avatar className="h-6 w-6">
+                    <AvatarImage src={item.user?.imageUrl} />
+                    <AvatarFallback className="text-xs bg-green-100 text-green-700">
+                      <User className="h-3 w-3" />
+                    </AvatarFallback>
+                  </Avatar>
+                  <CardDescription className="text-sm font-medium">
+                    {item.user?.displayName || "Unknown Tutor"}
+                  </CardDescription>
+                </div>
+              </CardHeader>
+
+              <CardContent className="space-y-4">
                 <div
-                  className="text-sm text-gray-700 line-clamp-3"
+                  className="text-sm text-gray-600 line-clamp-2"
                   dangerouslySetInnerHTML={{ 
                     __html: item.description || "No description available" 
                   }}
                 />
                 
-                <Card className="text-xs text-green-700 mt-auto bg-green-50 border-green-200">
-                  <CardContent className="p-2">
-                    <p className="font-semibold mb-1">Availability:</p>
-                    <p className="wrap-break-word text-xs">
-                      {formatAvailability(item.availability)}
-                    </p>
-                  </CardContent>
-                </Card>
+                <div className="bg-gray-50 rounded-lg p-3 space-y-2">
+                  <div className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                    <Clock className="h-4 w-4" />
+                    Availability
+                  </div>
+                  <p className="text-xs text-gray-600 leading-relaxed">
+                    {formatAvailability(item.availability)}
+                  </p>
+                </div>
                 
-                <Button asChild className="mt-3 bg-green-700 hover:bg-green-800">
+                <Button asChild className="w-full bg-green-700 hover:bg-green-800 transition-colors">
                   <Link href={`/browse/${item._id}`}>
                     View Details
                   </Link>
@@ -312,24 +424,46 @@ export default function SearchClient({ initialOfferings }: SearchClientProps) {
           ))}
         </div>
       ) : (
-        <Card className="py-20">
-          <CardContent className="flex flex-col items-center justify-center text-center gap-6">
-            <SearchX size={48} className="text-red-500" />
-            <h2 className="text-2xl font-bold text-gray-700">
+        <Card className="border-dashed border-2 border-gray-200">
+          <CardContent className="flex flex-col items-center justify-center text-center py-16 px-6">
+            <div className="rounded-full bg-gray-100 p-6 mb-6">
+              <SearchX className="h-12 w-12 text-gray-400" />
+            </div>
+            <CardTitle className="text-2xl font-semibold text-gray-900 mb-2">
               {search ? (
                 <>
-                  No results for <span className="text-green-900">"{search}"</span>
+                  No results found for <span className="text-green-700">"{search}"</span>
                 </>
               ) : (
-                "No subjects available"
+                "No tutoring sessions available"
               )}
-            </h2>
-            <p className="text-gray-500">
+            </CardTitle>
+            <CardDescription className="text-gray-500 max-w-md mb-6">
               {search 
-                ? "Try searching with a different course code or subject name."
-                : "Check back later for new tutoring subjects."
+                ? "We couldn't find any tutoring sessions matching your search. Try adjusting your search terms or filters."
+                : "There are no tutoring sessions available at the moment. Check back later for new opportunities."
               }
-            </p>
+            </CardDescription>
+            {search && (
+              <div className="flex gap-2">
+                <Button 
+                  variant="outline" 
+                  onClick={() => {
+                    setSearch("");
+                    setDay("");
+                    setRating("");
+                    setSortBy("");
+                  }}
+                >
+                  Clear Search
+                </Button>
+                <Button asChild className="bg-green-700 hover:bg-green-800">
+                  <Link href="/browse">
+                    Browse All Sessions
+                  </Link>
+                </Button>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
