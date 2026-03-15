@@ -372,7 +372,7 @@ function AnimateIcon({
   }, [localAnimate, controls]);
 
   const childProps = (
-    React.isValidElement(children) ? (children as React.ReactElement).props : {}
+    React.isValidElement(children) ? (children as React.ReactElement<any>).props : {}
   ) as AnyProps;
 
   const handleMouseEnter = composeEventHandlers<React.MouseEvent<HTMLElement>>(
