@@ -180,7 +180,7 @@ export async function submitSubject({
           documentId,
           userId,
           ...sendData,
-          status: "pending",
+          status: "approved", // temporarily auto approve, change to pending if you want to review first
         }),
       }
     );
@@ -193,7 +193,7 @@ export async function submitSubject({
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ userId, ...sendData, status: "pending" }),
+        body: JSON.stringify({ userId, ...sendData, status: "approved" }), // temporarily auto approve, change to pending if you want to review first
       }
     );
     data = await response.json();

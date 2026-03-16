@@ -65,6 +65,7 @@ export default function OfferAndQuizPage() {
       if (data.success) {
         setSubmitState("success");
         CreatePopup("Submitted", "success");
+        CreatePopup("Your subject has been auto-approved by the system", "success");
         
         router.replace("/tutor/subjects");
       } else {
