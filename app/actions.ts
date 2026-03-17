@@ -1,6 +1,32 @@
 "use server";
 import { auth } from "@clerk/nextjs/server";
 
+const daysOfWeek = [
+  { name: "M", value: "monday" },
+  { name: "T", value: "tuesday" },
+  { name: "W", value: "wednesday" },
+  { name: "Th", value: "thursday" },
+  { name: "F", value: "friday" },
+  { name: "S", value: "saturday" },
+  { name: "Su", value: "sunday" },
+];
+
+type TimeOfDay = {
+  hourOfDay: number;
+  minute: number;
+};
+
+type TimeRange = {
+  id: string;
+  timeStart: TimeOfDay;
+  timeEnd: TimeOfDay;
+};
+
+type AvailabilitySlot = {
+  day: (typeof daysOfWeek)[number]["value"];
+  timeRanges: TimeRange[];
+};
+
 export type onboardingData = {
   accountType: string;
   studentRole?: string;
@@ -8,6 +34,7 @@ export type onboardingData = {
   department?: string;
   section?: number;
   yearLevel?: number;
+  availability?: AvailabilitySlot[];
 };
 
 export type Collections = "users" | "colleges" | "userData" | "faq" | "subjects" | "offerings" | "reviews" | "appointments" | "subjectOptions";
@@ -19,6 +46,7 @@ export async function finishOnboarding({
   department,
   section,
   yearLevel,
+  availability
 }: onboardingData) {
   const { userId } = await auth();
   if (!userId) {
@@ -41,6 +69,7 @@ export async function finishOnboarding({
           department,
           yearLevel,
           section,
+          availability,
         }),
       }
     );

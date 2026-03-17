@@ -10,6 +10,7 @@ export default function Page() {
               logoImageUrl: '/images/AnimoAprendoGreenTransparent.png',
               logoPlacement: 'inside',
               unsafe_disableDevelopmentModeWarnings: true,
+              
             }
           }} />
         </div>
