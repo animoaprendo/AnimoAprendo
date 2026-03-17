@@ -283,6 +283,42 @@ export class GamificationSystem {
         unlocked: (stats.responseTime || 999) <= 180, // in minutes
         xpReward: 100,
       },
+      {
+        id: "approved_offerings_1",
+        name: "First Approved Offer",
+        description: "Get 1 subject offering approved",
+        icon: "✅",
+        rarity: "common",
+        category: "milestone",
+        unlocked: (stats.approvedSubjectOfferings || 0) >= 1,
+        progress: stats.approvedSubjectOfferings || 0,
+        maxProgress: 1,
+        xpReward: 25,
+      },
+      {
+        id: "approved_offerings_5",
+        name: "Growing Catalog",
+        description: "Get 5 subject offerings approved",
+        icon: "📚",
+        rarity: "rare",
+        category: "milestone",
+        unlocked: (stats.approvedSubjectOfferings || 0) >= 5,
+        progress: stats.approvedSubjectOfferings || 0,
+        maxProgress: 5,
+        xpReward: 75,
+      },
+      {
+        id: "approved_offerings_10",
+        name: "Subject Specialist",
+        description: "Get 10 subject offerings approved",
+        icon: "🎯",
+        rarity: "epic",
+        category: "milestone",
+        unlocked: (stats.approvedSubjectOfferings || 0) >= 10,
+        progress: stats.approvedSubjectOfferings || 0,
+        maxProgress: 10,
+        xpReward: 150,
+      },
     ];
 
     // Set unlocked date for unlocked achievements

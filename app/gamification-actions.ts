@@ -9,6 +9,30 @@ import {
   DailyActivity 
 } from "@/lib/gamification/database-schema";
 
+const APPROVED_OFFERING_MILESTONES = [
+  {
+    threshold: 1,
+    achievementId: 'approved_offerings_1',
+    actionType: 'approved_offerings_milestone_1',
+    xpReward: 25,
+    description: 'Milestone reached: 1 approved subject offering'
+  },
+  {
+    threshold: 5,
+    achievementId: 'approved_offerings_5',
+    actionType: 'approved_offerings_milestone_5',
+    xpReward: 75,
+    description: 'Milestone reached: 5 approved subject offerings'
+  },
+  {
+    threshold: 10,
+    achievementId: 'approved_offerings_10',
+    actionType: 'approved_offerings_milestone_10',
+    xpReward: 150,
+    description: 'Milestone reached: 10 approved subject offerings'
+  }
+];
+
 // Initialize user gamification profile
 export async function initializeGamificationProfile(userId?: string) {
   try {
@@ -370,6 +394,144 @@ export async function getDailyActivity(userId?: string, days: number = 30) {
   } catch (error) {
     console.error("Error fetching daily activity:", error);
     return { success: false, error: "Failed to fetch daily activity" };
+  }
+}
+
+// Get total approved subject offerings for milestone tracking/display
+export async function getApprovedSubjectOfferingsCount(userId?: string) {
+  try {
+    const { userId: authUserId } = await auth();
+    const targetUserId = userId || authUserId;
+
+    if (!targetUserId) {
+      return { success: false, error: "Unauthorized" };
+    }
+
+    const client = await clientPromise;
+    const db = client.db("main");
+    const subjectsCollection = db.collection('subjects');
+
+    const approvedOfferingsCount = await subjectsCollection.countDocuments({
+      userId: targetUserId,
+      status: 'available'
+    });
+
+    return {
+      success: true,
+      data: {
+        approvedOfferingsCount
+      }
+    };
+  } catch (error) {
+    console.error("Error fetching approved subject offerings count:", error);
+    return { success: false, error: "Failed to fetch approved subject offerings count" };
+  }
+}
+
+// Check and award milestone XP for approved subject offerings (1, 5, 10)
+export async function processApprovedSubjectOfferingMilestones(
+  targetUserId: string,
+  subjectId?: string
+) {
+  try {
+    if (!targetUserId) {
+      return { success: false, error: "User ID is required" };
+    }
+
+    const client = await clientPromise;
+    const gamificationDb = client.db("gamification");
+    const mainDb = client.db("main");
+
+    const profileCollection = gamificationDb.collection<UserGamificationProfile>('userGamificationProfiles');
+    const transactionCollection = gamificationDb.collection<XPTransaction>('xpTransactions');
+    const subjectsCollection = mainDb.collection('subjects');
+
+    // Ensure the user has a gamification profile before tracking milestone unlocks
+    let profile = await profileCollection.findOne({ userId: targetUserId });
+    if (!profile) {
+      const initResult = await initializeGamificationProfile(targetUserId);
+      if (!initResult.success) {
+        return { success: false, error: initResult.error || "Failed to initialize profile" };
+      }
+      profile = await profileCollection.findOne({ userId: targetUserId });
+    }
+
+    if (!profile) {
+      return { success: false, error: "Failed to load user profile" };
+    }
+
+    const approvedOfferingsCount = await subjectsCollection.countDocuments({
+      userId: targetUserId,
+      status: 'available'
+    });
+
+    const unlockedNow: string[] = [];
+    let totalXPAwarded = 0;
+
+    for (const milestone of APPROVED_OFFERING_MILESTONES) {
+      if (approvedOfferingsCount < milestone.threshold) {
+        continue;
+      }
+
+      if (profile.unlockedAchievements.includes(milestone.achievementId)) {
+        continue;
+      }
+
+      const existingMilestoneTransaction = await transactionCollection.findOne({
+        userId: targetUserId,
+        actionType: milestone.actionType
+      });
+
+      if (existingMilestoneTransaction) {
+        continue;
+      }
+
+      const xpResult = await awardXP(
+        milestone.actionType,
+        milestone.xpReward,
+        milestone.description,
+        subjectId || `approved-offerings-${milestone.threshold}`,
+        'subject',
+        targetUserId
+      );
+
+      if (!xpResult.success) {
+        continue;
+      }
+
+      totalXPAwarded += milestone.xpReward;
+      unlockedNow.push(milestone.achievementId);
+
+      await profileCollection.updateOne(
+        { userId: targetUserId },
+        {
+          $addToSet: {
+            unlockedAchievements: milestone.achievementId,
+            achievementProgress: {
+              achievementId: milestone.achievementId,
+              progress: milestone.threshold,
+              maxProgress: milestone.threshold,
+              unlockedAt: new Date()
+            }
+          },
+          $set: { updatedAt: new Date() }
+        }
+      );
+
+      profile.unlockedAchievements.push(milestone.achievementId);
+    }
+
+    return {
+      success: true,
+      data: {
+        approvedOfferingsCount,
+        unlockedMilestones: unlockedNow,
+        totalXPAwarded
+      }
+    };
+  } catch (error) {
+    console.error("Error processing approved subject offering milestones:", error);
+    return { success: false, error: "Failed to process approved subject offering milestones" };
   }
 }
 

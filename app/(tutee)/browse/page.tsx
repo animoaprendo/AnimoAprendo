@@ -28,6 +28,21 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { sortOfferingsByScore, DEFAULT_WEIGHTS, getScoreBreakdown } from "@/lib/subject-sorting";
 
+type TuteeAvailability = {
+  day: string;
+  timeRanges: {
+    id?: string;
+    timeStart: {
+      hourOfDay: number;
+      minute: number;
+    };
+    timeEnd: {
+      hourOfDay: number;
+      minute: number;
+    };
+  }[];
+};
+
 interface CardInfo {
   _id: string;
   userId: string;
@@ -130,6 +145,11 @@ export default function Browse() {
     return Array.from(days);
   }, [offerings]);
 
+  const tuteeAvailability = useMemo(
+    () => ((user?.publicMetadata as any)?.availability as TuteeAvailability[] | undefined) || [],
+    [user]
+  );
+
   // Filter and sort offerings based on current filters
   const filteredOfferings = useMemo(() => {
     let filtered = [...offerings];
@@ -176,7 +196,9 @@ export default function Browse() {
     switch (filters.sortBy) {
       case "weighted":
         // Use the weighted algorithm for smart sorting
-        filtered = sortOfferingsByScore(filtered, DEFAULT_WEIGHTS) as CardInfo[];
+        filtered = sortOfferingsByScore(filtered, DEFAULT_WEIGHTS, {
+          tuteeAvailability,
+        }) as CardInfo[];
         
         // Log score breakdowns for debugging (temporary)
         // console.log('\n=== WEIGHTED SORTING BREAKDOWN ===');
@@ -208,7 +230,7 @@ export default function Browse() {
     }
 
     return filtered;
-  }, [offerings, filters]);
+  }, [offerings, filters, tuteeAvailability]);
 
   const scroll = (dir: "left" | "right") => {
     if (scrollRef.current) {

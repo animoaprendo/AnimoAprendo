@@ -1011,9 +1011,23 @@ export async function searchOfferings(params: {
   sortBy?: string;
   day?: string;
   rating?: string;
+  tuteeAvailability?: Array<{
+    day: string;
+    timeRanges: Array<{
+      id?: string;
+      timeStart: {
+        hourOfDay: number;
+        minute: number;
+      };
+      timeEnd: {
+        hourOfDay: number;
+        minute: number;
+      };
+    }>;
+  }>;
 }): Promise<{ success: boolean; data?: any[]; error?: string }> {
   try {
-    const { query, sortBy, day, rating } = params;
+    const { query, sortBy, day, rating, tuteeAvailability } = params;
     
     // Get all offerings first
     const offeringsResponse = await getAllOfferings();
@@ -1062,7 +1076,7 @@ export async function searchOfferings(params: {
         case "weighted":
           // Use weighted algorithm for smart sorting
           const { sortOfferingsByScore, DEFAULT_WEIGHTS } = await import('@/lib/subject-sorting');
-          filtered = sortOfferingsByScore(filtered, DEFAULT_WEIGHTS);
+          filtered = sortOfferingsByScore(filtered, DEFAULT_WEIGHTS, { tuteeAvailability });
           break;
         case "highest-rated":
           filtered.sort((a, b) => (b.averageRating || 0) - (a.averageRating || 0));
@@ -1075,12 +1089,12 @@ export async function searchOfferings(params: {
         default:
           // Default to weighted sorting for best results
           const { sortOfferingsByScore: sortDefault, DEFAULT_WEIGHTS: weightsDefault } = await import('@/lib/subject-sorting');
-          filtered = sortDefault(filtered, weightsDefault);
+          filtered = sortDefault(filtered, weightsDefault, { tuteeAvailability });
       }
     } else {
       // No sortBy specified, use weighted as default
       const { sortOfferingsByScore: sortDefault, DEFAULT_WEIGHTS: weightsDefault } = await import('@/lib/subject-sorting');
-      filtered = sortDefault(filtered, weightsDefault);
+      filtered = sortDefault(filtered, weightsDefault, { tuteeAvailability });
     }
 
     return { success: true, data: filtered };

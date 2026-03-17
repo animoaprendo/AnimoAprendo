@@ -34,6 +34,7 @@ export interface UserStats {
   totalAppointments: number;
   completed: number;
   upcoming: number;
+  approvedSubjectOfferings?: number;
   totalReviews?: number;
   averageRating?: number;
   streakDays?: number;

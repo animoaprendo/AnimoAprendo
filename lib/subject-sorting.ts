@@ -31,6 +31,26 @@ export interface Offering extends Partial<OfferingStats> {
   [key: string]: any;
 }
 
+export interface TuteeAvailabilityTime {
+  hourOfDay: number;
+  minute: number;
+}
+
+export interface TuteeAvailabilityRange {
+  id?: string;
+  timeStart: TuteeAvailabilityTime;
+  timeEnd: TuteeAvailabilityTime;
+}
+
+export interface TuteeAvailabilitySlot {
+  day: string;
+  timeRanges: TuteeAvailabilityRange[];
+}
+
+export interface ScoringOptions {
+  tuteeAvailability?: TuteeAvailabilitySlot[];
+}
+
 /**
  * Default weights for the sorting algorithm
  * Total should equal 100 for percentage-based weighting
@@ -50,7 +70,8 @@ export const DEFAULT_WEIGHTS: SortingWeights = {
 const NORMALIZATION_TARGETS = {
   subjectRating: 5.0,           // Max rating
   tutorRating: 5.0,             // Max rating
-  availabilities: 7,            // Having all 7 days is excellent
+  availabilities: 7,            // Having all 7 days is excellent (fallback metric)
+  availabilityOverlapMinutes: 360, // 6 hours/week of overlap is excellent
   repeatBookings: 10,           // 10+ repeat students is excellent
   bookingFrequency: 20,         // 20+ bookings in last 30 days is excellent
 };
@@ -109,6 +130,83 @@ function normalizeMetric(value: number, target: number, useLog: boolean = false)
   return Math.min(value / target, 1);
 }
 
+function normalizeDay(day: string): string {
+  return day.trim().toLowerCase();
+}
+
+function parseTimeToMinutes(time: string): number {
+  const [hourText, minuteText] = time.split(':');
+  const hour = Number(hourText);
+  const minute = Number(minuteText);
+
+  if (!Number.isFinite(hour) || !Number.isFinite(minute)) return 0;
+  return hour * 60 + minute;
+}
+
+function overlapMinutes(startA: number, endA: number, startB: number, endB: number): number {
+  return Math.max(0, Math.min(endA, endB) - Math.max(startA, startB));
+}
+
+function hasTuteeAvailability(tuteeAvailability?: TuteeAvailabilitySlot[]): boolean {
+  if (!tuteeAvailability || tuteeAvailability.length === 0) return false;
+
+  return tuteeAvailability.some(
+    (slot) => Array.isArray(slot.timeRanges) && slot.timeRanges.length > 0
+  );
+}
+
+export function calculateAvailabilityOverlapMinutes(
+  offeringAvailability?: Array<{ day: string; start: string; end: string }>,
+  tuteeAvailability?: TuteeAvailabilitySlot[]
+): number {
+  if (
+    !offeringAvailability ||
+    offeringAvailability.length === 0 ||
+    !tuteeAvailability ||
+    tuteeAvailability.length === 0
+  ) {
+    return 0;
+  }
+
+  const tuteeByDay = new Map<string, Array<{ start: number; end: number }>>();
+
+  for (const slot of tuteeAvailability) {
+    const day = normalizeDay(slot.day);
+    if (!day || !Array.isArray(slot.timeRanges)) continue;
+
+    const ranges = slot.timeRanges
+      .map((range) => {
+        const start = (range?.timeStart?.hourOfDay ?? 0) * 60 + (range?.timeStart?.minute ?? 0);
+        const end = (range?.timeEnd?.hourOfDay ?? 0) * 60 + (range?.timeEnd?.minute ?? 0);
+        return { start, end };
+      })
+      .filter((range) => range.end > range.start);
+
+    if (ranges.length === 0) continue;
+
+    const existing = tuteeByDay.get(day) || [];
+    existing.push(...ranges);
+    tuteeByDay.set(day, existing);
+  }
+
+  let totalOverlap = 0;
+
+  for (const slot of offeringAvailability) {
+    const day = normalizeDay(slot.day);
+    const tutorStart = parseTimeToMinutes(slot.start);
+    const tutorEnd = parseTimeToMinutes(slot.end);
+
+    if (!day || tutorEnd <= tutorStart) continue;
+
+    const tuteeRanges = tuteeByDay.get(day) || [];
+    for (const range of tuteeRanges) {
+      totalOverlap += overlapMinutes(tutorStart, tutorEnd, range.start, range.end);
+    }
+  }
+
+  return totalOverlap;
+}
+
 /**
  * Calculate the weighted score for a single offering
  * 
@@ -118,13 +216,19 @@ function normalizeMetric(value: number, target: number, useLog: boolean = false)
  */
 export function calculateOfferingScore(
   offering: Offering,
-  weights: SortingWeights = DEFAULT_WEIGHTS
+  weights: SortingWeights = DEFAULT_WEIGHTS,
+  options: ScoringOptions = {}
 ): number {
   // Extract metrics with defaults
   const rawSubjectRating = offering.averageRating || 0;
   const rawTutorRating = offering.averageRating || 0;
   const reviewCount = offering.totalReviews || 0;
   const availabilities = offering.availabilityCount || 0;
+  const availabilityOverlapMinutes = calculateAvailabilityOverlapMinutes(
+    offering.availability,
+    options.tuteeAvailability
+  );
+  const hasAvailabilityContext = hasTuteeAvailability(options.tuteeAvailability);
   const repeatBookings = offering.repeatBookingsCount || 0;
   const bookingFrequency = offering.totalBookingsCount || 0;
 
@@ -146,11 +250,17 @@ export function calculateOfferingScore(
     false
   );
   
-  const normalizedAvailabilities = normalizeMetric(
-    availabilities,
-    NORMALIZATION_TARGETS.availabilities,
-    false
-  );
+  const normalizedAvailabilities = hasAvailabilityContext
+    ? normalizeMetric(
+        availabilityOverlapMinutes,
+        NORMALIZATION_TARGETS.availabilityOverlapMinutes,
+        false
+      )
+    : normalizeMetric(
+        availabilities,
+        NORMALIZATION_TARGETS.availabilities,
+        false
+      );
   
   const normalizedRepeatBookings = normalizeMetric(
     repeatBookings,
@@ -185,11 +295,12 @@ export function calculateOfferingScore(
  */
 export function sortOfferingsByScore(
   offerings: Offering[],
-  weights: SortingWeights = DEFAULT_WEIGHTS
+  weights: SortingWeights = DEFAULT_WEIGHTS,
+  options: ScoringOptions = {}
 ): Offering[] {
   return [...offerings].sort((a, b) => {
-    const scoreA = calculateOfferingScore(a, weights);
-    const scoreB = calculateOfferingScore(b, weights);
+    const scoreA = calculateOfferingScore(a, weights, options);
+    const scoreB = calculateOfferingScore(b, weights, options);
     
     // Sort by score (highest first)
     if (scoreB !== scoreA) {
@@ -267,7 +378,8 @@ export const WEIGHT_PRESETS = {
  */
 export function getScoreBreakdown(
   offering: Offering,
-  weights: SortingWeights = DEFAULT_WEIGHTS
+  weights: SortingWeights = DEFAULT_WEIGHTS,
+  options: ScoringOptions = {}
 ): {
   totalScore: number;
   breakdown: {
@@ -282,6 +394,11 @@ export function getScoreBreakdown(
   const rawTutorRating = offering.averageRating || 0;
   const reviewCount = offering.totalReviews || 0;
   const availabilities = offering.availabilityCount || 0;
+  const availabilityOverlapMinutes = calculateAvailabilityOverlapMinutes(
+    offering.availability,
+    options.tuteeAvailability
+  );
+  const hasAvailabilityContext = hasTuteeAvailability(options.tuteeAvailability);
   const repeatBookings = offering.repeatBookingsCount || 0;
   const bookingFrequency = offering.totalBookingsCount || 0;
 
@@ -303,9 +420,11 @@ export function getScoreBreakdown(
       weight: weights.tutorRating,
     },
     {
-      metric: 'Availabilities',
-      value: availabilities,
-      normalized: normalizeMetric(availabilities, NORMALIZATION_TARGETS.availabilities, false),
+      metric: hasAvailabilityContext ? 'Availability Overlap (Minutes)' : 'Availabilities',
+      value: hasAvailabilityContext ? availabilityOverlapMinutes : availabilities,
+      normalized: hasAvailabilityContext
+        ? normalizeMetric(availabilityOverlapMinutes, NORMALIZATION_TARGETS.availabilityOverlapMinutes, false)
+        : normalizeMetric(availabilities, NORMALIZATION_TARGETS.availabilities, false),
       weight: weights.availabilities,
     },
     {
