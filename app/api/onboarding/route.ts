@@ -12,6 +12,7 @@ export async function POST(req: Request) {
     department,
     yearLevel,
     section,
+    availability,
   }: any = await req.json();
 
   try {
@@ -22,6 +23,7 @@ export async function POST(req: Request) {
         accountType,
         role,
         collegeInformation: { college, department, yearLevel, section },
+        availability,
       },
     });
 
