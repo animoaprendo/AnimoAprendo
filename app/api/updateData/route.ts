@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
 import clientPromise from "@/lib/mongodb";
-import { updateSessionStats } from "@/app/gamification-actions";
+import {
+  processApprovedSubjectOfferingMilestones,
+  updateSessionStats
+} from "@/app/gamification-actions";
 
 export async function PUT(request: NextRequest) {
   try {
@@ -37,6 +40,8 @@ export async function PUT(request: NextRequest) {
       );
     }
 
+    const existingDocument = await collectionRef.findOne({ _id: mongoId });
+
     const result = await collectionRef.updateOne(
       { _id: mongoId },
       { $set: updateData }
@@ -64,6 +69,21 @@ export async function PUT(request: NextRequest) {
         }
       } catch (error) {
         console.error("Error updating gamification for appointment completion:", error);
+        // Don't fail the main update if gamification fails
+      }
+    }
+
+    // Trigger gamification updates for subject offering approval milestones
+    if (
+      collection === 'subjects' &&
+      data.status === 'available' &&
+      existingDocument?.status !== 'available' &&
+      existingDocument?.userId
+    ) {
+      try {
+        await processApprovedSubjectOfferingMilestones(existingDocument.userId, id);
+      } catch (error) {
+        console.error("Error updating gamification for subject approval milestone:", error);
         // Don't fail the main update if gamification fails
       }
     }

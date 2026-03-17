@@ -316,6 +316,72 @@ async function insertDefaultAchievements(collection: any) {
       createdAt: new Date(),
       updatedAt: new Date(),
       createdBy: 'system'
+    },
+    {
+      id: 'approved_offerings_1',
+      name: 'First Approved Offer',
+      description: 'Get 1 subject offering approved',
+      icon: '✅',
+      category: 'milestone',
+      rarity: 'common',
+      xpReward: 25,
+      requirements: [
+        {
+          type: 'approved_offerings_count',
+          value: 1,
+          comparison: 'gte'
+        }
+      ],
+      isProgressBased: true,
+      maxProgress: 1,
+      isActive: true,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      createdBy: 'system'
+    },
+    {
+      id: 'approved_offerings_5',
+      name: 'Growing Catalog',
+      description: 'Get 5 subject offerings approved',
+      icon: '📚',
+      category: 'milestone',
+      rarity: 'rare',
+      xpReward: 75,
+      requirements: [
+        {
+          type: 'approved_offerings_count',
+          value: 5,
+          comparison: 'gte'
+        }
+      ],
+      isProgressBased: true,
+      maxProgress: 5,
+      isActive: true,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      createdBy: 'system'
+    },
+    {
+      id: 'approved_offerings_10',
+      name: 'Subject Specialist',
+      description: 'Get 10 subject offerings approved',
+      icon: '🎯',
+      category: 'milestone',
+      rarity: 'epic',
+      xpReward: 150,
+      requirements: [
+        {
+          type: 'approved_offerings_count',
+          value: 10,
+          comparison: 'gte'
+        }
+      ],
+      isProgressBased: true,
+      maxProgress: 10,
+      isActive: true,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      createdBy: 'system'
     }
   ];
 

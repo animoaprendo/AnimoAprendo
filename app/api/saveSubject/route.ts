@@ -1,6 +1,7 @@
 import clientPromise from "@/lib/mongodb";
 import { ObjectId } from "mongodb";
 import { NextResponse } from "next/server";
+import { processApprovedSubjectOfferingMilestones } from "@/app/gamification-actions";
 
 export async function POST(req: Request) {
   console.log("Saving subject...");
@@ -24,6 +25,17 @@ export async function POST(req: Request) {
     
     const data = await db.collection("subjects").insertOne(subjectWithTimestamps);
 
+    if (subjectWithTimestamps.status === 'available' && sendData.userId) {
+      try {
+        await processApprovedSubjectOfferingMilestones(
+          sendData.userId,
+          data.insertedId.toString()
+        );
+      } catch (error) {
+        console.error("Error updating gamification for subject approval milestone:", error);
+      }
+    }
+
     return NextResponse.json({ success: true, data }, { status: 200 });
   } catch (error) {
     console.error("Error saving subject:", error);
@@ -41,6 +53,9 @@ export async function PATCH(req: Request) {
     const client = await clientPromise;
     const db = client.db("main");
     const { documentId, ...rest } = sendData;
+    const existingSubject = await db
+      .collection("subjects")
+      .findOne({ _id: ObjectId.createFromHexString(documentId) });
     
     // Add updated timestamp to the update data
     const updateDataWithTimestamp = {
@@ -54,6 +69,18 @@ export async function PATCH(req: Request) {
         { _id: ObjectId.createFromHexString(documentId) },
         { $set: updateDataWithTimestamp }
       );
+
+    if (
+      rest.status === 'available' &&
+      existingSubject?.status !== 'available' &&
+      existingSubject?.userId
+    ) {
+      try {
+        await processApprovedSubjectOfferingMilestones(existingSubject.userId, documentId);
+      } catch (error) {
+        console.error("Error updating gamification for subject approval milestone:", error);
+      }
+    }
 
     return NextResponse.json({ success: true, data }, { status: 200 });
   } catch (error) {

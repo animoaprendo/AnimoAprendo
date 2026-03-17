@@ -1,5 +1,8 @@
 import { fetchAppointments, fetchUsers } from "@/app/actions";
-import { getUserGamificationProfile } from '@/app/gamification-actions';
+import {
+  getApprovedSubjectOfferingsCount,
+  getUserGamificationProfile
+} from '@/app/gamification-actions';
 import { AchievementSystem } from '@/components/gamification/achievement-system';
 import { LevelCard } from '@/components/gamification/level-card';
 import { StatsOverview } from '@/components/gamification/progress-tracking';
@@ -60,6 +63,7 @@ export default async function Dashboard() {
     totalAppointments: 0,
     completed: 0,
     upcoming: 0,
+    approvedSubjectOfferings: 0,
     totalReviews: 0,
     averageRating: 0,
     streakDays: 0,
@@ -77,6 +81,7 @@ export default async function Dashboard() {
       totalAppointments: gamificationProfile.stats.totalSessions,
       completed: gamificationProfile.stats.completedSessions,
       upcoming: 0, // Will be calculated from appointments
+      approvedSubjectOfferings: 0,
       totalReviews: gamificationProfile.stats.totalReviews,
       averageRating: gamificationProfile.stats.averageRating,
       streakDays: gamificationProfile.currentStreak,
@@ -85,6 +90,11 @@ export default async function Dashboard() {
       cancelationRate: gamificationProfile.stats.canceledSessions > 0 ? 
         (gamificationProfile.stats.canceledSessions / gamificationProfile.stats.totalSessions) * 100 : 0
     };
+  }
+
+  const approvedOfferingsResult = await getApprovedSubjectOfferingsCount(user.id);
+  if (approvedOfferingsResult.success && approvedOfferingsResult.data) {
+    gamificationStats.approvedSubjectOfferings = approvedOfferingsResult.data.approvedOfferingsCount;
   }
 
   console.log(gamificationProfile)

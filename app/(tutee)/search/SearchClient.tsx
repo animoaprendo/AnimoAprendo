@@ -25,6 +25,21 @@ interface Availability {
   end: string;
 }
 
+type TuteeAvailability = {
+  day: string;
+  timeRanges: {
+    id?: string;
+    timeStart: {
+      hourOfDay: number;
+      minute: number;
+    };
+    timeEnd: {
+      hourOfDay: number;
+      minute: number;
+    };
+  }[];
+};
+
 interface Offering {
   _id: string;
   userId?: string;
@@ -68,11 +83,14 @@ export default function SearchClient({ initialOfferings }: SearchClientProps) {
     const fetchFilteredResults = async () => {
       setIsLoading(true);
       try {
+        const tuteeAvailability = ((user?.publicMetadata as any)?.availability as TuteeAvailability[] | undefined) || [];
+
         const response = await searchOfferings({
           query: search,
           sortBy,
           day,
           rating,
+          tuteeAvailability,
         });
 
         if (response.success && response.data) {
