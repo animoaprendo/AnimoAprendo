@@ -165,6 +165,10 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: 'Missing messageId or status' }, { status: 400 });
     }
 
+    if ((status === 'accepted' || status === 'declined') && !actorId) {
+      return NextResponse.json({ error: 'actorId is required for appointment responses' }, { status: 400 });
+    }
+
     const client = await clientPromise;
     const db = client.db('main');
     const chatCollection = db.collection('chat');
@@ -272,11 +276,15 @@ export async function PATCH(request: NextRequest) {
             }
           }
 
+          const isCreatedByTutor = updated.senderRole === 'tutor';
+          const tutorId = isCreatedByTutor ? updated.creatorId : actorId;
+          const tuteeId = isCreatedByTutor ? actorId : updated.creatorId;
+
           // Create appointment record
           const appointmentRecord = {
             messageId: updated._id.toString(),
-            tutorId: updated.creatorId, // The one who created the appointment
-            tuteeId: actorId, // The one who accepted/declined
+            tutorId,
+            tuteeId,
             status: status, // 'accepted' or 'declined'
             appointmentType: updated.appointment.appointmentType || 'single',
             datetimeISO: updated.appointment.datetimeISO,
