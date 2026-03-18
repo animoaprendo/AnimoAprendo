@@ -83,6 +83,20 @@ const TIME_OPTIONS = Array.from({ length: 24 * 4 }, (_, i) => {
   };
 });
 
+const generateLocalId = (): string => {
+  const cryptoObj = globalThis.crypto;
+  if (cryptoObj?.randomUUID) {
+    return cryptoObj.randomUUID();
+  }
+
+  // RFC4122-ish fallback for older browsers/devices without randomUUID.
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (char) => {
+    const rand = Math.floor(Math.random() * 16);
+    const value = char === "x" ? rand : (rand & 0x3) | 0x8;
+    return value.toString(16);
+  });
+};
+
 export default function OfferDetails({
   subject,
   setSubject,
@@ -128,7 +142,7 @@ export default function OfferDetails({
   const handleAddSlot = () =>
     setAvailability([
       ...availability,
-      { id: crypto.randomUUID(), day: "Monday", start: "08:00", end: "09:00" },
+      { id: generateLocalId(), day: "Monday", start: "08:00", end: "09:00" },
     ]);
   const handleUpdateSlot = (id: string, key: keyof Slot, value: string) =>
     setAvailability(

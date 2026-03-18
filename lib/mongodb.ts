@@ -4,28 +4,68 @@ if (!process.env.MONGODB_URI) {
   throw new Error('Invalid/Missing environment variable: "MONGODB_URI"');
 }
 
-const uri = process.env.MONGODB_URI;
-const options = { appName: "devrel.template.nextjs" };
+const primaryUri = process.env.MONGODB_URI;
+const fallbackUri = process.env.MONGODB_URI_FALLBACK;
+const options = {
+  appName: "animoaprendo",
+  serverSelectionTimeoutMS: 10000,
+  connectTimeoutMS: 10000,
+};
 
-let client: MongoClient;
+type MongoCache = {
+  clientPromise?: Promise<MongoClient>;
+};
 
-if (process.env.NODE_ENV === "development") {
-  // In development mode, use a global variable so that the value
-  // is preserved across module reloads caused by HMR (Hot Module Replacement).
-  const globalWithMongo = global as typeof globalThis & {
-    _mongoClient?: MongoClient;
-  };
+const globalWithMongo = global as typeof globalThis & {
+  _mongo?: MongoCache;
+};
 
-  if (!globalWithMongo._mongoClient) {
-    globalWithMongo._mongoClient = new MongoClient(uri, options);
-  }
-  client = globalWithMongo._mongoClient;
-} else {
-  // In production mode, it's best to not use a global variable.
-  client = new MongoClient(uri, options);
+if (!globalWithMongo._mongo) {
+  globalWithMongo._mongo = {};
 }
 
-// Export a module-scoped MongoClient. By doing this in a
-// separate module, the client can be shared across functions.
+function isSrvDnsRefusedError(error: unknown): boolean {
+  return (
+    !!error &&
+    typeof error === "object" &&
+    "code" in error &&
+    (error as { code?: string }).code === "ECONNREFUSED" &&
+    "syscall" in error &&
+    (error as { syscall?: string }).syscall === "querySrv"
+  );
+}
 
-export default client;
+async function connectWithUri(uri: string): Promise<MongoClient> {
+  const client = new MongoClient(uri, options);
+  await client.connect();
+  return client;
+}
+
+async function createClientPromise(): Promise<MongoClient> {
+  try {
+    return await connectWithUri(primaryUri);
+  } catch (error) {
+    if (isSrvDnsRefusedError(error) && fallbackUri) {
+      console.warn(
+        "Mongo SRV lookup failed with ECONNREFUSED (querySrv). Falling back to MONGODB_URI_FALLBACK."
+      );
+      return connectWithUri(fallbackUri);
+    }
+
+    if (isSrvDnsRefusedError(error) && !fallbackUri) {
+      throw new Error(
+        'MongoDB SRV DNS lookup failed (ECONNREFUSED querySrv). Add MONGODB_URI_FALLBACK with a non-SRV mongodb:// URI or fix DNS/network access to Atlas.'
+      );
+    }
+
+    throw error;
+  }
+}
+
+if (!globalWithMongo._mongo.clientPromise) {
+  globalWithMongo._mongo.clientPromise = createClientPromise();
+}
+
+const clientPromise = globalWithMongo._mongo.clientPromise;
+
+export default clientPromise;

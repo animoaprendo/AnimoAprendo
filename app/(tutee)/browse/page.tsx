@@ -374,7 +374,7 @@ export default function Browse() {
                     <SelectItem value="weighted">Smart Sort (Recommended)</SelectItem>
                     <SelectItem value="rating">Rating</SelectItem>
                     <SelectItem value="newest">Newest</SelectItem>
-                    <SelectItem value="subject">Subject</SelectItem>
+                    <SelectItem value="subject">A-Z</SelectItem>
                   </SelectContent>
                 </Select>
 
@@ -508,21 +508,8 @@ export default function Browse() {
             </div>
 
             {/* Active Filters Display */}
-            {(filters.search || filters.minRating > 0 || filters.selectedDays.length > 0 || filters.subjects.length > 0) && (
+            {(filters.minRating > 0 || filters.selectedDays.length > 0 || filters.subjects.length > 0) && (
               <div className="flex flex-wrap gap-2">
-                {filters.search && (
-                  <Badge variant="secondary" className="gap-1">
-                    Search: "{filters.search}"
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-4 w-4 p-0 ml-1 text-red-500 hover:text-red-700 hover:bg-red-100 hover:cursor-pointer"
-                      onClick={() => setFilters(prev => ({ ...prev, search: "" }))}
-                    >
-                      <X className="w-3 h-3" />
-                    </Button>
-                  </Badge>
-                )}
                 {filters.minRating > 0 && (
                   <Badge variant="secondary" className="gap-1">
                     Rating: {filters.minRating}+ stars
