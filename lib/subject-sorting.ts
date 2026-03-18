@@ -63,6 +63,14 @@ export const DEFAULT_WEIGHTS: SortingWeights = {
   bookingFrequency: 5,
 };
 
+export const AVAILABILITY_WEIGHTS: SortingWeights = {
+  subjectRating: 10,
+  tutorRating: 10,
+  availabilities: 75,
+  repeatBookings: 2.5,
+  bookingFrequency: 2.5,
+};
+
 /**
  * Normalization ranges for each metric
  * These define what we consider "excellent" values for scaling
@@ -70,10 +78,10 @@ export const DEFAULT_WEIGHTS: SortingWeights = {
 const NORMALIZATION_TARGETS = {
   subjectRating: 5.0,           // Max rating
   tutorRating: 5.0,             // Max rating
-  availabilities: 7,            // Having all 7 days is excellent (fallback metric)
-  availabilityOverlapMinutes: 360, // 6 hours/week of overlap is excellent
-  repeatBookings: 10,           // 10+ repeat students is excellent
-  bookingFrequency: 20,         // 20+ bookings in last 30 days is excellent
+  availabilities: 3,            // Having all 7 days is excellent (fallback metric)
+  availabilityOverlapMinutes: 120, // 6 hours/week of overlap is excellent
+  repeatBookings: 5,           // 10+ repeat students is excellent
+  bookingFrequency: 10,         // 20+ bookings in last 30 days is excellent
 };
 
 /**

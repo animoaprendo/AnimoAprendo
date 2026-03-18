@@ -15,8 +15,8 @@ import { useUser } from "@clerk/nextjs";
 import { Calendar, Clock, Filter, Loader2, Search, SearchX, Star, User } from "lucide-react";
 import Link from "next/link";
 import { useQueryState } from "nuqs";
-import React, { useEffect, useState } from "react";
-import { getScoreBreakdown, DEFAULT_WEIGHTS } from "@/lib/subject-sorting";
+import React, { useEffect, useMemo, useState } from "react";
+import { AVAILABILITY_WEIGHTS, calculateOfferingScore, DEFAULT_WEIGHTS } from "@/lib/subject-sorting";
 
 interface Availability {
   id: string;
@@ -78,13 +78,15 @@ export default function SearchClient({ initialOfferings }: SearchClientProps) {
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [results, setResults] = useState<Offering[]>(initialOfferings);
   const [isLoading, setIsLoading] = useState(false);
+  const tuteeAvailability = useMemo(
+    () => ((user?.publicMetadata as any)?.availability as TuteeAvailability[] | undefined) || [],
+    [user]
+  );
 
   useEffect(() => {
     const fetchFilteredResults = async () => {
       setIsLoading(true);
       try {
-        const tuteeAvailability = ((user?.publicMetadata as any)?.availability as TuteeAvailability[] | undefined) || [];
-
         const response = await searchOfferings({
           query: search,
           sortBy,
@@ -151,7 +153,19 @@ export default function SearchClient({ initialOfferings }: SearchClientProps) {
     // Debounce search to avoid too many API calls
     const timeoutId = setTimeout(fetchFilteredResults, 300);
     return () => clearTimeout(timeoutId);
-  }, [search, sortBy, day, rating, initialOfferings, user]);
+  }, [search, sortBy, day, rating, initialOfferings, tuteeAvailability, user]);
+
+  const resultsWithMatch = useMemo(
+    () =>
+      results.map((item) => {
+        const score = calculateOfferingScore(item, AVAILABILITY_WEIGHTS, { tuteeAvailability });
+        return {
+          ...item,
+          matchPercent: Math.round(Math.max(0, Math.min(100, score))),
+        };
+      }),
+    [results, tuteeAvailability]
+  );
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -365,7 +379,7 @@ export default function SearchClient({ initialOfferings }: SearchClientProps) {
         </div>
       ) : results.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {results.map((item) => (
+          {resultsWithMatch.map((item) => (
             <Card
               key={item._id}
               className="group overflow-hidden transition-all duration-300 border-0 shadow-md hover:shadow-xl hover:-translate-y-1"
@@ -388,6 +402,9 @@ export default function SearchClient({ initialOfferings }: SearchClientProps) {
                   }`}
                 >
                   {item.status === "available" ? "Available" : "Paused"}
+                </Badge>
+                <Badge className="absolute top-12 right-3 bg-white/95 text-gray-900 hover:bg-white shadow-sm border border-gray-200">
+                  {item.matchPercent}% Match
                 </Badge>
                 <div className="absolute top-3 left-3 flex items-center gap-1 bg-white/95 backdrop-blur-sm rounded-full px-2 py-1">
                   <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
