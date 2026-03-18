@@ -26,7 +26,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { sortOfferingsByScore, DEFAULT_WEIGHTS, getScoreBreakdown } from "@/lib/subject-sorting";
+import { calculateOfferingScore, sortOfferingsByScore, DEFAULT_WEIGHTS, AVAILABILITY_WEIGHTS } from "@/lib/subject-sorting";
 
 type TuteeAvailability = {
   day: string;
@@ -196,7 +196,7 @@ export default function Browse() {
     switch (filters.sortBy) {
       case "weighted":
         // Use the weighted algorithm for smart sorting
-        filtered = sortOfferingsByScore(filtered, DEFAULT_WEIGHTS, {
+        filtered = sortOfferingsByScore(filtered, AVAILABILITY_WEIGHTS, {
           tuteeAvailability,
         }) as CardInfo[];
         
@@ -598,19 +598,19 @@ export default function Browse() {
           </TabsList>
 
           <TabsContent value="all" className="mt-8 min-h-[500px] w-full">
-            <TutorGrid offerings={currentOfferings} />
+            <TutorGrid offerings={currentOfferings} tuteeAvailability={tuteeAvailability} />
           </TabsContent>
 
           <TabsContent value="top-rated" className="mt-8 min-h-[500px] w-full">
-            <TutorGrid offerings={currentOfferings} />
+            <TutorGrid offerings={currentOfferings} tuteeAvailability={tuteeAvailability} />
           </TabsContent>
 
           <TabsContent value="newest" className="mt-8 min-h-[500px] w-full">
-            <TutorGrid offerings={currentOfferings} />
+            <TutorGrid offerings={currentOfferings} tuteeAvailability={tuteeAvailability} />
           </TabsContent>
 
           <TabsContent value="trending" className="mt-8 min-h-[500px] w-full">
-            <TutorGrid offerings={currentOfferings} />
+            <TutorGrid offerings={currentOfferings} tuteeAvailability={tuteeAvailability} />
           </TabsContent>
         </Tabs>
       </div>
@@ -619,7 +619,18 @@ export default function Browse() {
 }
 
 // Reusable Tutor Grid Component
-function TutorGrid({ offerings }: { offerings: CardInfo[] }) {
+function TutorGrid({ offerings, tuteeAvailability }: { offerings: CardInfo[]; tuteeAvailability: TuteeAvailability[] }) {
+  const offeringsWithMatch = useMemo(
+    () => offerings.map((offering) => {
+      const score = calculateOfferingScore(offering, AVAILABILITY_WEIGHTS, { tuteeAvailability });
+      return {
+        ...offering,
+        matchPercent: Math.round(Math.max(0, Math.min(100, score))),
+      };
+    }),
+    [offerings, tuteeAvailability]
+  );
+
   if (offerings.length === 0) {
     return (
       <div className="min-h-[400px] w-screen xl:max-w-7xl lg:max-w-[996px] md:max-w-[736px] max-w-[393px] flex items-center justify-center">
@@ -641,7 +652,7 @@ function TutorGrid({ offerings }: { offerings: CardInfo[] }) {
   return (
     <div className="min-h-[400px] w-full">
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 w-full">
-        {offerings.map((offering) => (
+        {offeringsWithMatch.map((offering) => (
         <Card key={offering._id} className="group hover:shadow-lg hover:-translate-y-1 transition-all duration-200 overflow-hidden">
           <div className="relative">
             <img
@@ -660,6 +671,10 @@ function TutorGrid({ offerings }: { offerings: CardInfo[] }) {
               }`}
             >
               {offering.status === "available" ? "Available" : "Unavailable"}
+            </Badge>
+
+            <Badge className="absolute top-3 left-3 bg-white/95 text-gray-900 hover:bg-white">
+              {offering.matchPercent}% Match
             </Badge>
             
 
