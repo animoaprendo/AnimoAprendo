@@ -26,7 +26,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { calculateOfferingScore, sortOfferingsByScore, DEFAULT_WEIGHTS, AVAILABILITY_WEIGHTS } from "@/lib/subject-sorting";
+import { calculateOfferingScore, sortOfferingsByScore, DEFAULT_WEIGHTS, AVAILABILITY_WEIGHTS, getScoreBreakdown } from "@/lib/subject-sorting";
 
 type TuteeAvailability = {
   day: string;
@@ -146,7 +146,7 @@ export default function Browse() {
   }, [offerings]);
 
   const tuteeAvailability = useMemo(
-    () => ((user?.publicMetadata as any)?.availability as TuteeAvailability[] | undefined) || [],
+    () => ((user?.publicMetadata as any)?.tuteeAvailability as TuteeAvailability[] | undefined) || [],
     [user]
   );
 

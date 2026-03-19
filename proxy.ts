@@ -7,6 +7,7 @@ const isPublicRoute = createRouteMatcher([
   "/sign-up(.*)",
   "/api/(.*)",
 ]);
+const isApiRoute = createRouteMatcher(["/api/(.*)", "/trpc/(.*)"]);
 
 const isDefaultRoute = createRouteMatcher(["/", "/search(.*)", "/browse(.*)"]);
 const isTestingRoute = createRouteMatcher(["/testing(.*)"]);
@@ -105,7 +106,7 @@ export default clerkMiddleware(async (auth, req) => {
   }
 
   // If the user is logged in and trying to access the sign-in or sign-up page, redirect them to their dashboard/home page
-  if (isPublicRoute(req) && userId) {
+  if (isPublicRoute(req) && userId && !isApiRoute(req)) {
     if (metadata?.adminRole === "superAdmin") {
       return NextResponse.redirect(new URL("/superadmin/dashboard", req.url));
     }

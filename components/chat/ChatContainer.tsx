@@ -2,6 +2,8 @@
 
 import { InfoIcon, X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
 
 // Import all our new components
 import AppointmentModal from "./AppointmentModal";
@@ -91,6 +93,91 @@ export default function ChatContainer({
   const handleRealtimeMessage = useCallback(
     (newMessage: Message) => {
       console.log("Real-time message received:", newMessage);
+
+      const normalizeId = (id?: string) => {
+        if (!id) return "";
+        return id.startsWith("user_") ? id.replace("user_", "") : id;
+      };
+
+      const messageId = getMessageId(newMessage);
+      const alreadyExists = allChats.some(
+        (msg) => getMessageId(msg) === messageId
+      );
+      const isOwnMessage = normalizeId(newMessage.creatorId) === normalizeId(userId);
+
+      if (!alreadyExists && !isOwnMessage) {
+        const creatorNormalized = normalizeId(newMessage.creatorId);
+        const sender = users.find(
+          (u) => normalizeId(u.id) === creatorNormalized
+        );
+
+        const activeConversationMatchesSender =
+          activeUser && normalizeId(activeUser.id) === creatorNormalized;
+        const shouldShowToast = !activeConversationMatchesSender || !isWindowFocused;
+
+        if (shouldShowToast) {
+          const senderName = sender?.name || "New message";
+          const rawPreview =
+            typeof newMessage.message === "string" && newMessage.message.trim().length > 0
+              ? newMessage.message.trim()
+              : newMessage.type === "appointment"
+              ? "Sent an appointment update"
+              : "Sent you a message";
+          const preview =
+            rawPreview.length > 90 ? `${rawPreview.slice(0, 90)}...` : rawPreview;
+
+          const openConversationFromToast = () => {
+            const creatorVariations = [
+              newMessage.creatorId,
+              normalizeId(newMessage.creatorId),
+              `user_${normalizeId(newMessage.creatorId)}`,
+            ].filter(Boolean);
+
+            const matchedUser = users.find((u) => {
+              const userVariations = [
+                u.id,
+                normalizeId(u.id),
+                `user_${normalizeId(u.id)}`,
+              ];
+              return creatorVariations.some((variation) =>
+                userVariations.includes(String(variation))
+              );
+            });
+
+            if (matchedUser) {
+              setActiveUser(matchedUser);
+              setUsers((prev) =>
+                prev.map((u) =>
+                  u.id === matchedUser.id ? { ...u, unreadCount: 0 } : u
+                )
+              );
+              setShowUserListDrawer(false);
+              setIsDrawerAnimating(false);
+            }
+          };
+
+          toast.custom((t) => (
+            <div className="pointer-events-auto w-full max-w-sm rounded-lg border bg-background p-4 shadow-md">
+              <div className="space-y-2">
+                <p className="text-sm font-semibold">{senderName}</p>
+                <p className="text-sm text-muted-foreground">{preview}</p>
+                <div className="flex justify-end">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      openConversationFromToast();
+                      toast.dismiss(t);
+                    }}
+                  >
+                    Open
+                  </Button>
+                </div>
+              </div>
+            </div>
+          ));
+        }
+      }
 
       // Check if this message should be visible on current role page
       const shouldShowMessage =
@@ -351,7 +438,7 @@ export default function ChatContainer({
         return prev;
       });
     },
-    [activeUser, userId, isWindowFocused, markMessagesAsSeen]
+    [activeUser, userId, isWindowFocused, markMessagesAsSeen, allChats, users]
   );
 
   // Set up Socket.IO connection
