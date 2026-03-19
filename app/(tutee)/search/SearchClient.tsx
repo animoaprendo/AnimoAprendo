@@ -79,7 +79,7 @@ export default function SearchClient({ initialOfferings }: SearchClientProps) {
   const [results, setResults] = useState<Offering[]>(initialOfferings);
   const [isLoading, setIsLoading] = useState(false);
   const tuteeAvailability = useMemo(
-    () => ((user?.publicMetadata as any)?.availability as TuteeAvailability[] | undefined) || [],
+    () => ((user?.publicMetadata as any)?.tuteeAvailability as TuteeAvailability[] | undefined) || [],
     [user]
   );
 

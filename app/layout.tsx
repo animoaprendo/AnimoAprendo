@@ -8,6 +8,7 @@ export const metadata: Metadata = {
 };
 import { Geist, Geist_Mono } from "next/font/google";
 import { Toaster } from "sonner";
+import GlobalMessageNotifications from "@/components/chat/GlobalMessageNotifications";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -37,6 +38,7 @@ export default async function RootLayout({
             {/* <AdminNavBR /> */}
 
             {children}
+            <GlobalMessageNotifications />
             <Toaster position="bottom-right" />
           </NuqsAdapter>
         </body>
