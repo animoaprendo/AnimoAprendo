@@ -69,7 +69,8 @@ export async function finishOnboarding({
           department,
           yearLevel,
           section,
-          availability,
+          tuteeAvailability: availability,
+          tutorAvailability: availability,
         }),
       }
     );

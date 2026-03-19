@@ -3,6 +3,49 @@
 import sharp from "sharp";
 import FormData from "form-data";
 import fetch from "node-fetch";
+import { auth, clerkClient } from "@clerk/nextjs/server";
+
+export async function updateProfilePublicMetadata(params: {
+  availability: unknown;
+  bio?: unknown;
+  availabilityKey: "tuteeAvailability" | "tutorAvailability";
+}) {
+  try {
+    const { userId } = await auth();
+
+    if (!userId) {
+      return { success: false, error: "Unauthorized" };
+    }
+
+    const { availability, bio, availabilityKey } = params;
+
+    if (!Array.isArray(availability)) {
+      return { success: false, error: "Invalid availability payload" };
+    }
+
+    if (bio !== undefined && typeof bio !== "string") {
+      return { success: false, error: "Invalid bio payload" };
+    }
+
+    const client = await clerkClient();
+    const currentUser = await client.users.getUser(userId);
+    const currentPublicMetadata =
+      (currentUser.publicMetadata as Record<string, unknown> | null) || {};
+
+    await client.users.updateUserMetadata(userId, {
+      publicMetadata: {
+        ...currentPublicMetadata,
+        [availabilityKey]: availability,
+        bio: typeof bio === "string" ? bio.trim() : String(currentPublicMetadata.bio || ""),
+      },
+    });
+
+    return { success: true };
+  } catch (error) {
+    console.error("Error updating profile metadata:", error);
+    return { success: false, error: "Failed to update profile metadata" };
+  }
+}
 
 export async function uploadBannerServer(file: File, username: string) {
   try {

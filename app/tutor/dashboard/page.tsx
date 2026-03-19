@@ -1,4 +1,4 @@
-import { fetchAppointments, fetchUsers } from "@/app/actions";
+import { fetchAppointments, fetchUsers, getCollectionData } from "@/app/actions";
 import {
   getApprovedSubjectOfferingsCount,
   getUserGamificationProfile
@@ -27,6 +27,7 @@ import {
   Clock,
   Eye,
   MapPin,
+  Star,
   User
 } from "lucide-react";
 import Link from "next/link";
@@ -36,6 +37,37 @@ import { redirect, RedirectType } from "next/navigation";
 function getXPForLevel(level: number): number {
   if (level <= 1) return 0;
   return Math.floor(100 * Math.pow(1.5, level - 2));
+}
+
+const dayLabelMap: Record<string, string> = {
+  monday: "Monday",
+  tuesday: "Tuesday",
+  wednesday: "Wednesday",
+  thursday: "Thursday",
+  friday: "Friday",
+  saturday: "Saturday",
+  sunday: "Sunday",
+};
+
+const dayOrder = [
+  "monday",
+  "tuesday",
+  "wednesday",
+  "thursday",
+  "friday",
+  "saturday",
+  "sunday",
+];
+
+function formatAvailabilityTime(hourOfDay: number, minute: number): string {
+  const normalizedHour = Number.isFinite(hourOfDay) ? hourOfDay : 0;
+  const normalizedMinute = Number.isFinite(minute) ? minute : 0;
+  const date = new Date(0, 0, 0, normalizedHour, normalizedMinute);
+  return date.toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  });
 }
 
 export default async function Dashboard() {
@@ -97,7 +129,77 @@ export default async function Dashboard() {
     gamificationStats.approvedSubjectOfferings = approvedOfferingsResult.data.approvedOfferingsCount;
   }
 
-  console.log(gamificationProfile)
+  const userPublicMetadata = user.publicMetadata as Record<string, any>;
+  const rawTutorAvailability = Array.isArray(userPublicMetadata?.tutorAvailability)
+    ? userPublicMetadata.tutorAvailability
+    : [];
+  const tutorAvailability = [...rawTutorAvailability]
+    .filter((slot: any) => slot?.day && Array.isArray(slot?.timeRanges) && slot.timeRanges.length > 0)
+    .sort((a: any, b: any) => dayOrder.indexOf(a.day) - dayOrder.indexOf(b.day));
+
+  const normalizeUserId = (id?: string) => (id || "").replace(/^user_/, "");
+
+  // Fetch recent reviews the logged-in tutor received from tutees.
+  let recentReviews: any[] = [];
+  const reviewsResult = await getCollectionData("reviews");
+  if (reviewsResult?.success && Array.isArray(reviewsResult.data)) {
+    recentReviews = reviewsResult.data
+      .filter((review: any) => {
+        const reviewTutorId = String(review?.tutorId || "");
+        return (
+          review?.reviewerType === "tutee" &&
+          (
+            reviewTutorId === user.id ||
+            normalizeUserId(reviewTutorId) === normalizeUserId(user.id)
+          )
+        );
+      })
+      .sort((a: any, b: any) => {
+        const aDate = new Date(a?.createdAt || 0).getTime();
+        const bDate = new Date(b?.createdAt || 0).getTime();
+        return bDate - aDate;
+      })
+      .slice(0, 5);
+  }
+
+  let reviewUserMap: Record<string, any> = {};
+  let reviewOfferingMap: Record<string, any> = {};
+  if (recentReviews.length > 0) {
+    const reviewerIds = [...new Set(recentReviews.map((review: any) => review?.reviewerId).filter(Boolean))];
+    const reviewersResult = await fetchUsers(reviewerIds);
+
+    if (
+      reviewersResult.success &&
+      reviewersResult.data &&
+      Array.isArray(reviewersResult.data.users)
+    ) {
+      reviewUserMap = reviewersResult.data.users.reduce((acc: Record<string, any>, reviewer: any) => {
+        const reviewerId = String(reviewer?.id || "");
+        if (reviewerId) {
+          acc[reviewerId] = reviewer;
+          acc[normalizeUserId(reviewerId)] = reviewer;
+        }
+        return acc;
+      }, {});
+    }
+
+    // Fetch offerings to get subject information
+    const offeringIds = [...new Set(recentReviews.map((review: any) => review?.offerId).filter(Boolean))];
+    if (offeringIds.length > 0) {
+      const offeringsResult = await getCollectionData("subjects"); // 'subjects' collection contains offerings
+      if (offeringsResult?.success && Array.isArray(offeringsResult.data)) {
+        reviewOfferingMap = offeringsResult.data.reduce((acc: Record<string, any>, offering: any) => {
+          const offeringId = String(offering?._id || "");
+          if (offeringId) {
+            acc[offeringId] = offering;
+          }
+          return acc;
+        }, {});
+      }
+    }
+  }
+
+  // console.log(gamificationProfile)
   if (appointmentsResult.success && appointmentsResult.appointments) {
     const now = new Date();
 
@@ -299,23 +401,48 @@ export default async function Dashboard() {
                 <Clock className="w-5 h-5" />
                 Availability
               </CardTitle>
+              <CardDescription>
+                Your current weekly tutoring schedule
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {/* <p className="text-sm text-muted-foreground">
-                Manage your tutoring schedule and set your available hours for
-                students to book sessions.
-              </p>
+              {tutorAvailability.length > 0 ? (
+                <div className="space-y-3">
+                  {tutorAvailability.map((slot: any) => (
+                    <div key={slot.day} className="rounded-md border p-3 space-y-1">
+                      <p className="text-sm font-semibold">
+                        {dayLabelMap[slot.day] || slot.day}
+                      </p>
+                      <div className="space-y-1">
+                        {slot.timeRanges.map((range: any, idx: number) => (
+                          <p key={range?.id || idx} className="text-xs text-muted-foreground">
+                            {formatAvailabilityTime(
+                              Number(range?.timeStart?.hourOfDay),
+                              Number(range?.timeStart?.minute)
+                            )}
+                            {" - "}
+                            {formatAvailabilityTime(
+                              Number(range?.timeEnd?.hourOfDay),
+                              Number(range?.timeEnd?.minute)
+                            )}
+                          </p>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-sm text-muted-foreground">
+                  No availability set yet.
+                </div>
+              )}
 
               <Button variant="outline" className="w-full" asChild>
-                <Link href="#">
+                <Link href="/tutor/profile">
                   <CalendarDays className="w-4 h-4 mr-2" />
-                  Manage Schedule
+                  Manage Availability
                 </Link>
-              </Button> */}
-              <div className="flex items-center justify-around">
-                <span className="text-sm font-medium">Feature coming soon</span>
-                {/* <Badge variant="secondary">New Tutor</Badge> */}
-              </div>
+              </Button>
             </CardContent>
           </Card>
         </div>
@@ -449,6 +576,83 @@ export default async function Dashboard() {
                     </h3>
                     <p className="text-sm text-muted-foreground">
                       New appointment requests will appear here
+                    </p>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Recent Reviews */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Star className="w-5 h-5" />
+                Recent Reviews
+              </CardTitle>
+              <CardDescription>
+                Latest feedback from your tutees
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {recentReviews.length > 0 ? (
+                  recentReviews.map((review: any) => {
+                    const reviewerId = String(review?.reviewerId || "");
+                    const reviewer =
+                      reviewUserMap[reviewerId] ||
+                      reviewUserMap[normalizeUserId(reviewerId)];
+                    const offering = reviewOfferingMap[String(review?.offerId || "")];
+                    const subjectName = offering?.subject || "Subject";
+
+                    return (
+                      <Card key={review._id || `${review.appointmentId}-${review.createdAt}`} className="p-4">
+                        <div className="space-y-2">
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <div className="flex flex-col gap-1">
+                              <h4 className="font-semibold">
+                                {reviewer?.displayName || "Anonymous Tutee"}
+                              </h4>
+                              <p className="text-xs text-muted-foreground">
+                                {subjectName}
+                              </p>
+                            </div>
+                            <span className="text-xs text-muted-foreground">
+                              {review?.createdAt
+                                ? new Date(review.createdAt).toLocaleDateString("en-US", {
+                                    month: "short",
+                                    day: "numeric",
+                                    year: "numeric",
+                                  })
+                                : ""}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center gap-1 text-amber-500">
+                            {Array.from({ length: 5 }).map((_, idx) => (
+                              <Star
+                                key={idx}
+                                className={`h-4 w-4 ${idx < Number(review?.rating || 0) ? "fill-current" : "text-muted-foreground/30"}`}
+                              />
+                            ))}
+                            <span className="ml-2 text-sm text-muted-foreground">
+                              {Number(review?.rating || 0).toFixed(1)}
+                            </span>
+                          </div>
+
+                          <p className="text-sm text-muted-foreground">
+                            {review?.comment?.trim() || "No comment provided."}
+                          </p>
+                        </div>
+                      </Card>
+                    );
+                  })
+                ) : (
+                  <div className="text-center py-8">
+                    <Star className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
+                    <h3 className="font-medium mb-2">No recent reviews yet</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Reviews from your tutees will appear here.
                     </p>
                   </div>
                 )}
