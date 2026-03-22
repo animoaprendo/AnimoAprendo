@@ -1,5 +1,6 @@
 import { fetchAppointments, fetchUsers, getCollectionData } from "@/app/actions";
 import {
+  getDailyLoginStreak,
   getApprovedSubjectOfferingsCount,
   getUserGamificationProfile
 } from '@/app/gamification-actions';
@@ -23,7 +24,6 @@ import { currentUser } from "@clerk/nextjs/server";
 import {
   Award,
   CalendarDays,
-  CheckCircle,
   Clock,
   Eye,
   MapPin,
@@ -80,11 +80,6 @@ export default async function Dashboard() {
   const tokens = await getMicrosoftAccessToken(user.id);
 
   let upcomingAppointments: any[] = [];
-  let stats = {
-    totalAppointments: 0,
-    completed: 0,
-    upcoming: 0,
-  };
   
   // Get real gamification data from database
   const gamificationProfileResult = await getUserGamificationProfile(user.id);
@@ -127,6 +122,11 @@ export default async function Dashboard() {
   const approvedOfferingsResult = await getApprovedSubjectOfferingsCount(user.id);
   if (approvedOfferingsResult.success && approvedOfferingsResult.data) {
     gamificationStats.approvedSubjectOfferings = approvedOfferingsResult.data.approvedOfferingsCount;
+  }
+
+  const dailyLoginStreakResult = await getDailyLoginStreak(user.id);
+  if (dailyLoginStreakResult.success && dailyLoginStreakResult.data) {
+    gamificationStats.streakDays = dailyLoginStreakResult.data.streakDays;
   }
 
   const userPublicMetadata = user.publicMetadata as Record<string, any>;
@@ -209,8 +209,8 @@ export default async function Dashboard() {
     );
 
     // Calculate statistics
-    stats.totalAppointments = tutorAppointments.length;
-    stats.completed = tutorAppointments.filter(
+    const totalAppointments = tutorAppointments.length;
+    const completedAppointments = tutorAppointments.filter(
       (apt: any) => apt.status === "completed"
     ).length;
 
@@ -227,7 +227,12 @@ export default async function Dashboard() {
       )
       .slice(0, 5); // Limit to 5 most recent
 
-    stats.upcoming = upcoming.length;
+    const upcomingCount = upcoming.length;
+
+    // Keep one source of truth for displayed stats.
+    gamificationStats.totalAppointments = totalAppointments;
+    gamificationStats.completed = completedAppointments;
+    gamificationStats.upcoming = upcomingCount;
 
     // Fetch tutee user data for the upcoming appointments
     if (upcoming.length > 0) {
@@ -251,6 +256,7 @@ export default async function Dashboard() {
           return {
             id: apt._id || apt.messageId,
             tutee: tuteeData ? tuteeData.displayName : "Unknown User",
+            tuteeId: tuteeData?.id || apt.tuteeId,
             subject: apt.subject || "Tutoring Session",
             appointmentType: apt.appointmentType || "single",
             startDate: appointmentDate.toLocaleDateString("en-US", {
@@ -276,10 +282,6 @@ export default async function Dashboard() {
           };
         });
         
-        // Update upcoming count in gamification stats
-        if (gamificationProfileResult.success && gamificationProfileResult.data) {
-          gamificationStats.upcoming = stats.upcoming;
-        }
       } else {
         // Fallback: show appointments even if user data fetch failed
         upcomingAppointments = upcoming.map((apt: any) => {
@@ -288,6 +290,7 @@ export default async function Dashboard() {
           return {
             id: apt._id || apt.messageId,
             tutee: "Loading...", // Will show this if user data fails to load
+            tuteeId: apt.tuteeId,
             subject: apt.subject || "Tutoring Session",
             date: appointmentDate.toLocaleDateString("en-US", {
               month: "short",
@@ -462,48 +465,13 @@ export default async function Dashboard() {
 
           <Separator />
 
-          {/* Gamification Stats Overview */}
-          <StatsOverview stats={gamificationStats} />
-          
           {/* Weekly Goals */}
           {/* <WeeklyGoals 
             stats={gamificationStats}
           /> */}
 
-          {/* Statistics Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            <Card>
-              <CardContent className="p-6 text-center">
-                <CalendarDays className="h-12 w-12 mx-auto mb-4 text-primary" />
-                <h3 className="text-3xl font-bold mb-2">
-                  {stats.totalAppointments}
-                </h3>
-                <p className="text-sm text-muted-foreground">
-                  Total Appointments
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="p-6 text-center">
-                <CheckCircle className="h-12 w-12 mx-auto mb-4 text-green-600" />
-                <h3 className="text-3xl font-bold mb-2">{stats.completed}</h3>
-                <p className="text-sm text-muted-foreground">
-                  Completed Sessions
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="p-6 text-center">
-                <Clock className="h-12 w-12 mx-auto mb-4 text-blue-600" />
-                <h3 className="text-3xl font-bold mb-2">{stats.upcoming}</h3>
-                <p className="text-sm text-muted-foreground">
-                  Upcoming Sessions
-                </p>
-              </CardContent>
-            </Card>
-          </div>
+          {/* Gamification Stats Overview */}
+          <StatsOverview stats={gamificationStats} />
 
           {/* Upcoming Appointments */}
           <Card>
@@ -524,7 +492,13 @@ export default async function Dashboard() {
                       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                         <div className="space-y-1">
                           <div className="flex items-center gap-2">
-                            <h4 className="font-semibold">{appt.tutee}</h4>
+                            {appt.tuteeId ? (
+                              <Link href={`/profile/${appt.tuteeId}`} className="font-semibold hover:underline">
+                                {appt.tutee}
+                              </Link>
+                            ) : (
+                              <h4 className="font-semibold">{appt.tutee}</h4>
+                            )}
                             {appt.status === "completed" && (
                               <Badge variant="secondary" className="text-xs">
                                 Completed
@@ -610,9 +584,15 @@ export default async function Dashboard() {
                         <div className="space-y-2">
                           <div className="flex flex-wrap items-center justify-between gap-2">
                             <div className="flex flex-col gap-1">
-                              <h4 className="font-semibold">
-                                {reviewer?.displayName || "Anonymous Tutee"}
-                              </h4>
+                              {reviewer?.id ? (
+                                <Link href={`/profile/${reviewer.id}`} className="font-semibold hover:underline">
+                                  {reviewer?.displayName || "Anonymous Tutee"}
+                                </Link>
+                              ) : (
+                                <h4 className="font-semibold">
+                                  {reviewer?.displayName || "Anonymous Tutee"}
+                                </h4>
+                              )}
                               <p className="text-xs text-muted-foreground">
                                 {subjectName}
                               </p>

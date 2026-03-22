@@ -419,15 +419,31 @@ export default function SearchClient({ initialOfferings }: SearchClientProps) {
                   {item.subject || item.title || "Untitled Subject"}
                 </CardTitle>
                 <div className="flex items-center gap-2 mt-1">
-                  <Avatar className="h-6 w-6">
-                    <AvatarImage src={item.user?.imageUrl} />
-                    <AvatarFallback className="text-xs bg-green-100 text-green-700">
-                      <User className="h-3 w-3" />
-                    </AvatarFallback>
-                  </Avatar>
-                  <CardDescription className="text-sm font-medium">
-                    {item.user?.displayName || "Unknown Tutor"}
-                  </CardDescription>
+                  {item.user?.id ? (
+                    <Link href={`/profile/${item.user.id}`} className="flex items-center gap-2 rounded-md -m-1 p-1 hover:bg-gray-50 transition-colors">
+                      <Avatar className="h-6 w-6">
+                        <AvatarImage src={item.user?.imageUrl} />
+                        <AvatarFallback className="text-xs bg-green-100 text-green-700">
+                          <User className="h-3 w-3" />
+                        </AvatarFallback>
+                      </Avatar>
+                      <CardDescription className="text-sm font-medium hover:underline">
+                        {item.user?.displayName || "Unknown Tutor"}
+                      </CardDescription>
+                    </Link>
+                  ) : (
+                    <>
+                      <Avatar className="h-6 w-6">
+                        <AvatarImage src={item.user?.imageUrl} />
+                        <AvatarFallback className="text-xs bg-green-100 text-green-700">
+                          <User className="h-3 w-3" />
+                        </AvatarFallback>
+                      </Avatar>
+                      <CardDescription className="text-sm font-medium">
+                        {item.user?.displayName || "Unknown Tutor"}
+                      </CardDescription>
+                    </>
+                  )}
                 </div>
               </CardHeader>
 

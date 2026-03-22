@@ -26,7 +26,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { calculateOfferingScore, sortOfferingsByScore, DEFAULT_WEIGHTS, AVAILABILITY_WEIGHTS, getScoreBreakdown } from "@/lib/subject-sorting";
+import { getOfferingsWithScores, sortOfferingsByScore, AVAILABILITY_WEIGHTS, calculateAvailabilityOverlapMinutes } from "@/lib/subject-sorting";
 
 type TuteeAvailability = {
   day: string;
@@ -607,12 +607,21 @@ export default function Browse() {
 
 // Reusable Tutor Grid Component
 function TutorGrid({ offerings, tuteeAvailability }: { offerings: CardInfo[]; tuteeAvailability: TuteeAvailability[] }) {
+  const hasTuteeAvailability = tuteeAvailability.some(
+    (slot) => Array.isArray(slot.timeRanges) && slot.timeRanges.length > 0
+  );
+
   const offeringsWithMatch = useMemo(
-    () => offerings.map((offering) => {
-      const score = calculateOfferingScore(offering, AVAILABILITY_WEIGHTS, { tuteeAvailability });
+    () => getOfferingsWithScores(offerings, AVAILABILITY_WEIGHTS, { tuteeAvailability }).map(({ offering, score }) => {
+      const overlapMinutes = calculateAvailabilityOverlapMinutes(
+        offering.availability,
+        tuteeAvailability
+      );
+
       return {
         ...offering,
         matchPercent: Math.round(Math.max(0, Math.min(100, score))),
+        overlapMinutes,
       };
     }),
     [offerings, tuteeAvailability]
@@ -640,7 +649,7 @@ function TutorGrid({ offerings, tuteeAvailability }: { offerings: CardInfo[]; tu
     <div className="min-h-[400px] w-full">
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 w-full">
         {offeringsWithMatch.map((offering) => (
-        <Card key={offering._id} className="group hover:shadow-lg hover:-translate-y-1 transition-all duration-200 overflow-hidden">
+        <Card key={offering._id} className="group hover:shadow-lg hover:-translate-y-1 transition-all duration-200 overflow-hidden flex flex-col">
           <div className="relative">
             <img
               src={offering.banner}
@@ -667,34 +676,41 @@ function TutorGrid({ offerings, tuteeAvailability }: { offerings: CardInfo[]; tu
 
           </div>
 
-          <CardContent className="p-6">
-            <div className="space-y-4">
+          <CardContent className="p-6 flex flex-col h-full">
+            <div className="flex flex-col grow gap-4">
               {/* Subject */}
               <div>
-                <CardTitle className="text-xl mb-2">{offering.subject}</CardTitle>
+                <CardTitle className="text-lg mb-2">{offering.subject}</CardTitle>
                 {offering.user && (
                   <div className="flex items-start gap-3">
-                    <Avatar className="w-8 h-8">
-                      <AvatarImage src={offering.user.imageUrl} alt={offering.user.displayName} />
-                      <AvatarFallback>
-                        {offering.user.displayName?.charAt(0) || "T"}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1">
-                      <div className="flex items-center justify-between">
-                        <p className="text-sm font-medium">{offering.user.displayName}</p>
-                        {offering.averageRating && !isNaN(Number(offering.averageRating)) && Number(offering.averageRating) > 0 ? (
-                          <Badge variant="secondary" className="text-xs">
-                            <Star className="w-3 h-3 mr-1 fill-yellow-400 text-yellow-400" />
-                            {Number(offering.averageRating).toFixed(1)}
-                          </Badge>
-                        ) : null}
+                    <Link
+                      href={`/profile/${offering.user.id}`}
+                      className="flex items-start gap-3 flex-1 rounded-md -m-1 p-1 hover:bg-gray-50 transition-colors"
+                    >
+                      <Avatar className="w-8 h-8">
+                        <AvatarImage src={offering.user.imageUrl} alt={offering.user.displayName} />
+                        <AvatarFallback>
+                          {offering.user.displayName?.charAt(0) || "T"}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm font-medium truncate hover:underline">
+                            {offering.user.displayName}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-1 text-xs text-gray-500">
+                          <Users className="w-3 h-3" />
+                          {offering.totalReviews || 0} reviews
+                        </div>
                       </div>
-                      <div className="flex items-center gap-1 text-xs text-gray-500">
-                        <Users className="w-3 h-3" />
-                        {offering.totalReviews || 0} reviews
-                      </div>
-                    </div>
+                    </Link>
+                    {offering.averageRating && !isNaN(Number(offering.averageRating)) && Number(offering.averageRating) > 0 ? (
+                      <Badge variant="secondary" className="text-xs mt-0.5">
+                        <Star className="w-3 h-3 mr-1 fill-yellow-400 text-yellow-400" />
+                        {Number(offering.averageRating).toFixed(1)}
+                      </Badge>
+                    ) : null}
                   </div>
                 )}
               </div>
@@ -708,7 +724,7 @@ function TutorGrid({ offerings, tuteeAvailability }: { offerings: CardInfo[]; tu
               />
 
               {/* Availability Preview */}
-              <div className="flex items-center gap-2 text-sm text-gray-600">
+              <div className="flex items-center gap-2 text-sm text-gray-600 mt-auto">
                 <Clock className="w-4 h-4" />
                 <span>
                   {offering.availability.length > 0 
@@ -716,6 +732,19 @@ function TutorGrid({ offerings, tuteeAvailability }: { offerings: CardInfo[]; tu
                     : "No availability listed"
                   }
                 </span>
+              </div>
+
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-gray-500">Shared schedule</span>
+                {hasTuteeAvailability ? (
+                  <Badge variant="secondary" className="text-xs">
+                    {offering.overlapMinutes > 0
+                      ? `${Math.floor(offering.overlapMinutes / 60)}h ${offering.overlapMinutes % 60}m`
+                      : "0h 0m"}
+                  </Badge>
+                ) : (
+                  <span className="text-xs text-gray-400">Set your availability</span>
+                )}
               </div>
 
               {/* Action Button */}

@@ -1,6 +1,6 @@
 "use client";
 
-import { fetchAppointments, fetchUsers, submitQuizAttempt } from "@/app/actions";
+import { fetchAppointments, fetchUsers, submitQuizAttempt, updateQuizAttemptCorrectness } from "@/app/actions";
 import { useUser } from "@clerk/nextjs";
 import { AlertCircle, ArrowLeft, Calendar, CheckCircle, Clock, User } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -18,6 +18,7 @@ type Question = {
 type QuizAnswer = {
   questionId: string;
   answer: string;
+  isCorrect?: boolean;
 };
 
 type QuizAttempt = {
@@ -25,6 +26,46 @@ type QuizAttempt = {
   answers: QuizAnswer[];
   score: number;
   completedAt: string;
+};
+
+const normalizeAnswerText = (value: string): string =>
+  value.toLowerCase().trim();
+
+const isFillInAnswerCorrect = (
+  userAnswer: string | undefined,
+  expectedAnswer: string | string[]
+): boolean => {
+  const normalizedUserAnswer = normalizeAnswerText(userAnswer || "");
+  if (!normalizedUserAnswer) return false;
+
+  const acceptedAnswers = Array.isArray(expectedAnswer)
+    ? expectedAnswer
+    : [expectedAnswer];
+
+  return acceptedAnswers
+    .map((answer) => normalizeAnswerText(String(answer)))
+    .includes(normalizedUserAnswer);
+};
+
+const isQuestionAnswerCorrect = (
+  question: Question,
+  userAnswer: string | undefined
+): boolean => {
+  if (!userAnswer) return false;
+
+  if (question.type === 'fill-in') {
+    return isFillInAnswerCorrect(userAnswer, question.answer);
+  }
+
+  return String(userAnswer) === String(question.answer);
+};
+
+const sanitizeAnswerForQuestion = (
+  question: Question | undefined,
+  answer: string
+): string => {
+  if (!question) return answer;
+  return question.type === "fill-in" ? answer.trimEnd() : answer;
 };
 
 export default function TuteeQuizPage() {
@@ -44,6 +85,8 @@ export default function TuteeQuizPage() {
   const [quizCompleted, setQuizCompleted] = useState(false);
   const [score, setScore] = useState<number | null>(null);
   const [isViewingAsTutor, setIsViewingAsTutor] = useState(false);
+  const [answerCorrectness, setAnswerCorrectness] = useState<Record<string, boolean>>({});
+  const [savingCorrections, setSavingCorrections] = useState(false);
 
   // Load appointment and quiz data
   useEffect(() => {
@@ -92,10 +135,16 @@ export default function TuteeQuizPage() {
             setScore(attemptAlreadyCompleted.score);
             // Load their previous answers for review
             const answerMap: { [key: string]: string } = {};
+            const correctnessMap: Record<string, boolean> = {};
             attemptAlreadyCompleted.answers.forEach((ans: QuizAnswer) => {
               answerMap[ans.questionId] = ans.answer;
+              correctnessMap[ans.questionId] =
+                typeof ans.isCorrect === "boolean"
+                  ? ans.isCorrect
+                  : false;
             });
             setAnswers(answerMap);
+            setAnswerCorrectness(correctnessMap);
           }
 
           // Fetch tutor's name if tutorId exists
@@ -131,10 +180,13 @@ export default function TuteeQuizPage() {
 
   const handleAnswerChange = (questionId: string, answer: string) => {
     if (quizCompleted) return;
+
+    const question = questions.find((q) => q.id === questionId);
+    const sanitizedAnswer = sanitizeAnswerForQuestion(question, answer);
     
     setAnswers(prev => ({
       ...prev,
-      [questionId]: answer
+      [questionId]: sanitizedAnswer
     }));
   };
 
@@ -149,12 +201,8 @@ export default function TuteeQuizPage() {
         if (userAnswer === question.answer) {
           correct++;
         }
-      } else if (question.type === 'fill-in' && Array.isArray(question.answer)) {
-        // Case insensitive comparison for fill-in questions
-        const correctAnswers = question.answer.map(ans => ans.toLowerCase().trim());
-        if (correctAnswers.includes(userAnswer.toLowerCase().trim())) {
-          correct++;
-        }
+      } else if (question.type === 'fill-in' && isFillInAnswerCorrect(userAnswer, question.answer)) {
+        correct++;
       }
     });
 
@@ -182,11 +230,24 @@ export default function TuteeQuizPage() {
       setSubmitting(true);
       setError("");
 
-      const quizScore = calculateScore(answers);
-      const quizAnswers: QuizAnswer[] = Object.entries(answers).map(([questionId, answer]) => ({
-        questionId,
-        answer
-      }));
+      const questionMap = new Map(questions.map((question) => [question.id, question]));
+      const sanitizedAnswers = Object.entries(answers).reduce((acc, [questionId, answer]) => {
+        acc[questionId] = sanitizeAnswerForQuestion(questionMap.get(questionId), answer);
+        return acc;
+      }, {} as { [key: string]: string });
+
+      setAnswers(sanitizedAnswers);
+
+      const quizScore = calculateScore(sanitizedAnswers);
+      const quizAnswers: QuizAnswer[] = Object.entries(sanitizedAnswers).map(([questionId, answer]) => {
+        const question = questionMap.get(questionId);
+
+        return {
+          questionId,
+          answer,
+          isCorrect: question ? isQuestionAnswerCorrect(question, answer) : false,
+        };
+      });
 
       // Submit quiz attempt using server action
       const result = await submitQuizAttempt({
@@ -218,6 +279,55 @@ export default function TuteeQuizPage() {
 
   const handleGoBack = () => {
     router.back();
+  };
+
+  const getEffectiveAnswerCorrectness = (question: Question): boolean => {
+    const mapped = answerCorrectness[question.id];
+    if (typeof mapped === "boolean") return mapped;
+    return isQuestionAnswerCorrect(question, answers[question.id]);
+  };
+
+  const handleTutorCorrectnessChange = (questionId: string, isCorrect: boolean) => {
+    setAnswerCorrectness((prev) => ({
+      ...prev,
+      [questionId]: isCorrect,
+    }));
+  };
+
+  const handleSaveTutorCorrections = async () => {
+    if (!appointmentId || !isViewingAsTutor || !quizCompleted) return;
+
+    try {
+      setSavingCorrections(true);
+      setError("");
+
+      const payload = questions.map((question) => ({
+        questionId: question.id,
+        isCorrect: getEffectiveAnswerCorrectness(question),
+      }));
+
+      const result = await updateQuizAttemptCorrectness({
+        messageId: appointmentId,
+        attempt: currentAttempt,
+        answers: payload,
+      });
+
+      if (!result.success) {
+        setError(result.error || "Failed to save tutor corrections.");
+        return;
+      }
+
+      const correctCount = payload.filter((answer) => answer.isCorrect).length;
+      const recomputedScore = questions.length > 0
+        ? Math.round((correctCount / questions.length) * 100)
+        : 0;
+      setScore(recomputedScore);
+    } catch (err) {
+      console.error("Error saving tutor corrections:", err);
+      setError("An error occurred while saving tutor corrections.");
+    } finally {
+      setSavingCorrections(false);
+    }
   };
 
   if (loading) {
@@ -353,12 +463,7 @@ export default function TuteeQuizPage() {
                     const userAnswer = answers[question.id];
                     let isCorrect = false;
                     
-                    if (question.type === 'multiple-choice' || question.type === 'true-false') {
-                      isCorrect = userAnswer === question.answer;
-                    } else if (question.type === 'fill-in' && Array.isArray(question.answer)) {
-                      const correctAnswers = question.answer.map(ans => ans.toLowerCase().trim());
-                      isCorrect = correctAnswers.includes(userAnswer?.toLowerCase().trim() || "");
-                    }
+                    isCorrect = getEffectiveAnswerCorrectness(question);
                     
                     if (isCorrect) correct++;
                     else incorrect++;
@@ -409,20 +514,15 @@ export default function TuteeQuizPage() {
               const userAnswer = answers[question.id];
               let isCorrect = false;
               
-              if (quizCompleted && currentAttempt === 2) {
-                if (question.type === 'multiple-choice' || question.type === 'true-false') {
-                  isCorrect = userAnswer === question.answer;
-                } else if (question.type === 'fill-in' && Array.isArray(question.answer)) {
-                  const correctAnswers = question.answer.map(ans => ans.toLowerCase().trim());
-                  isCorrect = correctAnswers.includes(userAnswer?.toLowerCase().trim() || "");
-                }
+              if (quizCompleted && (currentAttempt === 2 || isViewingAsTutor)) {
+                isCorrect = getEffectiveAnswerCorrectness(question);
               }
 
               return (
                 <div key={question.id} className={`border rounded-lg p-6 ${
                   quizCompleted ? 'bg-gray-50' : 'bg-white'
                 } ${
-                  quizCompleted && currentAttempt === 2 
+                  quizCompleted && (currentAttempt === 2 || isViewingAsTutor)
                     ? isCorrect 
                       ? 'border-green-300 bg-green-50' 
                       : 'border-red-300 bg-red-50'
@@ -436,14 +536,14 @@ export default function TuteeQuizPage() {
                           : 'bg-red-100 text-red-600'
                         : 'bg-green-100 text-green-600'
                     }`}>
-                      {quizCompleted && currentAttempt === 2 ? (isCorrect ? '✓' : '✗') : idx + 1}
+                      {quizCompleted && (currentAttempt === 2 || isViewingAsTutor) ? (isCorrect ? '✓' : '✗') : idx + 1}
                     </div>
                     <div className="flex-1">
                       <div className="flex items-start justify-between mb-4">
                         <h3 className="text-lg font-medium text-gray-900">
                           {question.question}
                         </h3>
-                        {quizCompleted && currentAttempt === 2 && (
+                        {quizCompleted && (currentAttempt === 2 || isViewingAsTutor) && (
                           <span className={`px-2 py-1 rounded text-xs font-medium ${
                             isCorrect 
                               ? 'bg-green-100 text-green-700' 
@@ -453,6 +553,33 @@ export default function TuteeQuizPage() {
                           </span>
                         )}
                       </div>
+
+                      {quizCompleted && isViewingAsTutor && (
+                        <div className="mb-4 flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => handleTutorCorrectnessChange(question.id, true)}
+                            className={`px-3 py-1.5 rounded text-xs font-medium border transition-colors ${
+                              isCorrect
+                                ? 'bg-green-100 text-green-700 border-green-300'
+                                : 'bg-white text-gray-600 border-gray-300 hover:border-green-300'
+                            }`}
+                          >
+                            Mark Correct
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleTutorCorrectnessChange(question.id, false)}
+                            className={`px-3 py-1.5 rounded text-xs font-medium border transition-colors ${
+                              !isCorrect
+                                ? 'bg-red-100 text-red-700 border-red-300'
+                                : 'bg-white text-gray-600 border-gray-300 hover:border-red-300'
+                            }`}
+                          >
+                            Mark Incorrect
+                          </button>
+                        </div>
+                      )}
 
                       {question.type === 'multiple-choice' && (
                         <div className="space-y-3">
@@ -548,6 +675,11 @@ export default function TuteeQuizPage() {
                               </ul>
                             </div>
                           )}
+                          {question.type === 'fill-in' && !Array.isArray(question.answer) && (
+                            <p className="text-sm text-blue-800">
+                              {question.answer}
+                            </p>
+                          )}
                         </div>
                       )}
                     </div>
@@ -577,6 +709,17 @@ export default function TuteeQuizPage() {
                 <User className="w-4 h-4 inline mr-2" />
                 You are viewing this quiz as the tutor. Student responses are shown above.
               </p>
+              {quizCompleted && (
+                <div className="mt-3 flex justify-end">
+                  <button
+                    onClick={handleSaveTutorCorrections}
+                    disabled={savingCorrections}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors text-sm"
+                  >
+                    {savingCorrections ? 'Saving...' : 'Save Correctness Overrides'}
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>

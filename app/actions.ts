@@ -53,36 +53,37 @@ export async function finishOnboarding({
     return { success: false, error: "Unauthorized" };
   }
 
-  if (accountType === "student") {
-    const response = await fetch(
-      `${process.env.NEXT_PUBLIC_BASE_URL}/api/onboarding`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          userId,
-          accountType,
-          role: studentRole,
-          college,
-          department,
-          yearLevel,
-          section,
-          tuteeAvailability: availability,
-          tutorAvailability: availability,
-        }),
-      }
-    );
+  const resolvedRole = accountType === "teacher" ? "tutor" : (studentRole || "tutee");
+  const normalizedAvailability = Array.isArray(availability) ? availability : [];
 
-    const data = await response.json();
-    if (data.success) {
-      return { success: true };
-    } else {
-      console.error("Error updating publicMetadata:", data.error);
-      return { success: false, error: "Failed to update metadata" };
+  const response = await fetch(
+    `${process.env.NEXT_PUBLIC_BASE_URL}/api/onboarding`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        userId,
+        accountType,
+        role: resolvedRole,
+        college,
+        department,
+        yearLevel,
+        section,
+        tuteeAvailability: resolvedRole === "tutee" ? normalizedAvailability : [],
+        tutorAvailability: resolvedRole === "tutor" ? normalizedAvailability : [],
+      }),
     }
+  );
+
+  const data = await response.json();
+  if (data.success) {
+    return { success: true };
   }
+
+  console.error("Error updating publicMetadata:", data.error);
+  return { success: false, error: "Failed to update metadata" };
 }
 
 export async function updateMetadata({
@@ -554,7 +555,7 @@ export async function submitQuizAttempt(params: {
   messageId: string;
   quizAttempt: {
     attempt: 1 | 2;
-    answers: { questionId: string; answer: string }[];
+    answers: { questionId: string; answer: string; isCorrect?: boolean }[];
     score: number;
     completedAt: string;
     tuteeId: string;
@@ -608,6 +609,44 @@ export async function submitQuizAttempt(params: {
   } catch (error) {
     console.error('Server action: Error submitting quiz attempt:', error);
     return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+  }
+}
+
+// Tutor override for quiz attempt correctness
+export async function updateQuizAttemptCorrectness(params: {
+  messageId: string;
+  attempt: 1 | 2;
+  answers: { questionId: string; isCorrect: boolean }[];
+}): Promise<{ success: boolean; data?: any; error?: string }> {
+  try {
+    const { userId } = await auth();
+    if (!userId) {
+      return { success: false, error: "Unauthorized" };
+    }
+
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_BASE_URL}/api/appointments`,
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...params,
+          tutorId: userId,
+          quizAttemptCorrection: true,
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      const text = await response.text();
+      return { success: false, error: `HTTP ${response.status}: ${text}` };
+    }
+
+    const data = await response.json();
+    return { success: true, data };
+  } catch (error) {
+    console.error("Server action: Error updating quiz attempt correctness:", error);
+    return { success: false, error: error instanceof Error ? error.message : "Unknown error" };
   }
 }
 
@@ -789,6 +828,7 @@ export async function fetchTutorHistory(userId?: string): Promise<{
         id: appointment._id,
         appointmentId: appointment._id,
         Tutee: tuteeName,
+        TuteeId: tutee?.id || appointment.tuteeId,
         Date: formattedDate,
         Duration: "1 Hour", // Default duration
         Mode: appointment.mode || "Online",
@@ -884,6 +924,7 @@ export async function fetchTuteeAppointments(userId?: string): Promise<{
         start: startDate,
         end: endDate,
         tutorName,
+        tutorId: tutor?.id || appointment.tutorId,
         subject: appointment.subject || "No Subject",
         mode: appointment.mode || "Online",
         status: appointment.status || "active",
@@ -966,6 +1007,7 @@ export async function fetchTuteeHistory(userId?: string): Promise<{
         id: appointment._id,
         appointmentId: appointment._id,
         tutor: tutorName,
+        tutorId: tutor?.id || appointment.tutorId,
         date: formattedDate,
         duration: "1 Hour", // Default duration
         mode: appointment.mode || "Online",

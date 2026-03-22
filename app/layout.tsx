@@ -9,6 +9,7 @@ export const metadata: Metadata = {
 import { Geist, Geist_Mono } from "next/font/google";
 import { Toaster } from "sonner";
 import GlobalMessageNotifications from "@/components/chat/GlobalMessageNotifications";
+import { trackDailySiteVisit } from "@/app/gamification-actions";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -25,6 +26,8 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  await trackDailySiteVisit();
+
   return (
     <ClerkProvider>
       <html lang="en" >
