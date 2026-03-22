@@ -1,6 +1,6 @@
 "use client";
 
-import { fetchAppointments, getCollectionData } from "@/app/actions";
+import { getCollectionData } from "@/app/actions";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -80,6 +80,18 @@ type UserStats = {
   averageRating: number;
   activeChats: number;
   subjects?: string[];
+  debug?: {
+    userIdCandidates: string[];
+    rawIdentityFields: string[];
+    matchedAppointmentIds: string[];
+    completedAppointmentIds: string[];
+    activeAppointmentIds: string[];
+    matchedReviewIds: string[];
+    ratingReviewerType: "tutee" | "tutor";
+    tutorReceivedReviewIds: string[];
+    tuteeReceivedReviewIds: string[];
+    resolvedRatingSource: "tutor-received" | "tutee-received" | "none";
+  };
 };
 
 type UserWithStats = User & {
@@ -112,8 +124,13 @@ export default function UserManagement() {
   const isSuperAdmin =
     user?.publicMetadata?.isAdmin === true &&
     user?.publicMetadata?.adminRole === "superadmin";
-  const userCollege = user?.publicMetadata?.college as string | undefined;
-  const userDepartment = user?.publicMetadata?.department as string | undefined;
+  const adminCollegeInfo = (user?.publicMetadata as any)?.collegeInformation;
+  const userCollege =
+    adminCollegeInfo?.college ||
+    ((user?.publicMetadata as any)?.college as string | undefined);
+  const userDepartment =
+    adminCollegeInfo?.department ||
+    ((user?.publicMetadata as any)?.department as string | undefined);
 
   const [overallStats, setOverallStats] = useState({
     totalUsers: 0,
@@ -144,27 +161,151 @@ export default function UserManagement() {
     userDepartment,
   ]);
 
+  const normalizeUserId = (value: unknown) =>
+    String(value || "").replace(/^user_/, "").trim().toLowerCase();
+
+  const toRecord = (value: any): Record<string, any> =>
+    value && typeof value === "object" ? (value as Record<string, any>) : {};
+
+  const unwrapUserPayload = (rawUser: any) => {
+    const root = toRecord(rawUser);
+    const data = toRecord(root.data);
+    const payload = Object.keys(data).length > 0 ? data : root;
+    return { root, payload };
+  };
+
+  const buildUserIdCandidates = (rawUser: any) => {
+    const { root, payload } = unwrapUserPayload(rawUser);
+
+    const rawIdentityFields = [
+      payload?.id,
+      root?.id,
+      payload?._id,
+      root?._id,
+      payload?.userId,
+      root?.userId,
+      payload?.external_id,
+      payload?.externalId,
+      payload?.clerkId,
+      root?.external_id,
+      root?.externalId,
+      root?.clerkId,
+      payload?.public_metadata?.userId,
+      payload?.public_metadata?.clerkId,
+      payload?.publicMetadata?.userId,
+      payload?.publicMetadata?.clerkId,
+      root?.public_metadata?.userId,
+      root?.public_metadata?.clerkId,
+      root?.publicMetadata?.userId,
+      root?.publicMetadata?.clerkId,
+      payload?.primaryEmailAddress?.id,
+      root?.primaryEmailAddress?.id,
+    ]
+      .map((value) => String(value || "").trim())
+      .filter(Boolean);
+
+    const rawCandidates = [...rawIdentityFields];
+
+    const emailCandidates = [
+      ...(Array.isArray(payload?.email_addresses) ? payload.email_addresses : []),
+      ...(Array.isArray(payload?.emailAddresses) ? payload.emailAddresses : []),
+      ...(Array.isArray(root?.email_addresses) ? root.email_addresses : []),
+      ...(Array.isArray(root?.emailAddresses) ? root.emailAddresses : []),
+    ]
+      .map((entry: any) =>
+        String(entry?.email_address || entry?.emailAddress || "").trim().toLowerCase()
+      )
+      .filter(Boolean);
+
+    const usernameCandidate = String(payload?.username || root?.username || "").trim().toLowerCase();
+
+    const extraCandidates = [
+      ...emailCandidates,
+      usernameCandidate,
+    ].filter(Boolean);
+
+    rawCandidates.push(...extraCandidates);
+
+    const normalized = rawCandidates.map((value) => normalizeUserId(value)).filter(Boolean);
+
+    const candidates = new Set(
+      [
+        ...rawCandidates,
+        ...normalized,
+        ...normalized.map((value) => `user_${value}`),
+      ].map((value) => String(value || "").trim())
+    );
+
+    return {
+      candidates,
+      rawIdentityFields,
+    };
+  };
+
+  const matchesUserByCandidates = (value: unknown, candidates: Set<string>) => {
+    const raw = String(value || "").trim();
+    if (!raw) return false;
+    const normalized = normalizeUserId(raw);
+
+    return candidates.has(raw) || candidates.has(normalized) || candidates.has(`user_${normalized}`);
+  };
+
+  const getRole = (rawUser: any): "tutor" | "tutee" => {
+    const { root, payload } = unwrapUserPayload(rawUser);
+    const role = String(
+      payload?.role ||
+        root?.role ||
+        payload?.public_metadata?.role ||
+        payload?.publicMetadata?.role ||
+        root?.public_metadata?.role ||
+        root?.publicMetadata?.role ||
+        "tutee"
+    ).toLowerCase();
+
+    return role === "tutor" ? "tutor" : "tutee";
+  };
+
+  const getCollegeInformation = (rawUser: any) =>
+    unwrapUserPayload(rawUser).payload?.public_metadata?.collegeInformation ||
+    unwrapUserPayload(rawUser).payload?.publicMetadata?.collegeInformation ||
+    unwrapUserPayload(rawUser).root?.public_metadata?.collegeInformation ||
+    unwrapUserPayload(rawUser).root?.publicMetadata?.collegeInformation ||
+    {};
+
+  const formatIsoDate = (value: any) => {
+    if (!value) return new Date().toISOString();
+    if (typeof value === "string") return value;
+    if (typeof value === "number") return new Date(value).toISOString();
+    return new Date(value).toISOString();
+  };
+
   const fetchUserData = async () => {
     try {
       setLoading(true);
 
-      // Fetch users and appointments
-      const [usersResponse, appointmentsResponse] = await Promise.all([
+      // Fetch full datasets for accurate admin stats.
+      const [usersResponse, appointmentsResponse, reviewsResponse, subjectsResponse] = await Promise.all([
         getCollectionData("users"),
-        fetchAppointments(),
+        getCollectionData("appointments"),
+        getCollectionData("reviews"),
+        getCollectionData("subjects"),
       ]);
 
-      const usersData = usersResponse.data || [];
-      const appointmentsData = appointmentsResponse.appointments || [];
+      const usersData = usersResponse?.data || [];
+      const appointmentsData = appointmentsResponse?.data || [];
+      const reviewsData = reviewsResponse?.data || [];
+      const subjectsData = subjectsResponse?.data || [];
 
       // Filter out admin users (focusing on regular users only)
       // Make filtering more flexible to catch users regardless of data structure
       const regularUsers = usersData.filter((user: any) => {
-        const isAdmin = user.public_metadata?.isAdmin;
-        const hasRole = user.role || user.publicMetadata?.role;
+        const isAdmin =
+          user.public_metadata?.isAdmin === true ||
+          user.publicMetadata?.isAdmin === true;
+        const hasRole = getRole(user);
 
         return (
-          !isAdmin && (hasRole === "tutor" || hasRole === "tutee" || !hasRole)
+          !isAdmin && (hasRole === "tutor" || hasRole === "tutee")
         );
       });
 
@@ -174,65 +315,227 @@ export default function UserManagement() {
       // Calculate statistics for each user
       const usersWithStats: UserWithStats[] = await Promise.all(
         usersToProcess.map(async (user: any) => {
+          const { root, payload } = unwrapUserPayload(user);
+          const { candidates: userIdCandidates, rawIdentityFields } = buildUserIdCandidates(user);
+
           const userAppointments = appointmentsData.filter(
-            (apt: any) => apt.tutorId === user.id || apt.tuteeId === user.id
+            (apt: any) =>
+              matchesUserByCandidates(apt.tutorId, userIdCandidates) ||
+              matchesUserByCandidates(apt.tuteeId, userIdCandidates)
           );
 
           const completedAppointments = userAppointments.filter(
-            (apt: any) => apt.status === "completed"
+            (apt: any) =>
+              String(apt?.status || "").trim().toLowerCase() === "completed"
           );
 
-          // Calculate average rating (this would need to be implemented based on your review system)
-          const averageRating = 4.2; // Placeholder - you'd calculate this from reviews
+          const role = getRole(user);
+
+          const tutorReceivedReviews = reviewsData.filter(
+            (review: any) =>
+              String(review?.reviewerType || "").toLowerCase() === "tutee" &&
+              matchesUserByCandidates(review?.tutorId, userIdCandidates)
+          );
+
+          const tuteeReceivedReviews = reviewsData.filter(
+            (review: any) =>
+              String(review?.reviewerType || "").toLowerCase() === "tutor" &&
+              matchesUserByCandidates(review?.tuteeId, userIdCandidates)
+          );
+
+          const averageFrom = (items: any[]) => {
+            if (items.length === 0) return 0;
+            const total = items.reduce(
+              (sum: number, review: any) => sum + Number(review?.rating || 0),
+              0
+            );
+            return total / items.length;
+          };
+
+          const tutorReceivedAverage = averageFrom(tutorReceivedReviews);
+          const tuteeReceivedAverage = averageFrom(tuteeReceivedReviews);
+
+          let matchedRatingReviews: any[] = [];
+          let resolvedRatingSource: "tutor-received" | "tutee-received" | "none" = "none";
+
+          if (role === "tutor") {
+            if (tutorReceivedReviews.length > 0) {
+              matchedRatingReviews = tutorReceivedReviews;
+              resolvedRatingSource = "tutor-received";
+            } else if (tuteeReceivedReviews.length > 0) {
+              // Role metadata can be stale; use available data as fallback.
+              matchedRatingReviews = tuteeReceivedReviews;
+              resolvedRatingSource = "tutee-received";
+            }
+          } else {
+            if (tuteeReceivedReviews.length > 0) {
+              matchedRatingReviews = tuteeReceivedReviews;
+              resolvedRatingSource = "tutee-received";
+            } else if (tutorReceivedReviews.length > 0) {
+              matchedRatingReviews = tutorReceivedReviews;
+              resolvedRatingSource = "tutor-received";
+            }
+          }
+
+          const averageRating =
+            resolvedRatingSource === "tutor-received"
+              ? tutorReceivedAverage
+              : resolvedRatingSource === "tutee-received"
+              ? tuteeReceivedAverage
+              : 0;
 
           // Get user's subjects if they're a tutor
           let subjects: string[] = [];
-          if (user.role === "tutor") {
-            // This would come from their offerings/subjects
-            subjects = ["Mathematics", "Science"]; // Placeholder
+          if (role === "tutor") {
+            const tutorSubjects = subjectsData.filter(
+              (subject: any) =>
+                matchesUserByCandidates(subject?.userId, userIdCandidates) &&
+                String(subject?.status || "").toLowerCase() === "available"
+            );
+
+            subjects = Array.from(
+              new Set(
+                tutorSubjects
+                  .map((subject: any) => String(subject?.subject || "").trim())
+                  .filter(Boolean)
+              )
+            );
           }
 
           const stats: UserStats = {
             totalAppointments: userAppointments.length,
             completedAppointments: completedAppointments.length,
-            averageRating,
-            activeChats: Math.floor(Math.random() * 5), // Placeholder
+            averageRating: Number.isFinite(averageRating)
+              ? Number(averageRating.toFixed(1))
+              : 0,
+            activeChats: userAppointments.filter((apt: any) =>
+              ["pending", "accepted"].includes(String(apt?.status || "").toLowerCase())
+            ).length,
             subjects,
+            debug: {
+              userIdCandidates: Array.from(userIdCandidates.values()),
+              rawIdentityFields,
+              matchedAppointmentIds: userAppointments.map((apt: any) =>
+                String(apt?._id || apt?.messageId || "unknown")
+              ),
+              completedAppointmentIds: completedAppointments.map((apt: any) =>
+                String(apt?._id || apt?.messageId || "unknown")
+              ),
+              activeAppointmentIds: userAppointments
+                .filter((apt: any) =>
+                  ["pending", "accepted"].includes(
+                    String(apt?.status || "").toLowerCase()
+                  )
+                )
+                .map((apt: any) => String(apt?._id || apt?.messageId || "unknown")),
+              matchedReviewIds: matchedRatingReviews.map((review: any) =>
+                String(review?._id || "unknown")
+              ),
+              ratingReviewerType: role === "tutor" ? "tutee" : "tutor",
+              tutorReceivedReviewIds: tutorReceivedReviews.map((review: any) =>
+                String(review?._id || "unknown")
+              ),
+              tuteeReceivedReviewIds: tuteeReceivedReviews.map((review: any) =>
+                String(review?._id || "unknown")
+              ),
+              resolvedRatingSource,
+            },
           };
 
+          const firstName =
+            payload.firstName || payload.first_name || payload.given_name || root.firstName || root.first_name || "Unknown";
+          const lastName =
+            payload.lastName || payload.last_name || payload.family_name || root.lastName || root.last_name || "";
+
+          const rawEmailList =
+            payload.emailAddresses ||
+            payload.email_addresses ||
+            root.emailAddresses ||
+            root.email_addresses ||
+            (payload.primaryEmailAddress ? [payload.primaryEmailAddress] : []) ||
+            (root.primaryEmailAddress ? [root.primaryEmailAddress] : []);
+
+          const normalizedEmailAddresses = Array.isArray(rawEmailList)
+            ? rawEmailList
+                .map((entry: any) => ({
+                  emailAddress: entry?.emailAddress || entry?.email_address || "",
+                }))
+                .filter((entry) => entry.emailAddress)
+            : [];
+
+          const publicMetadata =
+            payload.public_metadata ||
+            payload.publicMetadata ||
+            root.public_metadata ||
+            root.publicMetadata ||
+            {};
+
+          const mappedId =
+            payload.id ||
+            root.id ||
+            payload.userId ||
+            root.userId ||
+            String(payload._id || root._id || "");
+
+          const debugCandidates = new Set([
+            ...Array.from(userIdCandidates.values()),
+            String(mappedId || "").trim(),
+            normalizeUserId(mappedId),
+          ].filter(Boolean));
+
           return {
-            id: user.id || user._id || user.userId,
-            _id: user._id || user.id,
-            firstName:
-              user.firstName || user.first_name || user.given_name || "Unknown",
-            lastName: user.lastName || user.last_name || user.family_name || "",
+            id: String(mappedId || ""),
+            _id: String(payload._id || root._id || mappedId || ""),
+            firstName,
+            lastName,
             username:
-              user.username ||
-              user.email_addresses?.[0]?.email_address?.split("@")[0] ||
+              payload.username ||
+              root.username ||
+              normalizedEmailAddresses?.[0]?.emailAddress?.split("@")[0] ||
               "user",
-            emailAddresses:
-              user.emailAddresses ||
-              user.email_addresses ||
-              (user.primaryEmailAddress ? [user.primaryEmailAddress] : []),
-            imageUrl: user.imageUrl || user.image_url || user.profileImageUrl,
-            role: user.role || user.publicMetadata?.role || "tutee",
-            createdAt:
-              user.createdAt ||
-              user.created_at ||
-              user.createdAt ||
-              new Date().toISOString(),
-            updatedAt:
-              user.updatedAt ||
-              user.updated_at ||
-              user.lastUpdatedAt ||
-              new Date().toISOString(),
+            emailAddresses: normalizedEmailAddresses,
+            imageUrl:
+              payload.imageUrl ||
+              payload.image_url ||
+              payload.profileImageUrl ||
+              root.imageUrl ||
+              root.image_url ||
+              root.profileImageUrl,
+            role,
+            createdAt: formatIsoDate(payload.createdAt || payload.created_at || root.createdAt || root.created_at),
+            updatedAt: formatIsoDate(payload.updatedAt || payload.updated_at || payload.lastUpdatedAt || root.updatedAt || root.updated_at || root.lastUpdatedAt),
             lastSignInAt:
-              user.lastSignInAt || user.last_sign_in_at || user.lastActiveAt,
+              payload.lastSignInAt ||
+              payload.last_sign_in_at ||
+              payload.lastActiveAt ||
+              root.lastSignInAt ||
+              root.last_sign_in_at ||
+              root.lastActiveAt,
             onboarded:
-              user.onboarded !== false &&
-              user.publicMetadata?.onboarded !== false,
-            publicMetadata: user.public_metadata, // Preserve the full publicMetadata including collegeInformation
-            stats,
+              payload.onboarded !== false &&
+              publicMetadata?.onboarded !== false,
+            publicMetadata, // Preserve normalized metadata including collegeInformation
+            stats: {
+              totalAppointments: stats.totalAppointments,
+              completedAppointments: stats.completedAppointments,
+              averageRating: stats.averageRating,
+              activeChats: stats.activeChats,
+              subjects: stats.subjects,
+              debug: {
+                ...stats.debug,
+                userIdCandidates: Array.from(debugCandidates.values()),
+                rawIdentityFields:
+                  rawIdentityFields.length > 0
+                    ? rawIdentityFields
+                    : [
+                        String(payload.id || "").trim(),
+                        String(root.id || "").trim(),
+                        String(payload._id || "").trim(),
+                        String(root._id || "").trim(),
+                        normalizedEmailAddresses?.[0]?.emailAddress || "",
+                      ].filter(Boolean),
+              },
+            },
           } as UserWithStats;
         })
       );
@@ -342,7 +645,10 @@ export default function UserManagement() {
           `${user.firstName} ${user.lastName}`
             .toLowerCase()
             .includes(searchTerm.toLowerCase()) ||
-          user.username.toLowerCase().includes(searchTerm.toLowerCase())
+          user.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          (user.emailAddresses?.[0]?.emailAddress || "")
+            .toLowerCase()
+            .includes(searchTerm.toLowerCase())
       );
     }
 
@@ -1004,14 +1310,6 @@ export default function UserManagement() {
                   </div>
                 </div>
               )}
-
-              {/* Recent Activity Placeholder */}
-              <div>
-                <h4 className="font-medium mb-2">Recent Activity</h4>
-                <div className="text-sm text-muted-foreground">
-                  Feature coming soon
-                </div>
-              </div>
             </div>
           )}
         </DialogContent>

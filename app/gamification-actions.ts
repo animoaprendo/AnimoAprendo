@@ -2,12 +2,22 @@
 
 import { auth } from "@clerk/nextjs/server";
 import clientPromise from "@/lib/mongodb";
+import { ObjectId } from "mongodb";
 import { 
   UserGamificationProfile, 
   XPTransaction, 
   Achievement, 
   DailyActivity 
 } from "@/lib/gamification/database-schema";
+
+const XP_REWARDS = {
+  DAILY_LOGIN: 5,
+  FIRST_BLOOD: 20,
+  REPEAT_CUSTOMER_SECOND: 40,
+  REPEAT_CUSTOMER_THIRD: 60,
+  SPECIALIST_50H: 150,
+  VETERAN_100H: 250,
+};
 
 const APPROVED_OFFERING_MILESTONES = [
   {
@@ -255,7 +265,10 @@ export async function updateSessionStats(
 
     const client = await clientPromise;
     const db = client.db("gamification");
+    const mainDb = client.db("main");
     const profileCollection = db.collection<UserGamificationProfile>('userGamificationProfiles');
+    const transactionCollection = db.collection<XPTransaction>('xpTransactions');
+    const appointmentsCollection = mainDb.collection('appointments');
 
     // Get current profile
     let profile = await profileCollection.findOne({ userId: targetUserId });
@@ -286,6 +299,112 @@ export async function updateSessionStats(
         targetUserId
       );
       if (xpResult.success) xpAwarded += 25;
+
+      const appointment = await findAppointmentById(appointmentsCollection, sessionData.appointmentId);
+      const tuteeId = String(appointment?.tuteeId || "");
+      const subject = String(sessionData.subjectId || appointment?.subject || "").trim();
+
+      // Daily Mission: first completed tutoring session of the day.
+      const firstBloodCount = await countCompletedSessionsForDay(appointmentsCollection, targetUserId, new Date());
+      if (firstBloodCount === 1) {
+        const firstBlood = await awardXP(
+          'daily_first_blood',
+          XP_REWARDS.FIRST_BLOOD,
+          'First Blood: completed your first tutoring session today',
+          sessionData.appointmentId,
+          'appointment',
+          targetUserId
+        );
+        if (firstBlood.success) xpAwarded += XP_REWARDS.FIRST_BLOOD;
+      }
+
+      // Repeat Customer mission: 2nd and 3rd completed sessions with same tutee.
+      if (tuteeId) {
+        const completedWithTutee = await appointmentsCollection.countDocuments({
+          tutorId: targetUserId,
+          tuteeId,
+          status: 'completed'
+        });
+
+        if (completedWithTutee === 2 || completedWithTutee === 3) {
+          const repeatTier = completedWithTutee;
+          const repeatActionType = `repeat_customer_${repeatTier}`;
+          const repeatRelatedId = `${targetUserId}:${tuteeId}:${repeatTier}`;
+          const alreadyRewarded = await transactionCollection.findOne({
+            userId: targetUserId,
+            actionType: repeatActionType,
+            relatedId: repeatRelatedId,
+          });
+
+          if (!alreadyRewarded) {
+            const repeatReward = await awardXP(
+              repeatActionType,
+              repeatTier === 2 ? XP_REWARDS.REPEAT_CUSTOMER_SECOND : XP_REWARDS.REPEAT_CUSTOMER_THIRD,
+              `Repeat Customer: completed ${repeatTier} sessions with the same student`,
+              repeatRelatedId,
+              'relationship_milestone',
+              targetUserId
+            );
+
+            if (repeatReward.success) {
+              xpAwarded += repeatTier === 2
+                ? XP_REWARDS.REPEAT_CUSTOMER_SECOND
+                : XP_REWARDS.REPEAT_CUSTOMER_THIRD;
+            }
+          }
+        }
+      }
+
+      // Milestone Mission: The Specialist (50 hours in one subject).
+      if (subject) {
+        const subjectHours = await calculateCompletedHoursForSubject(
+          appointmentsCollection,
+          targetUserId,
+          subject
+        );
+        if (subjectHours >= 50) {
+          const subjectKey = slugifyForAction(subject);
+          const specialistActionType = `specialist_50h_${subjectKey}`;
+          const existingSpecialist = await transactionCollection.findOne({
+            userId: targetUserId,
+            actionType: specialistActionType,
+          });
+
+          if (!existingSpecialist) {
+            const specialistReward = await awardXP(
+              specialistActionType,
+              XP_REWARDS.SPECIALIST_50H,
+              `The Specialist: reached 50 tutoring hours in ${subject}`,
+              subject,
+              'subject_milestone',
+              targetUserId
+            );
+            if (specialistReward.success) xpAwarded += XP_REWARDS.SPECIALIST_50H;
+          }
+        }
+      }
+
+      // Milestone Mission: The Veteran (100 completed tutoring hours total).
+      const totalHours = await calculateCompletedHoursTotal(appointmentsCollection, targetUserId);
+      if (totalHours >= 100) {
+        const veteranActionType = 'veteran_100h';
+        const existingVeteran = await transactionCollection.findOne({
+          userId: targetUserId,
+          actionType: veteranActionType,
+        });
+
+        if (!existingVeteran) {
+          const veteranReward = await awardXP(
+            veteranActionType,
+            XP_REWARDS.VETERAN_100H,
+            'The Veteran: reached 100 total completed tutoring hours',
+            targetUserId,
+            'career_milestone',
+            targetUserId
+          );
+          if (veteranReward.success) xpAwarded += XP_REWARDS.VETERAN_100H;
+        }
+      }
     }
 
     if (sessionData.canceled) {
@@ -591,4 +710,194 @@ async function updateDailyActivity(userId: string, date: string, xpEarned: numbe
   } catch (error) {
     console.error("Error updating daily activity:", error);
   }
+}
+
+// Track one site-visit activity row per user per day.
+export async function trackDailySiteVisit(userId?: string) {
+  try {
+    const { userId: authUserId } = await auth();
+    const targetUserId = userId || authUserId;
+
+    if (!targetUserId) {
+      return { success: false, error: "Unauthorized" };
+    }
+
+    const client = await clientPromise;
+    const db = client.db("gamification");
+    const collection = db.collection<{
+      userId: string;
+      date: string;
+      createdAt: Date;
+      updatedAt: Date;
+    }>("dailyLogin");
+
+    const date = new Date().toISOString().split("T")[0];
+    const now = new Date();
+
+    await collection.updateOne(
+      { userId: targetUserId, date },
+      {
+        $setOnInsert: {
+          userId: targetUserId,
+          date,
+          createdAt: now,
+          updatedAt: now,
+        },
+      },
+      { upsert: true }
+    );
+
+    const existingDailyLoginXP = await db.collection<XPTransaction>('xpTransactions').findOne({
+      userId: targetUserId,
+      actionType: 'daily_login',
+      relatedId: date,
+    });
+
+    if (!existingDailyLoginXP) {
+      await awardXP(
+        'daily_login',
+        XP_REWARDS.DAILY_LOGIN,
+        'Daily Mission: logged in today',
+        date,
+        'daily_login',
+        targetUserId
+      );
+    }
+
+    return { success: true };
+  } catch (error) {
+    console.error("Error tracking daily site visit:", error);
+    return { success: false, error: "Failed to track daily site visit" };
+  }
+}
+
+// Calculate current consecutive-day streak from dailyLogin records.
+export async function getDailyLoginStreak(userId?: string) {
+  try {
+    const { userId: authUserId } = await auth();
+    const targetUserId = userId || authUserId;
+
+    if (!targetUserId) {
+      return { success: false, error: "Unauthorized" };
+    }
+
+    const client = await clientPromise;
+    const db = client.db("gamification");
+    const collection = db.collection<{ userId: string; date: string }>("dailyLogin");
+
+    const rows = await collection
+      .find({ userId: targetUserId })
+      .project({ _id: 0, date: 1 })
+      .sort({ date: -1 })
+      .limit(400)
+      .toArray();
+
+    const dateSet = new Set(rows.map((row) => row.date));
+
+    const cursor = new Date();
+    cursor.setUTCHours(0, 0, 0, 0);
+
+    let streakDays = 0;
+    while (true) {
+      const dayKey = cursor.toISOString().split("T")[0];
+      if (!dateSet.has(dayKey)) break;
+
+      streakDays += 1;
+      cursor.setUTCDate(cursor.getUTCDate() - 1);
+    }
+
+    return { success: true, data: { streakDays } };
+  } catch (error) {
+    console.error("Error fetching daily login streak:", error);
+    return { success: false, error: "Failed to fetch daily login streak" };
+  }
+}
+
+async function findAppointmentById(
+  collection: any,
+  appointmentId?: string
+) {
+  if (!appointmentId) return null;
+
+  try {
+    return await collection.findOne({ _id: new ObjectId(appointmentId) });
+  } catch {
+    return await collection.findOne({ messageId: appointmentId });
+  }
+}
+
+function getAppointmentDurationMinutes(appointment: any): number {
+  const direct = Number(appointment?.durationMinutes ?? appointment?.duration ?? 0);
+  if (Number.isFinite(direct) && direct > 0) return direct;
+
+  const start = appointment?.datetimeISO ? new Date(appointment.datetimeISO) : null;
+  const end = appointment?.endDate ? new Date(appointment.endDate) : null;
+  if (start && end && Number.isFinite(start.getTime()) && Number.isFinite(end.getTime()) && end > start) {
+    const minutes = Math.round((end.getTime() - start.getTime()) / 60000);
+    if (minutes > 0) return minutes;
+  }
+
+  return 60;
+}
+
+async function countCompletedSessionsForDay(
+  collection: any,
+  tutorId: string,
+  day: Date
+): Promise<number> {
+  const start = new Date(day);
+  start.setUTCHours(0, 0, 0, 0);
+  const end = new Date(start);
+  end.setUTCDate(end.getUTCDate() + 1);
+
+  return collection.countDocuments({
+    tutorId,
+    status: 'completed',
+    datetimeISO: {
+      $gte: start.toISOString(),
+      $lt: end.toISOString(),
+    },
+  });
+}
+
+async function calculateCompletedHoursForSubject(
+  collection: any,
+  tutorId: string,
+  subject: string
+): Promise<number> {
+  const appointments = await collection
+    .find({ tutorId, status: 'completed', subject }, { projection: { durationMinutes: 1, duration: 1, datetimeISO: 1, endDate: 1 } })
+    .toArray();
+
+  const totalMinutes = appointments.reduce(
+    (sum: number, appointment: any) => sum + getAppointmentDurationMinutes(appointment),
+    0
+  );
+
+  return totalMinutes / 60;
+}
+
+async function calculateCompletedHoursTotal(
+  collection: any,
+  tutorId: string
+): Promise<number> {
+  const appointments = await collection
+    .find({ tutorId, status: 'completed' }, { projection: { durationMinutes: 1, duration: 1, datetimeISO: 1, endDate: 1 } })
+    .toArray();
+
+  const totalMinutes = appointments.reduce(
+    (sum: number, appointment: any) => sum + getAppointmentDurationMinutes(appointment),
+    0
+  );
+
+  return totalMinutes / 60;
+}
+
+function slugifyForAction(value: string): string {
+  return value
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+    .slice(0, 64) || 'subject';
 }

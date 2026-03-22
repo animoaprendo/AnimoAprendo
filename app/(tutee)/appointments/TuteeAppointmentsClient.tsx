@@ -19,6 +19,7 @@ interface AppointmentEvent extends RBCEvent {
   id: string;
   appointmentId: string;
   tutorName: string;
+  tutorId?: string;
   subject: string;
   mode: string;
   status: string;
@@ -191,7 +192,13 @@ export default function TuteeAppointmentsClient({ initialEvents }: TuteeAppointm
             <div className="space-y-3">
               <div className="flex justify-between items-center">
                 <span className="font-medium text-gray-700">Tutor:</span>
-                <span className="text-gray-900">{selectedEvent.tutorName}</span>
+                {selectedEvent.tutorId ? (
+                  <Link href={`/profile/${selectedEvent.tutorId}`} className="text-gray-900 hover:underline">
+                    {selectedEvent.tutorName}
+                  </Link>
+                ) : (
+                  <span className="text-gray-900">{selectedEvent.tutorName}</span>
+                )}
               </div>
               
               <div className="flex justify-between items-center">

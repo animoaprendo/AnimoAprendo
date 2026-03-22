@@ -7,13 +7,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { Skeleton } from "@/components/ui/skeleton";
 import { useUser } from "@clerk/nextjs";
-import { ArrowLeft, Calendar, Clock, MessageCircle, Star, Users } from "lucide-react";
+import { ArrowLeft, BookOpen, Calendar, Clock, MessageCircle, Star, Users } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { use, useEffect, useState } from "react";
 import { PiPauseCircle } from "react-icons/pi";
+import { PacmanLoader } from "react-spinners";
 
 interface Availability {
   id: string;
@@ -59,6 +59,189 @@ interface Review {
   };
 }
 
+interface ClerkTimeOfDay {
+  hourOfDay: number;
+  minute: number;
+}
+
+interface ClerkTimeRange {
+  id?: string;
+  timeStart?: ClerkTimeOfDay;
+  timeEnd?: ClerkTimeOfDay;
+}
+
+interface ClerkAvailabilitySlot {
+  day?: string;
+  timeRanges?: ClerkTimeRange[];
+}
+
+const parseTimeToMinutes = (timeValue: string): number | null => {
+  const value = timeValue.trim();
+
+  const twelveHourMatch = value.match(/^(\d{1,2})(?::(\d{1,2}))?(?::\d{1,2})?\s*(AM|PM)$/i);
+  if (twelveHourMatch) {
+    const hours = Number(twelveHourMatch[1]);
+    const minutes = Number(twelveHourMatch[2] ?? "0");
+    const period = twelveHourMatch[3].toUpperCase();
+
+    if (hours < 1 || hours > 12 || minutes < 0 || minutes > 59) return null;
+
+    const normalizedHours = (hours % 12) + (period === "PM" ? 12 : 0);
+    return normalizedHours * 60 + minutes;
+  }
+
+  const twentyFourHourMatch = value.match(/^(\d{1,2})(?::(\d{1,2}))?(?::\d{1,2})?$/);
+  if (twentyFourHourMatch) {
+    const hours = Number(twentyFourHourMatch[1]);
+    const minutes = Number(twentyFourHourMatch[2] ?? "0");
+
+    if (hours < 0 || hours > 23 || minutes < 0 || minutes > 59) return null;
+    return hours * 60 + minutes;
+  }
+
+  return null;
+};
+
+const normalizeDayKey = (day: string): string => day.trim().toLowerCase();
+
+const dayLabelFromKey = (dayKey: string): string => {
+  if (!dayKey) return "Unknown";
+  return dayKey.charAt(0).toUpperCase() + dayKey.slice(1);
+};
+
+const WEEKDAY_ORDER = [
+  "monday",
+  "tuesday",
+  "wednesday",
+  "thursday",
+  "friday",
+  "saturday",
+  "sunday",
+] as const;
+
+const timeOfDayToMinutes = (time?: ClerkTimeOfDay): number | null => {
+  if (!time) return null;
+  const { hourOfDay, minute } = time;
+  if (hourOfDay < 0 || hourOfDay > 23 || minute < 0 || minute > 59) return null;
+  return hourOfDay * 60 + minute;
+};
+
+const formatMinutesToTime = (totalMinutes: number): string => {
+  const normalized = ((totalMinutes % 1440) + 1440) % 1440;
+  const hours24 = Math.floor(normalized / 60);
+  const minutes = normalized % 60;
+  const period = hours24 >= 12 ? "PM" : "AM";
+  const hours12 = hours24 % 12 || 12;
+
+  return `${hours12}:${minutes.toString().padStart(2, "0")} ${period}`;
+};
+
+const getSharedAvailabilityOverlaps = (
+  offeringAvailability: Availability[],
+  tuteeAvailability: ClerkAvailabilitySlot[]
+) => {
+  const offeringByDay = new Map<string, Array<{ start: number; end: number }>>();
+  const tuteeByDay = new Map<string, Array<{ start: number; end: number }>>();
+
+  for (const slot of offeringAvailability) {
+    const start = parseTimeToMinutes(slot.start);
+    const end = parseTimeToMinutes(slot.end);
+    const dayKey = normalizeDayKey(slot.day);
+
+    if (!dayKey || start === null || end === null || start >= end) continue;
+
+    const daySlots = offeringByDay.get(dayKey) ?? [];
+    daySlots.push({ start, end });
+    offeringByDay.set(dayKey, daySlots);
+  }
+
+  for (const slot of tuteeAvailability) {
+    const dayKey = normalizeDayKey(slot.day ?? "");
+    if (!dayKey || !Array.isArray(slot.timeRanges)) continue;
+
+    const daySlots = tuteeByDay.get(dayKey) ?? [];
+
+    for (const range of slot.timeRanges) {
+      const start = timeOfDayToMinutes(range.timeStart);
+      const end = timeOfDayToMinutes(range.timeEnd);
+      if (start === null || end === null || start >= end) continue;
+
+      daySlots.push({ start, end });
+    }
+
+    if (daySlots.length > 0) {
+      tuteeByDay.set(dayKey, daySlots);
+    }
+  }
+
+  const overlaps: Array<{ day: string; start: number; end: number; duration: number }> = [];
+
+  for (const [day, offerSlots] of offeringByDay.entries()) {
+    const tuteeSlots = tuteeByDay.get(day);
+    if (!tuteeSlots || tuteeSlots.length === 0) continue;
+
+    const sortedOffer = [...offerSlots].sort((a, b) => a.start - b.start);
+    const sortedTutee = [...tuteeSlots].sort((a, b) => a.start - b.start);
+    const rawOverlaps: Array<{ start: number; end: number }> = [];
+
+    for (const offerSlot of sortedOffer) {
+      for (const tuteeSlot of sortedTutee) {
+        if (tuteeSlot.end <= offerSlot.start) continue;
+        if (tuteeSlot.start >= offerSlot.end) break;
+
+        const overlapStart = Math.max(offerSlot.start, tuteeSlot.start);
+        const overlapEnd = Math.min(offerSlot.end, tuteeSlot.end);
+
+        if (overlapStart < overlapEnd) {
+          rawOverlaps.push({ start: overlapStart, end: overlapEnd });
+        }
+      }
+    }
+
+    if (rawOverlaps.length === 0) continue;
+
+    rawOverlaps.sort((a, b) => a.start - b.start);
+
+    const mergedOverlaps: Array<{ start: number; end: number }> = [rawOverlaps[0]];
+    for (let i = 1; i < rawOverlaps.length; i++) {
+      const previous = mergedOverlaps[mergedOverlaps.length - 1];
+      const current = rawOverlaps[i];
+
+      if (current.start <= previous.end) {
+        previous.end = Math.max(previous.end, current.end);
+      } else {
+        mergedOverlaps.push({ ...current });
+      }
+    }
+
+    for (const window of mergedOverlaps) {
+      overlaps.push({
+        day: dayLabelFromKey(day),
+        start: window.start,
+        end: window.end,
+        duration: window.end - window.start,
+      });
+    }
+  }
+
+  overlaps.sort((a, b) => {
+    const aDay = normalizeDayKey(a.day);
+    const bDay = normalizeDayKey(b.day);
+    const aIndex = WEEKDAY_ORDER.indexOf(aDay as (typeof WEEKDAY_ORDER)[number]);
+    const bIndex = WEEKDAY_ORDER.indexOf(bDay as (typeof WEEKDAY_ORDER)[number]);
+
+    if (aIndex !== bIndex) {
+      if (aIndex === -1) return 1;
+      if (bIndex === -1) return -1;
+      return aIndex - bIndex;
+    }
+
+    return a.start - b.start;
+  });
+
+  return overlaps;
+};
+
 export default function OfferDetailsPage({
   params,
 }: {
@@ -72,6 +255,8 @@ export default function OfferDetailsPage({
   const [offer, setOffer] = useState<CardInfo | null>(null);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showSplash, setShowSplash] = useState(true);
+  const [isSplashExiting, setIsSplashExiting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [visibleCount, setVisibleCount] = useState(5);
 
@@ -107,36 +292,51 @@ export default function OfferDetailsPage({
     }
   }, [slug]);
 
-  // Loading state
-  if (loading) {
+  useEffect(() => {
+    if (loading) {
+      setShowSplash(true);
+      setIsSplashExiting(false);
+      return;
+    }
+
+    const delayTimer = setTimeout(() => {
+      setIsSplashExiting(true);
+    }, 500);
+
+    const exitTimer = setTimeout(() => {
+      setShowSplash(false);
+    }, 850);
+
+    return () => {
+      clearTimeout(delayTimer);
+      clearTimeout(exitTimer);
+    };
+  }, [loading]);
+
+  // Loading splash with delayed + animated dismissal
+  if (showSplash) {
     return (
-      <div className="min-h-screen bg-linear-to-br from-green-50 to-emerald-100">
-        <div className="container mx-auto p-4 md:p-6 max-w-7xl">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Main content skeleton */}
-            <div className="lg:col-span-2 space-y-6">
-              <Skeleton className="h-8 w-32" />
-              <Skeleton className="h-64 lg:h-96 w-full rounded-lg" />
-              <Card>
-                <CardHeader>
-                  <Skeleton className="h-8 w-3/4" />
-                  <div className="space-y-2">
-                    <Skeleton className="h-4 w-full" />
-                    <Skeleton className="h-4 w-full" />
-                    <Skeleton className="h-4 w-2/3" />
-                  </div>
-                </CardHeader>
-              </Card>
-            </div>
-            {/* Sidebar skeleton */}
-            <div className="space-y-6">
-              <Card>
-                <CardContent className="p-6 space-y-4">
-                  <Skeleton className="h-12 w-full" />
-                  <Skeleton className="h-4 w-3/4 mx-auto" />
-                </CardContent>
-              </Card>
-            </div>
+      <div
+        className={`min-h-screen min-w-screen bg-linear-to-br from-emerald-50 via-green-100 to-teal-100 flex items-center justify-center p-6 transition-opacity duration-300 ${
+          isSplashExiting ? "opacity-0" : "opacity-100"
+        }`}
+      >
+        <div
+          className={`w-full max-w-md rounded-2xl border border-emerald-200/70 bg-white/85 backdrop-blur-sm shadow-xl p-8 text-center transition-all duration-300 ${
+            isSplashExiting ? "opacity-0 scale-95" : "opacity-100 scale-100"
+          }`}
+        >
+          <div className="mx-auto mb-5 h-16 w-16 rounded-2xl bg-linear-to-br from-green-600 to-emerald-500 flex items-center justify-center shadow-lg animate-pulse">
+            <BookOpen className="h-8 w-8 text-white" />
+          </div>
+
+          <h2 className="text-2xl font-bold text-gray-900">Preparing Tutor Details</h2>
+          <p className="mt-2 text-sm text-gray-600">
+            Loading subject information, availability, and reviews.
+          </p>
+
+          <div className="mt-6 flex items-center justify-center">
+            <PacmanLoader color="#059669" size={14} />
           </div>
         </div>
       </div>
@@ -207,6 +407,14 @@ export default function OfferDetailsPage({
   const averageRating = reviews.length > 0 
     ? reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length 
     : 0;
+  const tuteeAvailability = (
+    (user?.publicMetadata as { tuteeAvailability?: ClerkAvailabilitySlot[] } | undefined)
+      ?.tuteeAvailability ?? []
+  );
+  const hasTuteeAvailability = tuteeAvailability.some(
+    (slot) => Array.isArray(slot.timeRanges) && slot.timeRanges.length > 0
+  );
+  const availabilityOverlaps = getSharedAvailabilityOverlaps(offer.availability, tuteeAvailability);
 
   const handleShowMore = () => {
     setVisibleCount((prev) => Math.min(prev + 5, reviews.length));
@@ -327,7 +535,10 @@ export default function OfferDetailsPage({
                   <Card className="border border-green-100 bg-green-50/50">
                     <CardContent className="p-4">
                       <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
+                        <Link
+                          href={`/profile/${offer.user.id}`}
+                          className="flex items-center gap-3 rounded-md -m-1 p-1 hover:bg-white/80 transition-colors"
+                        >
                           <Avatar className="w-14 h-14 border-2 border-white shadow-sm">
                             <AvatarImage
                               src={offer.user.imageUrl || "https://i.pravatar.cc/100?img=1"}
@@ -338,7 +549,7 @@ export default function OfferDetailsPage({
                             </AvatarFallback>
                           </Avatar>
                           <div>
-                            <h3 className="font-semibold text-lg text-gray-900">
+                            <h3 className="font-semibold text-lg text-gray-900 hover:underline">
                               {offer.user.displayName}
                             </h3>
                             <Badge variant="outline" className="text-xs bg-white border-green-200 text-green-700">
@@ -346,7 +557,7 @@ export default function OfferDetailsPage({
                               Tutor
                             </Badge>
                           </div>
-                        </div>
+                        </Link>
                         {offer.averageRating && offer.averageRating > 0 && (
                           <Badge className="bg-white text-gray-700 hover:bg-white border shadow-sm">
                             <Star className="w-4 h-4 text-yellow-500 fill-yellow-500 mr-1" />
@@ -389,6 +600,38 @@ export default function OfferDetailsPage({
                       </CardContent>
                     </Card>
                   ))}
+                </div>
+
+                <div className="mt-4 rounded-lg border border-green-200 bg-green-50/70 p-4">
+                  <h4 className="text-sm font-semibold text-green-900 mb-2">Your Overlap Time</h4>
+                  {availabilityOverlaps.length > 0 ? (
+                    <div className="space-y-2">
+                      {availabilityOverlaps.map((overlap, index) => (
+                        <div
+                          key={`${overlap.day}-${overlap.start}-${overlap.end}-${index}`}
+                          className="flex flex-wrap items-center gap-2 text-sm"
+                        >
+                          <Badge variant="outline" className="bg-white border-green-300 text-green-800">
+                            {overlap.day}
+                          </Badge>
+                          <span className="font-medium text-gray-800">
+                            {formatMinutesToTime(overlap.start)} - {formatMinutesToTime(overlap.end)}
+                          </span>
+                          <Badge className="bg-green-700 hover:bg-green-700 text-white">
+                            {overlap.duration} min overlap
+                          </Badge>
+                        </div>
+                      ))}
+                    </div>
+                  ) : !hasTuteeAvailability ? (
+                    <p className="text-sm text-gray-600">
+                      Add your availability in profile to see your overlap with this tutor.
+                    </p>
+                  ) : (
+                    <p className="text-sm text-gray-600">
+                      No shared availability windows found between your schedule and this tutor.
+                    </p>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -448,20 +691,30 @@ export default function OfferDetailsPage({
                           >
                             <CardContent className="p-5">
                               <div className="flex items-start gap-4">
-                                <Avatar className="w-12 h-12 border-2 border-white shadow-sm">
-                                  <AvatarImage
-                                    src={review.reviewer.imageUrl || "https://i.pravatar.cc/100?img=1"}
-                                    alt={review.reviewer.displayName}
-                                  />
-                                  <AvatarFallback className="bg-blue-100 text-blue-700 font-semibold">
-                                    {review.reviewer.displayName?.charAt(0) || "U"}
-                                  </AvatarFallback>
-                                </Avatar>
+                                <Link
+                                  href={`/profile/${review.reviewer.id}`}
+                                  className="rounded-md hover:ring-2 hover:ring-blue-100 transition-all"
+                                >
+                                  <Avatar className="w-12 h-12 border-2 border-white shadow-sm">
+                                    <AvatarImage
+                                      src={review.reviewer.imageUrl || "https://i.pravatar.cc/100?img=1"}
+                                      alt={review.reviewer.displayName}
+                                    />
+                                    <AvatarFallback className="bg-blue-100 text-blue-700 font-semibold">
+                                      {review.reviewer.displayName?.charAt(0) || "U"}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                </Link>
                                 <div className="flex-1">
                                   <div className="flex items-center justify-between mb-3">
                                     <div>
                                       <h4 className="font-semibold text-gray-900">
-                                        {review.reviewer.displayName}
+                                        <Link
+                                          href={`/profile/${review.reviewer.id}`}
+                                          className="hover:underline"
+                                        >
+                                          {review.reviewer.displayName}
+                                        </Link>
                                       </h4>
                                       <div className="flex items-center gap-1 mt-1">
                                         {[1, 2, 3, 4, 5].map((star) => (

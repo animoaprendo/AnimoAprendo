@@ -13,18 +13,49 @@ export async function POST(req: Request) {
     yearLevel,
     section,
     availability,
+    tuteeAvailability,
+    tutorAvailability,
   }: any = await req.json();
 
   try {
     const client = await clerkClient();
+    const existingUser = await client.users.getUser(userId);
+    const existingVerified =
+      (existingUser.publicMetadata as Record<string, unknown> | undefined)
+        ?.verified;
+
+    const resolvedRole = role || (accountType === "teacher" ? "tutor" : "tutee");
+    const resolvedTuteeAvailability = Array.isArray(tuteeAvailability)
+      ? tuteeAvailability
+      : Array.isArray(availability) && resolvedRole === "tutee"
+        ? availability
+        : [];
+    const resolvedTutorAvailability = Array.isArray(tutorAvailability)
+      ? tutorAvailability
+      : Array.isArray(availability) && resolvedRole === "tutor"
+        ? availability
+        : [];
+
+    const publicMetadata: Record<string, unknown> = {
+      onboarded: true,
+      accountType,
+      role: resolvedRole,
+      collegeInformation: { college, department, yearLevel, section },
+      tuteeAvailability: resolvedTuteeAvailability,
+      tutorAvailability: resolvedTutorAvailability,
+      availability:
+        resolvedRole === "tutor"
+          ? resolvedTutorAvailability
+          : resolvedTuteeAvailability,
+    };
+
+    if (accountType === "teacher") {
+      publicMetadata.verified =
+        typeof existingVerified === "boolean" ? existingVerified : false;
+    }
+
     await client.users.updateUserMetadata(userId, {
-      publicMetadata: {
-        onboarded: true,
-        accountType,
-        role,
-        collegeInformation: { college, department, yearLevel, section },
-        availability,
-      },
+      publicMetadata,
     });
 
     return NextResponse.json({ success: true }, {status: 200});

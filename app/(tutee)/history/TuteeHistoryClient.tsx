@@ -11,12 +11,14 @@ import { Separator } from "@/components/ui/separator";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { BookOpen, Search, Star } from "lucide-react";
+import Link from "next/link";
 import { useEffect, useState } from "react";
 
 interface HistoryItem {
   id: string;
   appointmentId: string;
   tutor: string;
+  tutorId?: string;
   date: string;
   duration: string;
   mode: string;
@@ -240,7 +242,15 @@ export default function TuteeHistoryClient({
                   ) : (
                     filteredHistory.map((item) => (
                       <TableRow key={item.id} className="hover:bg-gray-50">
-                        <TableCell className="font-medium">{item.tutor}</TableCell>
+                        <TableCell className="font-medium">
+                          {item.tutorId ? (
+                            <Link href={`/profile/${item.tutorId}`} className="hover:underline">
+                              {item.tutor}
+                            </Link>
+                          ) : (
+                            item.tutor
+                          )}
+                        </TableCell>
                         <TableCell>{item.date}</TableCell>
                         <TableCell>{item.duration}</TableCell>
                         <TableCell>

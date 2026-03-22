@@ -19,6 +19,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Table,
   TableBody,
@@ -38,12 +39,14 @@ import {
   Star,
   Users
 } from "lucide-react";
+import Link from "next/link";
 import React, { useState } from "react";
 
 type HistoryItem = {
   id: string;
   appointmentId: string;
   Tutee: string;
+  TuteeId?: string;
   Date: string;
   Duration: string;
   Mode: string;
@@ -75,6 +78,7 @@ const TutorHistoryClient: React.FC<TutorHistoryClientProps> = ({
     null
   );
   const [tempRating, setTempRating] = useState(0);
+  const [tempComment, setTempComment] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const filteredData = historyData.filter((item) =>
@@ -84,6 +88,7 @@ const TutorHistoryClient: React.FC<TutorHistoryClientProps> = ({
   const openRatingModal = (session: HistoryItem) => {
     setSelectedSession(session);
     setTempRating(0);
+    setTempComment("");
     setModalOpen(true);
   };
 
@@ -95,6 +100,7 @@ const TutorHistoryClient: React.FC<TutorHistoryClientProps> = ({
       const result = await createReview({
         appointmentId: selectedSession.appointmentId,
         rating: tempRating,
+        comment: tempComment.trim() || undefined,
       });
 
       if (result.success) {
@@ -122,6 +128,7 @@ const TutorHistoryClient: React.FC<TutorHistoryClientProps> = ({
         }));
 
         setModalOpen(false);
+        setTempComment("");
       } else {
         console.error("Failed to submit rating:", result.error);
         alert("Failed to submit rating. Please try again.");
@@ -248,7 +255,13 @@ const TutorHistoryClient: React.FC<TutorHistoryClientProps> = ({
                     filteredData.map((item) => (
                       <TableRow key={item.id} className="text-center">
                         <TableCell className="font-medium">
-                          {item.Tutee}
+                          {item.TuteeId ? (
+                            <Link href={`/profile/${item.TuteeId}`} className="hover:underline">
+                              {item.Tutee}
+                            </Link>
+                          ) : (
+                            item.Tutee
+                          )}
                         </TableCell>
                         <TableCell>{item.Date}</TableCell>
                         <TableCell>
@@ -334,6 +347,21 @@ const TutorHistoryClient: React.FC<TutorHistoryClientProps> = ({
                 {tempRating} star{tempRating > 1 ? "s" : ""} selected
               </p>
             )}
+
+            <div className="mt-4 space-y-2">
+              <p className="text-sm font-medium">Comment for student (optional)</p>
+              <Textarea
+                value={tempComment}
+                onChange={(e) => setTempComment(e.target.value)}
+                placeholder="Write a short feedback comment..."
+                rows={4}
+                maxLength={500}
+                disabled={isSubmitting}
+              />
+              <p className="text-xs text-muted-foreground text-right">
+                {tempComment.length}/500
+              </p>
+            </div>
           </div>
 
           <DialogFooter className="gap-2">
