@@ -362,8 +362,10 @@ export async function sendMessage(messageData: {
   appointment?: {
     appointmentType?: 'single' | 'recurring';
     endDate?: string;
+    selectedDates?: string[];
     startDate: string;
     datetimeISO: string;
+    durationMinutes?: number;
     mode: 'online' | 'in-person';
     status?: 'pending' | 'accepted' | 'declined';
     subject?: string;

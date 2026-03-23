@@ -64,13 +64,19 @@ export default function ChatContainer({
   const [showAppointmentModal, setShowAppointmentModal] = useState(false);
   const [appointmentDate, setAppointmentDate] = useState<string>("");
   const [appointmentTime, setAppointmentTime] = useState<string>("08:00");
+  const [appointmentDurationOption, setAppointmentDurationOption] = useState<
+    "15" | "30" | "45" | "60" | "120" | "custom"
+  >("60");
+  const [customDurationMinutes, setCustomDurationMinutes] = useState<string>("90");
   const [appointmentMode, setAppointmentMode] = useState<
     "online" | "in-person"
   >("online");
   const [appointmentType, setAppointmentType] = useState<
     "single" | "recurring"
   >("single");
-  const [appointmentEndDate, setAppointmentEndDate] = useState<string>("");
+  const [selectedRecurringDates, setSelectedRecurringDates] = useState<string[]>(
+    []
+  );
 
   // Appointment data
   const [upcomingAppointments, setUpcomingAppointments] = useState<any[]>([]);
@@ -949,21 +955,62 @@ export default function ChatContainer({
   );
 
   const handleSendAppointment = useCallback(async () => {
-    if (!activeUser || !userId || !appointmentDate || !appointmentTime) return;
+    if (!activeUser || !userId || !appointmentTime) return;
 
-    const dt = new Date(`${appointmentDate}T${appointmentTime}`);
+    const durationMinutes =
+      appointmentDurationOption === "custom"
+        ? Number(customDurationMinutes)
+        : Number(appointmentDurationOption);
+    if (!Number.isFinite(durationMinutes) || durationMinutes <= 0) return;
+
+    const sortedRecurringDates = [...selectedRecurringDates].sort((a, b) =>
+      a.localeCompare(b)
+    );
+    const startDateString =
+      appointmentType === "recurring" ? sortedRecurringDates[0] : appointmentDate;
+
+    if (!startDateString) return;
+    if (appointmentType === "recurring" && sortedRecurringDates.length === 0) return;
+
+    const dt = new Date(`${startDateString}T${appointmentTime}`);
     const datetimeISO = dt.toISOString();
+    const durationLabel =
+      durationMinutes >= 60 && durationMinutes % 60 === 0
+        ? `${durationMinutes / 60} hr`
+        : `${durationMinutes} min`;
+
+    const recurringDateSummary = sortedRecurringDates
+      .slice(0, 4)
+      .map((dateString) =>
+        new Date(`${dateString}T00:00:00`).toLocaleDateString("en-US", {
+          weekday: "short",
+          month: "short",
+          day: "numeric",
+        })
+      )
+      .join(", ");
+    const hasMoreRecurringDates = sortedRecurringDates.length > 4;
 
     try {
-      const appointmentMessage = `Appointment request for ${dt.toLocaleDateString(
-        "en-US",
-        {
-          weekday: "long",
-          year: "numeric",
-          month: "long",
-          day: "numeric",
-        }
-      )} at ${dt.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })} (${appointmentMode})`;
+      const appointmentMessage =
+        appointmentType === "recurring"
+          ? `Recurring appointment request (${sortedRecurringDates.length} sessions) on ${recurringDateSummary}${
+              hasMoreRecurringDates ? ", ..." : ""
+            } at ${dt.toLocaleTimeString("en-US", {
+              hour: "numeric",
+              minute: "2-digit",
+              hour12: true,
+            })} for ${durationLabel} (${appointmentMode})`
+          : `Appointment request for ${dt.toLocaleDateString("en-US", {
+              weekday: "long",
+              year: "numeric",
+              month: "long",
+              day: "numeric",
+            })} at ${dt.toLocaleTimeString("en-US", {
+              hour: "numeric",
+              minute: "2-digit",
+              hour12: true,
+            })} for ${durationLabel} (${appointmentMode})`;
 
       const result = await sendMessage({
         creatorId: userId,
@@ -975,11 +1022,14 @@ export default function ChatContainer({
         appointment: {
           appointmentType,
           endDate:
-            appointmentType === "recurring" && appointmentEndDate
-              ? new Date(appointmentEndDate).toISOString()
+            appointmentType === "recurring" && sortedRecurringDates.length > 0
+              ? sortedRecurringDates[sortedRecurringDates.length - 1]
               : undefined,
-          startDate: new Date(appointmentDate).toISOString(),
+          selectedDates:
+            appointmentType === "recurring" ? sortedRecurringDates : undefined,
+          startDate: new Date(`${startDateString}T00:00:00`).toISOString(),
           datetimeISO,
+          durationMinutes,
           mode: appointmentMode,
           status: "pending",
           subject: inquiry?.subject || "Tutoring Session",
@@ -989,6 +1039,7 @@ export default function ChatContainer({
 
       if (result.success) {
         setShowAppointmentModal(false);
+        setSelectedRecurringDates([]);
       }
     } catch (error) {
       console.error("Error sending appointment:", error);
@@ -998,12 +1049,14 @@ export default function ChatContainer({
     userId,
     appointmentDate,
     appointmentTime,
+    appointmentDurationOption,
+    customDurationMinutes,
     appointmentMode,
     userRole,
     inquiry,
     offeringId,
     appointmentType,
-    appointmentEndDate,
+    selectedRecurringDates,
   ]);
 
   // Loading state
@@ -1055,7 +1108,7 @@ export default function ChatContainer({
       </div>
 
       {/* Mobile/Main Content Area */}
-      <div className="flex-1  grow shrink-0 h-full flex flex-col bg-white rounded-lg shadow-md relative">
+      <div className="flex-1 grow shrink-0 h-full flex flex-col bg-white rounded-lg shadow-md relative">
         <MessagesContainer
           messages={messages}
           activeUser={activeUser}
@@ -1182,12 +1235,16 @@ export default function ChatContainer({
         setAppointmentDate={setAppointmentDate}
         appointmentTime={appointmentTime}
         setAppointmentTime={setAppointmentTime}
+        appointmentDurationOption={appointmentDurationOption}
+        setAppointmentDurationOption={setAppointmentDurationOption}
+        customDurationMinutes={customDurationMinutes}
+        setCustomDurationMinutes={setCustomDurationMinutes}
         appointmentMode={appointmentMode}
         setAppointmentMode={setAppointmentMode}
         appointmentType={appointmentType}
         setAppointmentType={setAppointmentType}
-        appointmentEndDate={appointmentEndDate}
-        setAppointmentEndDate={setAppointmentEndDate}
+        selectedRecurringDates={selectedRecurringDates}
+        setSelectedRecurringDates={setSelectedRecurringDates}
         onSend={handleSendAppointment}
       />
     </div>

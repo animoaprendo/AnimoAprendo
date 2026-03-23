@@ -90,8 +90,12 @@ export async function POST(request: NextRequest) {
       newMessage.appointment = {
         appointmentType: appointment.appointmentType || 'single',
         endDate: appointment.endDate,
+        selectedDates: Array.isArray(appointment.selectedDates)
+          ? appointment.selectedDates
+          : undefined,
         startDate: appointment.startDate || appointment.datetimeISO,
         datetimeISO: appointment.datetimeISO,
+        durationMinutes: appointment.durationMinutes,
         mode: appointment.mode as 'online' | 'in-person',
         status: (appointment.status ?? 'pending') as 'pending' | 'accepted' | 'declined',
         subject: appointment.subject,
@@ -289,6 +293,8 @@ export async function PATCH(request: NextRequest) {
             appointmentType: updated.appointment.appointmentType || 'single',
             datetimeISO: updated.appointment.datetimeISO,
             endDate: updated.appointment.endDate,
+            selectedDates: updated.appointment.selectedDates,
+            durationMinutes: updated.appointment.durationMinutes,
             mode: updated.appointment.mode,
             subject: subject, // Save subject information from inquiry
             offeringId: offeringId, // Save offering ID if available
