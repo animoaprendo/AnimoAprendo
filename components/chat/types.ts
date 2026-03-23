@@ -11,8 +11,10 @@ export interface Message {
   appointment?: {
     appointmentType?: "single" | "recurring";
     endDate?: string;
+    selectedDates?: string[];
     startDate?: string;
     datetimeISO: string;
+    durationMinutes?: number;
     mode: "online" | "in-person";
     status: "pending" | "accepted" | "declined" | "cancelled";
     subject?: string;

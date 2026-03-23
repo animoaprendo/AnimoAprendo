@@ -125,9 +125,27 @@ function AppointmentMessage({
 }) {
   const appointment = message.appointment!;
   const date = new Date(appointment.datetimeISO);
+  const recurringDates =
+    appointment.appointmentType === "recurring"
+      ? [...(appointment.selectedDates || [])].sort((a, b) => a.localeCompare(b))
+      : [];
   const isCreator = message.creatorId === userId;
   const canRespond = !isCreator && appointment.status === "pending";
   const canCancel = isCreator && appointment.status !== "cancelled";
+
+  const formatRecurringDate = (dateString: string) => {
+    return new Date(`${dateString}T00:00:00`).toLocaleDateString([], {
+      weekday: "short",
+      month: "short",
+      day: "numeric",
+    });
+  };
+
+  const durationLabel = appointment.durationMinutes
+    ? appointment.durationMinutes >= 60 && appointment.durationMinutes % 60 === 0
+      ? `${appointment.durationMinutes / 60} hr`
+      : `${appointment.durationMinutes} min`
+    : null;
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -157,7 +175,7 @@ function AppointmentMessage({
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-2 font-semibold text-green-900">
+      <div className="flex items-center gap-2 font-semibold text-white">
         <Calendar className="w-5 h-5" />
         Appointment Request
       </div>
@@ -174,13 +192,26 @@ function AppointmentMessage({
         <div className="flex items-center gap-2 text-sm">
           <Calendar className="w-4 h-4" />
           <span className="font-medium">Date:</span>
-          <span>{date.toLocaleDateString()}</span>
           {appointment.appointmentType === "recurring" &&
-            appointment.endDate && (
-              <span>
-                - {new Date(appointment.endDate).toLocaleDateString()}
-              </span>
-            )}
+          recurringDates.length > 0 ? (
+            <span className="flex flex-wrap gap-1">
+              {recurringDates.map((dateString) => (
+                <span
+                  key={dateString}
+                  className="px-2 py-0.5 rounded-full bg-green-50 border border-green-200 text-xs text-black"
+                >
+                  {formatRecurringDate(dateString)}
+                </span>
+              ))}
+            </span>
+          ) : (
+            <span
+                  key={date.toISOString()}
+                  className="px-2 py-0.5 rounded-full bg-green-50 border border-green-200 text-xs text-black"
+                >
+                  {date.toLocaleDateString()}
+                </span>
+          )}
         </div>
 
         <div className="flex items-center gap-2 text-sm">
@@ -192,12 +223,15 @@ function AppointmentMessage({
               minute: "2-digit",
             })}
           </span>
+          {durationLabel && (
+            <span className="text-xs text-white">({durationLabel})</span>
+          )}
         </div>
 
         <div className="flex items-center gap-2 text-sm">
           <MapPin className="w-4 h-4" />
           <span className="font-medium">Mode:</span>
-          <Badge variant="outline" className="capitalize text-xs">
+          <Badge variant="outline" className="capitalize text-xs bg-green-300">
             {appointment.mode}
           </Badge>
         </div>
