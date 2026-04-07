@@ -4,6 +4,7 @@ import { InfoIcon, X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { useUser } from "@clerk/nextjs";
 
 // Import all our new components
 import AppointmentModal from "./AppointmentModal";
@@ -45,6 +46,9 @@ export default function ChatContainer({
   userRole = "tutee",
   offeringId,
 }: ChatContainerProps) {
+  // Get current user from Clerk
+  const { user: clerkUser } = useUser();
+  
   // State management
   const [users, setUsers] = useState<User[]>([]);
   const [activeUser, setActiveUser] = useState<User | null>(null);
@@ -77,6 +81,7 @@ export default function ChatContainer({
   const [selectedRecurringDates, setSelectedRecurringDates] = useState<string[]>(
     []
   );
+  const [subjectAvailability, setSubjectAvailability] = useState<any[]>([]);
 
   // Appointment data
   const [upcomingAppointments, setUpcomingAppointments] = useState<any[]>([]);
@@ -422,6 +427,8 @@ export default function ChatContainer({
                           username: userData.username,
                           emailAddress: userData.emailAddress,
                           imageUrl: userData.imageUrl,
+                          tuteeAvailability: userData.tuteeAvailability,
+                          tutorAvailability: userData.tutorAvailability,
                         }
                       : user
                   )
@@ -696,6 +703,8 @@ export default function ChatContainer({
                     username: user.username,
                     emailAddress: user.emailAddress,
                     imageUrl: user.imageUrl,
+                    tuteeAvailability: user.tuteeAvailability,
+                    tutorAvailability: user.tutorAvailability,
                   });
                 }
               });
@@ -758,6 +767,8 @@ export default function ChatContainer({
                   username: userData.username,
                   emailAddress: userData.emailAddress,
                   imageUrl: userData.imageUrl,
+                  tuteeAvailability: userData.tuteeAvailability,
+                  tutorAvailability: userData.tutorAvailability,
                 };
                 setUsers([updatedUser, ...usersList]);
                 setActiveUser(updatedUser);
@@ -873,6 +884,137 @@ export default function ChatContainer({
 
     fetchInquiry();
   }, [activeUser, userId, userRole, recipientId, offeringId]);
+
+  // Fetch subject/offering availability
+  useEffect(() => {
+    if (!offeringId) {
+      setSubjectAvailability([]);
+      return;
+    }
+
+    const fetchOfferingAvailability = async () => {
+      try {
+        const response = await fetch(
+          `${process.env.NEXT_PUBLIC_BASE_URL}/api/getOffering?id=${offeringId}`
+        );
+        const data = await response.json();
+
+        if (data.success && data.data) {
+          // Normalize offering availability to the same structure used by AppointmentModal.
+          const offering = data.data;
+          const rawAvailability = offering.availability || offering.tuteeAvailability || [];
+          const normalizedAvailability = Array.isArray(rawAvailability)
+            ? rawAvailability
+                .map((slot: any, index: number) => {
+                  const normalizedDay = typeof slot?.day === "string" ? slot.day.toLowerCase() : "";
+
+                  if (Array.isArray(slot?.timeRanges)) {
+                    return {
+                      day: normalizedDay,
+                      timeRanges: slot.timeRanges,
+                    };
+                  }
+
+                  if (slot?.start && slot?.end) {
+                    const [startHour = "0", startMinute = "0"] = String(slot.start).split(":");
+                    const [endHour = "0", endMinute = "0"] = String(slot.end).split(":");
+
+                    return {
+                      day: normalizedDay,
+                      timeRanges: [
+                        {
+                          id: slot.id || `subject-${index}`,
+                          timeStart: {
+                            hourOfDay: Number.parseInt(startHour, 10) || 0,
+                            minute: Number.parseInt(startMinute, 10) || 0,
+                          },
+                          timeEnd: {
+                            hourOfDay: Number.parseInt(endHour, 10) || 0,
+                            minute: Number.parseInt(endMinute, 10) || 0,
+                          },
+                        },
+                      ],
+                    };
+                  }
+
+                  return null;
+                })
+                .filter((slot): slot is { day: string; timeRanges: any[] } =>
+                  Boolean(slot && slot.day && Array.isArray(slot.timeRanges) && slot.timeRanges.length > 0)
+                )
+            : [];
+
+          console.log("Offering availability (raw):", rawAvailability);
+          console.log("Offering availability (normalized):", normalizedAvailability);
+          setSubjectAvailability(normalizedAvailability);
+        } else {
+          setSubjectAvailability([]);
+        }
+      } catch (error) {
+        console.error("Error fetching offering availability:", error);
+        setSubjectAvailability([]);
+      }
+    };
+
+    fetchOfferingAvailability();
+  }, [offeringId]);
+
+  // Fetch availability for the active user
+  useEffect(() => {
+    if (!activeUser) return;
+
+    const fetchAvailability = async () => {
+      try {
+        const userId_normalized = activeUser.id.startsWith("user_")
+          ? activeUser.id.replace("user_", "")
+          : activeUser.id;
+
+        console.log("Fetching availability for user:", userId_normalized);
+
+        const response = await fetch(
+          `${process.env.NEXT_PUBLIC_BASE_URL}/api/user-availability?userIds=${userId_normalized}`
+        );
+        const data = await response.json();
+
+        console.log("Availability fetch response:", data);
+
+        if (data.success && data.data) {
+          const userKey = activeUser.id.startsWith("user_")
+            ? activeUser.id
+            : `user_${activeUser.id}`;
+          const availabilityInfo = data.data[userKey] || data.data[userId_normalized];
+
+          console.log("Availability info for user:", availabilityInfo);
+
+          if (availabilityInfo) {
+            const updatedActiveUser = {
+              ...activeUser,
+              tuteeAvailability: availabilityInfo.tuteeAvailability,
+              tutorAvailability: availabilityInfo.tutorAvailability,
+            };
+
+            setActiveUser(updatedActiveUser);
+
+            setUsers((prev) =>
+              prev.map((user) =>
+                user.id === activeUser.id
+                  ? {
+                      ...user,
+                      tuteeAvailability: availabilityInfo.tuteeAvailability,
+                      tutorAvailability: availabilityInfo.tutorAvailability,
+                    }
+                  : user
+              )
+            );
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching user availability:", error);
+      }
+    };
+
+    fetchAvailability();
+  }, [activeUser?.id]);
 
   // Clear pending messages when switching users
   useEffect(() => {
@@ -1246,6 +1388,22 @@ export default function ChatContainer({
         selectedRecurringDates={selectedRecurringDates}
         setSelectedRecurringDates={setSelectedRecurringDates}
         onSend={handleSendAppointment}
+        currentUserAvailability={
+          clerkUser?.publicMetadata
+            ? userRole === "tutee"
+              ? (clerkUser.publicMetadata.tuteeAvailability as any)
+              : (clerkUser.publicMetadata.tutorAvailability as any)
+            : undefined
+        }
+        otherUserAvailability={
+          activeUser
+            ? userRole === "tutor"
+              ? activeUser.tuteeAvailability
+              : activeUser.tutorAvailability
+            : undefined
+        }
+        subjectAvailability={subjectAvailability}
+        userRole={userRole}
       />
     </div>
   );

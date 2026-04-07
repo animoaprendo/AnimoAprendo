@@ -19,6 +19,22 @@ interface UserDocument {
       yearLevel?: number;
       section?: string;
     };
+    tuteeAvailability?: Array<{
+      day: string;
+      timeRanges: Array<{
+        id: string;
+        timeStart: { hourOfDay: number; minute: number };
+        timeEnd: { hourOfDay: number; minute: number };
+      }>;
+    }>;
+    tutorAvailability?: Array<{
+      day: string;
+      timeRanges: Array<{
+        id: string;
+        timeStart: { hourOfDay: number; minute: number };
+        timeEnd: { hourOfDay: number; minute: number };
+      }>;
+    }>;
   };
 }
 
@@ -71,6 +87,8 @@ export async function GET(request: NextRequest) {
         ? `${user.first_name} ${user.last_name}`
         : user.username || user.email_addresses?.[0]?.email_address || 'Unknown User',
       collegeInformation: user.public_metadata?.collegeInformation || null,
+      tuteeAvailability: user.public_metadata?.tuteeAvailability || [],
+      tutorAvailability: user.public_metadata?.tutorAvailability || [],
     }));
 
     return NextResponse.json({ users: transformedUsers });

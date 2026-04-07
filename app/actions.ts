@@ -71,8 +71,8 @@ export async function finishOnboarding({
         department,
         yearLevel,
         section,
-        tuteeAvailability: resolvedRole === "tutee" ? normalizedAvailability : [],
-        tutorAvailability: resolvedRole === "tutor" ? normalizedAvailability : [],
+        tuteeAvailability: normalizedAvailability,
+        tutorAvailability: normalizedAvailability,
       }),
     }
   );

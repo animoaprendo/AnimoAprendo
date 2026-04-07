@@ -1,6 +1,15 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+
+interface AvailabilitySlot {
+  day: string;
+  timeRanges: Array<{
+    id: string;
+    timeStart: { hourOfDay: number; minute: number };
+    timeEnd: { hourOfDay: number; minute: number };
+  }>;
+}
 
 interface AppointmentModalProps {
   isOpen: boolean;
@@ -22,6 +31,10 @@ interface AppointmentModalProps {
   selectedRecurringDates: string[];
   setSelectedRecurringDates: (dates: string[]) => void;
   onSend: () => void;
+  currentUserAvailability?: AvailabilitySlot[];
+  otherUserAvailability?: AvailabilitySlot[];
+  subjectAvailability?: AvailabilitySlot[];
+  userRole?: "tutee" | "tutor";
 }
 
 export default function AppointmentModal({
@@ -42,8 +55,25 @@ export default function AppointmentModal({
   selectedRecurringDates,
   setSelectedRecurringDates,
   onSend,
+  currentUserAvailability = [],
+  otherUserAvailability = [],
+  subjectAvailability = [],
+  userRole = "tutee",
 }: AppointmentModalProps) {
   if (!isOpen) return null;
+
+  // Debug - log availability data with detailed info
+  useEffect(() => {
+    console.log("AppointmentModal - Availability updated");
+    console.log("  Current user availability:", currentUserAvailability?.length || 0, "days");
+    console.log("  Other user availability:", otherUserAvailability?.length || 0, "days");
+    if (currentUserAvailability?.length > 0) {
+      console.log("    Current user days:", currentUserAvailability.map((s) => s.day).join(", "));
+    }
+    if (otherUserAvailability?.length > 0) {
+      console.log("    Other user days:", otherUserAvailability.map((s) => s.day).join(", "));
+    }
+  }, [currentUserAvailability, otherUserAvailability]);
 
   // Calculate minimum date (at least tomorrow to ensure 24-hour lead time)
   const getMinDate = () => {
@@ -77,12 +107,57 @@ export default function AppointmentModal({
     return [...dates].sort((a, b) => a.localeCompare(b));
   };
 
+  // Helper function to get day name from date string
+  const getDayNameFromDateString = (dateString: string): string => {
+    const date = new Date(`${dateString}T00:00:00`);
+    const days = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
+    return days[date.getDay()];
+  };
+
+  // Helper function to convert time string like "08:00" to minutes from midnight
+  const timeStringToMinutes = (timeStr: string): number => {
+    const [hours, minutes] = timeStr.split(":").map(Number);
+    return hours * 60 + minutes;
+  };
+
   const [calendarMonth, setCalendarMonth] = useState(() => {
     const min = parseDateString(minDate);
     return new Date(min.getFullYear(), min.getMonth(), 1);
   });
 
   const weekLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+  const normalizeDay = (day?: string) => (day || "").toLowerCase();
+  const getSlotForDay = (slots: AvailabilitySlot[] = [], dayName: string) =>
+    slots.find((slot) => normalizeDay(slot.day) === dayName);
+
+  // Determine tutee and tutor availability based on userRole
+  const tuteeAvailability = userRole === "tutee" ? currentUserAvailability : otherUserAvailability;
+  const tutorAvailability = userRole === "tutee" ? otherUserAvailability : currentUserAvailability;
+
+  // Helper function to check if a date has tutee + subject matched availability (GREEN)
+  const isDateMatchedWithSubject = (dateString: string): boolean => {
+    if (!tuteeAvailability || !subjectAvailability || subjectAvailability.length === 0) {
+      return false;
+    }
+
+    const dayName = getDayNameFromDateString(dateString);
+    const tuteeDaySlot = getSlotForDay(tuteeAvailability, dayName);
+    const subjectDaySlot = getSlotForDay(subjectAvailability, dayName);
+
+    return Boolean(tuteeDaySlot && subjectDaySlot);
+  };
+
+  // Helper function to check if a date has tutee + tutor matched availability (YELLOW)
+  const isDateMatched = (dateString: string): boolean => {
+    if (!tuteeAvailability || !tutorAvailability) return false;
+
+    const dayName = getDayNameFromDateString(dateString);
+    const tuteeDaySlot = getSlotForDay(tuteeAvailability, dayName);
+    const tutorDaySlot = getSlotForDay(tutorAvailability, dayName);
+
+    return Boolean(tuteeDaySlot && tutorDaySlot);
+  };
 
   const calendarDays = useMemo(() => {
     const year = calendarMonth.getFullYear();
@@ -96,6 +171,7 @@ export default function AppointmentModal({
       dateString: string;
       isDisabled: boolean;
       isSelected: boolean;
+      matchType: "none" | "tutor-tutee" | "subject-aligned";
     } | null> = [];
 
     for (let i = 0; i < leadingEmptySlots; i += 1) {
@@ -104,11 +180,20 @@ export default function AppointmentModal({
 
     for (let day = 1; day <= daysInMonth; day += 1) {
       const dateString = formatDateString(new Date(year, month, day));
+      let matchType: "none" | "tutor-tutee" | "subject-aligned" = "none";
+      
+      if (isDateMatchedWithSubject(dateString)) {
+        matchType = "subject-aligned";
+      } else if (isDateMatched(dateString)) {
+        matchType = "tutor-tutee";
+      }
+      
       days.push({
         day,
         dateString,
         isDisabled: dateString < minDate,
         isSelected: selectedRecurringDates.includes(dateString),
+        matchType,
       });
     }
 
@@ -117,7 +202,7 @@ export default function AppointmentModal({
     }
 
     return days;
-  }, [calendarMonth, minDate, selectedRecurringDates]);
+  }, [calendarMonth, minDate, selectedRecurringDates, currentUserAvailability, otherUserAvailability, subjectAvailability]);
 
   const handleToggleRecurringDate = (dateString: string) => {
     if (dateString < minDate) return;
@@ -164,7 +249,7 @@ export default function AppointmentModal({
     { value: "custom", label: "Custom" },
   ] as const;
 
-  const timeOptions = [
+  const allTimeOptions = [
     "08:00",
     "08:30",
     "09:00",
@@ -192,6 +277,83 @@ export default function AppointmentModal({
     "20:00",
   ];
 
+  // Section times for the selected date:
+  // Matched = (Tutee + Subject) OR (Tutee + Tutor), Other = everything else.
+  const sectionedTimes = useMemo(() => {
+    if (!appointmentDate || !hasValidDuration) {
+      return {
+        matched: [] as string[],
+        other: allTimeOptions,
+      };
+    }
+
+    const dayName = getDayNameFromDateString(appointmentDate);
+    const tuteeDaySlot = getSlotForDay(tuteeAvailability, dayName);
+    const tutorDaySlot = getSlotForDay(tutorAvailability, dayName);
+    const subjectDaySlot = getSlotForDay(subjectAvailability, dayName);
+
+    const matched: string[] = [];
+    const other: string[] = [];
+
+    allTimeOptions.forEach((time) => {
+      const startMinutes = timeStringToMinutes(time);
+      const endMinutes = startMinutes + selectedDurationMinutes;
+
+      const canFitWithinOverlap = (
+        slotA?: AvailabilitySlot,
+        slotB?: AvailabilitySlot
+      ) => {
+        if (!slotA || !slotB) return false;
+
+        return slotA.timeRanges.some((rangeA) => {
+          const rangeAStart = rangeA.timeStart.hourOfDay * 60 + rangeA.timeStart.minute;
+          const rangeAEnd = rangeA.timeEnd.hourOfDay * 60 + rangeA.timeEnd.minute;
+
+          return slotB.timeRanges.some((rangeB) => {
+            const rangeBStart = rangeB.timeStart.hourOfDay * 60 + rangeB.timeStart.minute;
+            const rangeBEnd = rangeB.timeEnd.hourOfDay * 60 + rangeB.timeEnd.minute;
+
+            const overlapStart = Math.max(rangeAStart, rangeBStart);
+            const overlapEnd = Math.min(rangeAEnd, rangeBEnd);
+
+            return startMinutes >= overlapStart && endMinutes <= overlapEnd;
+          });
+        });
+      };
+
+      const fitsTuteeSubject = canFitWithinOverlap(tuteeDaySlot, subjectDaySlot);
+      const fitsTuteeTutor = canFitWithinOverlap(tuteeDaySlot, tutorDaySlot);
+
+      if (fitsTuteeSubject || fitsTuteeTutor) {
+        matched.push(time);
+      } else {
+        other.push(time);
+      }
+    });
+
+    return { matched, other };
+  }, [
+    appointmentDate,
+    hasValidDuration,
+    selectedDurationMinutes,
+    tuteeAvailability,
+    tutorAvailability,
+    subjectAvailability,
+  ]);
+
+  useEffect(() => {
+    if (!appointmentDate || !appointmentTime) return;
+
+    const existsInMatched = sectionedTimes.matched.includes(appointmentTime);
+    const existsInOther = sectionedTimes.other.includes(appointmentTime);
+
+    if (!existsInMatched && !existsInOther) {
+      setAppointmentTime(
+        sectionedTimes.matched[0] || sectionedTimes.other[0] || "08:00"
+      );
+    }
+  }, [appointmentDate, appointmentTime, sectionedTimes, setAppointmentTime]);
+
   return (
     <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center">
       <div className="bg-white w-full max-w-md max-h-[90vh] rounded-2xl shadow-lg p-6 overflow-y-auto">
@@ -207,11 +369,24 @@ export default function AppointmentModal({
                 onChange={(e) => setAppointmentTime(e.target.value)}
                 className="w-full border rounded-lg px-3 py-2"
               >
-                {timeOptions.map((time) => (
-                  <option key={time} value={time}>
-                    {time}
-                  </option>
-                ))}
+                {sectionedTimes.matched.length > 0 && (
+                  <optgroup label="Matched Times">
+                    {sectionedTimes.matched.map((time) => (
+                      <option key={time} value={time}>
+                        {time}
+                      </option>
+                    ))}
+                  </optgroup>
+                )}
+                {sectionedTimes.other.length > 0 && (
+                  <optgroup label="Other Times">
+                    {sectionedTimes.other.map((time) => (
+                      <option key={time} value={time}>
+                        {time}
+                      </option>
+                    ))}
+                  </optgroup>
+                )}
               </select>
             </div>
             <div>
@@ -300,6 +475,18 @@ export default function AppointmentModal({
                   ? "Choose one date for this appointment."
                   : "Pick any days you want (for example Mon, Wed, Fri)."}
               </p>
+              {tuteeAvailability && tuteeAvailability.length > 0 && tutorAvailability && tutorAvailability.length > 0 && (
+                <div className="text-xs mt-2 space-y-1">
+                  {subjectAvailability && subjectAvailability.length > 0 ? (
+                    <>
+                      <p className="text-green-600">🟢 Green dates: Tutee & Subject availability aligned</p>
+                      <p className="text-yellow-600">🟡 Yellow dates: Tutee & Tutor availability aligned</p>
+                    </>
+                  ) : (
+                    <p className="text-yellow-600">🟡 Yellow dates: Tutee & Tutor availability aligned</p>
+                  )}
+                </div>
+              )}
             </div>
 
             <div className="border rounded-xl p-3">
@@ -366,15 +553,20 @@ export default function AppointmentModal({
                       type="button"
                       disabled={day.isDisabled}
                       onClick={() => handleDateSelection(day.dateString)}
-                      className={`h-8 rounded-md text-sm transition-colors ${
+                      className={`h-8 rounded-md text-sm transition-colors relative ${
                         isSelected
                           ? "bg-green-700 text-white"
                           : day.isDisabled
                           ? "bg-gray-100 text-gray-300 cursor-not-allowed"
+                          : day.matchType === "subject-aligned"
+                          ? "bg-green-200 text-gray-700 hover:bg-green-300 font-semibold border-2 border-green-400"
+                          : day.matchType === "tutor-tutee"
+                          ? "bg-yellow-200 text-gray-700 hover:bg-yellow-300 font-semibold border-2 border-yellow-400"
                           : "bg-white text-gray-700 hover:bg-green-50"
                       }`}
                     >
                       {day.day}
+                      {day.matchType !== "none" && <span className={`absolute -top-1 -right-1 w-2 h-2 rounded-full ${day.matchType === "subject-aligned" ? "bg-green-400" : "bg-yellow-400"}`}></span>}
                     </button>
                   );
                 })}

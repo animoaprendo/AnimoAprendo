@@ -619,7 +619,7 @@ export default function OfferDetailsPage({
                 </div>
 
                 <div className="mt-4 rounded-lg border border-green-200 bg-green-50/70 p-4">
-                  <h4 className="text-sm font-semibold text-green-900 mb-2">Your Overlap Time</h4>
+                  <h4 className="text-sm font-semibold text-green-900 mb-2">Your Matched Time</h4>
                   {availabilityOverlaps.length > 0 ? (
                     <div className="space-y-2">
                       {availabilityOverlaps.map((overlap, index) => (
