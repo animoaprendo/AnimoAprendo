@@ -71,8 +71,8 @@ export async function finishOnboarding({
         department,
         yearLevel,
         section,
-        tuteeAvailability: resolvedRole === "tutee" ? normalizedAvailability : [],
-        tutorAvailability: resolvedRole === "tutor" ? normalizedAvailability : [],
+        tuteeAvailability: normalizedAvailability,
+        tutorAvailability: normalizedAvailability,
       }),
     }
   );
@@ -467,6 +467,7 @@ export async function updateAppointmentStatus(params: {
   messageId: string;
   status: 'accepted' | 'declined' | 'cancelled';
   actorId: string;
+  declineReason?: string;
 }): Promise<{ success: boolean; data?: any; error?: string }> {
   try {
     const response = await fetch(
@@ -678,7 +679,7 @@ export async function fetchAppointments(userId?: string, messageId?: string): Pr
 
     const response = await fetch(
       `${process.env.NEXT_PUBLIC_BASE_URL}/api/appointments?${params}`,
-      { method: "GET" }
+      { method: "GET", cache: "no-store" }
     );
 
     if (!response.ok) {

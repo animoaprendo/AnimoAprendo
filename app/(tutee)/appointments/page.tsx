@@ -2,9 +2,11 @@ import { fetchTuteeAppointments } from "@/app/actions";
 import { Card, CardContent } from "@/components/ui/card";
 import { auth } from "@clerk/nextjs/server";
 import { AlertCircle, Lock } from "lucide-react";
+import { unstable_noStore as noStore } from "next/cache";
 import TuteeAppointmentsClient from "./TuteeAppointmentsClient";
 
 export default async function AppointmentsPage() {
+  noStore();
   const { userId } = await auth();
   
   if (!userId) {
@@ -37,7 +39,10 @@ export default async function AppointmentsPage() {
     );
   }
 
-  const events = appointmentsResult.appointments || [];
+  const events = (appointmentsResult.appointments || []).filter(
+    (event: { status?: string }) =>
+      event.status === "accepted" || event.status === "completed"
+  );
 
   return (
     <TuteeAppointmentsClient initialEvents={events} />

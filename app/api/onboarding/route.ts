@@ -25,28 +25,22 @@ export async function POST(req: Request) {
         ?.verified;
 
     const resolvedRole = role || (accountType === "teacher" ? "tutor" : "tutee");
-    const resolvedTuteeAvailability = Array.isArray(tuteeAvailability)
-      ? tuteeAvailability
-      : Array.isArray(availability) && resolvedRole === "tutee"
-        ? availability
-        : [];
-    const resolvedTutorAvailability = Array.isArray(tutorAvailability)
-      ? tutorAvailability
-      : Array.isArray(availability) && resolvedRole === "tutor"
-        ? availability
-        : [];
+    const resolvedOnboardingAvailability = Array.isArray(availability)
+      ? availability
+      : Array.isArray(tuteeAvailability)
+        ? tuteeAvailability
+        : Array.isArray(tutorAvailability)
+          ? tutorAvailability
+          : [];
 
     const publicMetadata: Record<string, unknown> = {
       onboarded: true,
       accountType,
       role: resolvedRole,
       collegeInformation: { college, department, yearLevel, section },
-      tuteeAvailability: resolvedTuteeAvailability,
-      tutorAvailability: resolvedTutorAvailability,
-      availability:
-        resolvedRole === "tutor"
-          ? resolvedTutorAvailability
-          : resolvedTuteeAvailability,
+      tuteeAvailability: resolvedOnboardingAvailability,
+      tutorAvailability: resolvedOnboardingAvailability,
+      availability: resolvedOnboardingAvailability,
     };
 
     if (accountType === "teacher") {

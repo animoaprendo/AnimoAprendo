@@ -3,7 +3,9 @@
 import { InfoIcon, X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { useUser } from "@clerk/nextjs";
 
 // Import all our new components
 import AppointmentModal from "./AppointmentModal";
@@ -45,6 +47,10 @@ export default function ChatContainer({
   userRole = "tutee",
   offeringId,
 }: ChatContainerProps) {
+  const router = useRouter();
+  // Get current user from Clerk
+  const { user: clerkUser } = useUser();
+  
   // State management
   const [users, setUsers] = useState<User[]>([]);
   const [activeUser, setActiveUser] = useState<User | null>(null);
@@ -77,6 +83,10 @@ export default function ChatContainer({
   const [selectedRecurringDates, setSelectedRecurringDates] = useState<string[]>(
     []
   );
+  const [subjectAvailability, setSubjectAvailability] = useState<any[]>([]);
+  const [showDeclineReasonModal, setShowDeclineReasonModal] = useState(false);
+  const [declineReason, setDeclineReason] = useState("");
+  const [pendingDeclineMessage, setPendingDeclineMessage] = useState<Message | null>(null);
 
   // Appointment data
   const [upcomingAppointments, setUpcomingAppointments] = useState<any[]>([]);
@@ -422,6 +432,8 @@ export default function ChatContainer({
                           username: userData.username,
                           emailAddress: userData.emailAddress,
                           imageUrl: userData.imageUrl,
+                          tuteeAvailability: userData.tuteeAvailability,
+                          tutorAvailability: userData.tutorAvailability,
                         }
                       : user
                   )
@@ -696,6 +708,8 @@ export default function ChatContainer({
                     username: user.username,
                     emailAddress: user.emailAddress,
                     imageUrl: user.imageUrl,
+                    tuteeAvailability: user.tuteeAvailability,
+                    tutorAvailability: user.tutorAvailability,
                   });
                 }
               });
@@ -758,6 +772,8 @@ export default function ChatContainer({
                   username: userData.username,
                   emailAddress: userData.emailAddress,
                   imageUrl: userData.imageUrl,
+                  tuteeAvailability: userData.tuteeAvailability,
+                  tutorAvailability: userData.tutorAvailability,
                 };
                 setUsers([updatedUser, ...usersList]);
                 setActiveUser(updatedUser);
@@ -874,6 +890,137 @@ export default function ChatContainer({
     fetchInquiry();
   }, [activeUser, userId, userRole, recipientId, offeringId]);
 
+  // Fetch subject/offering availability
+  useEffect(() => {
+    if (!offeringId) {
+      setSubjectAvailability([]);
+      return;
+    }
+
+    const fetchOfferingAvailability = async () => {
+      try {
+        const response = await fetch(
+          `${process.env.NEXT_PUBLIC_BASE_URL}/api/getOffering?id=${offeringId}`
+        );
+        const data = await response.json();
+
+        if (data.success && data.data) {
+          // Normalize offering availability to the same structure used by AppointmentModal.
+          const offering = data.data;
+          const rawAvailability = offering.availability || offering.tuteeAvailability || [];
+          const normalizedAvailability = Array.isArray(rawAvailability)
+            ? rawAvailability
+                .map((slot: any, index: number) => {
+                  const normalizedDay = typeof slot?.day === "string" ? slot.day.toLowerCase() : "";
+
+                  if (Array.isArray(slot?.timeRanges)) {
+                    return {
+                      day: normalizedDay,
+                      timeRanges: slot.timeRanges,
+                    };
+                  }
+
+                  if (slot?.start && slot?.end) {
+                    const [startHour = "0", startMinute = "0"] = String(slot.start).split(":");
+                    const [endHour = "0", endMinute = "0"] = String(slot.end).split(":");
+
+                    return {
+                      day: normalizedDay,
+                      timeRanges: [
+                        {
+                          id: slot.id || `subject-${index}`,
+                          timeStart: {
+                            hourOfDay: Number.parseInt(startHour, 10) || 0,
+                            minute: Number.parseInt(startMinute, 10) || 0,
+                          },
+                          timeEnd: {
+                            hourOfDay: Number.parseInt(endHour, 10) || 0,
+                            minute: Number.parseInt(endMinute, 10) || 0,
+                          },
+                        },
+                      ],
+                    };
+                  }
+
+                  return null;
+                })
+                .filter((slot): slot is { day: string; timeRanges: any[] } =>
+                  Boolean(slot && slot.day && Array.isArray(slot.timeRanges) && slot.timeRanges.length > 0)
+                )
+            : [];
+
+          console.log("Offering availability (raw):", rawAvailability);
+          console.log("Offering availability (normalized):", normalizedAvailability);
+          setSubjectAvailability(normalizedAvailability);
+        } else {
+          setSubjectAvailability([]);
+        }
+      } catch (error) {
+        console.error("Error fetching offering availability:", error);
+        setSubjectAvailability([]);
+      }
+    };
+
+    fetchOfferingAvailability();
+  }, [offeringId]);
+
+  // Fetch availability for the active user
+  useEffect(() => {
+    if (!activeUser) return;
+
+    const fetchAvailability = async () => {
+      try {
+        const userId_normalized = activeUser.id.startsWith("user_")
+          ? activeUser.id.replace("user_", "")
+          : activeUser.id;
+
+        console.log("Fetching availability for user:", userId_normalized);
+
+        const response = await fetch(
+          `${process.env.NEXT_PUBLIC_BASE_URL}/api/user-availability?userIds=${userId_normalized}`
+        );
+        const data = await response.json();
+
+        console.log("Availability fetch response:", data);
+
+        if (data.success && data.data) {
+          const userKey = activeUser.id.startsWith("user_")
+            ? activeUser.id
+            : `user_${activeUser.id}`;
+          const availabilityInfo = data.data[userKey] || data.data[userId_normalized];
+
+          console.log("Availability info for user:", availabilityInfo);
+
+          if (availabilityInfo) {
+            const updatedActiveUser = {
+              ...activeUser,
+              tuteeAvailability: availabilityInfo.tuteeAvailability,
+              tutorAvailability: availabilityInfo.tutorAvailability,
+            };
+
+            setActiveUser(updatedActiveUser);
+
+            setUsers((prev) =>
+              prev.map((user) =>
+                user.id === activeUser.id
+                  ? {
+                      ...user,
+                      tuteeAvailability: availabilityInfo.tuteeAvailability,
+                      tutorAvailability: availabilityInfo.tutorAvailability,
+                    }
+                  : user
+              )
+            );
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching user availability:", error);
+      }
+    };
+
+    fetchAvailability();
+  }, [activeUser?.id]);
+
   // Clear pending messages when switching users
   useEffect(() => {
     clearPendingMessages();
@@ -890,13 +1037,19 @@ export default function ChatContainer({
 
   // Event handlers
   const handleUserSelect = useCallback((user: User) => {
-    setActiveUser(user);
-    setUsers((prev) =>
-      prev.map((u) => (u.id === user.id ? { ...u, unreadCount: 0 } : u))
-    );
+    const basePath = userRole === "tutor" ? "/tutor/chat" : "/chat";
+    const encodedUserId = encodeURIComponent(user.id);
+    const query = userRole === "tutee" && offeringId ? `?offeringId=${encodeURIComponent(offeringId)}` : "";
+    const nextPath = `${basePath}/${encodedUserId}${query}`;
+    router.push(nextPath);
+
     // Close mobile drawer when user is selected
-    closeDrawer();
-  }, []);
+    setIsDrawerAnimating(true);
+    setTimeout(() => {
+      setShowUserListDrawer(false);
+      setIsDrawerAnimating(false);
+    }, 200);
+  }, [router, userRole, offeringId]);
 
   // Animated drawer functions
   const openDrawer = useCallback(() => {
@@ -936,6 +1089,13 @@ export default function ChatContainer({
 
   const handleAppointmentResponse = useCallback(
     async (msg: Message, action: "accepted" | "declined" | "cancelled") => {
+      if (action === "declined") {
+        setPendingDeclineMessage(msg);
+        setDeclineReason("");
+        setShowDeclineReasonModal(true);
+        return;
+      }
+
       try {
         const messageId = getMessageId(msg);
         const result = await updateAppointmentStatus({
@@ -953,6 +1113,34 @@ export default function ChatContainer({
     },
     [userId]
   );
+
+  const handleSubmitDeclineReason = useCallback(async () => {
+    if (!pendingDeclineMessage || !userId) return;
+
+    const trimmedReason = declineReason.trim();
+    if (!trimmedReason) {
+      toast.error("Please provide a reason for declining.");
+      return;
+    }
+
+    try {
+      const messageId = getMessageId(pendingDeclineMessage);
+      const result = await updateAppointmentStatus({
+        messageId,
+        status: "declined",
+        actorId: userId,
+        declineReason: trimmedReason,
+      });
+
+      if (result.success) {
+        setShowDeclineReasonModal(false);
+        setPendingDeclineMessage(null);
+        setDeclineReason("");
+      }
+    } catch (error) {
+      console.error("Error declining appointment status:", error);
+    }
+  }, [pendingDeclineMessage, userId, declineReason]);
 
   const handleSendAppointment = useCallback(async () => {
     if (!activeUser || !userId || !appointmentTime) return;
@@ -1228,6 +1416,44 @@ export default function ChatContainer({
       />
 
       {/* Appointment Modal */}
+      {showDeclineReasonModal && (
+        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center px-4">
+          <div className="bg-white w-full max-w-md rounded-2xl shadow-lg p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Decline Appointment</h3>
+            <p className="text-sm text-gray-600 mb-4">
+              Please provide a reason for declining this appointment request.
+            </p>
+
+            <textarea
+              value={declineReason}
+              onChange={(e) => setDeclineReason(e.target.value)}
+              rows={4}
+              className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-200"
+              placeholder="Enter your reason..."
+            />
+
+            <div className="mt-4 flex justify-end gap-2">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowDeclineReasonModal(false);
+                  setPendingDeclineMessage(null);
+                  setDeclineReason("");
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                className="bg-red-600 hover:bg-red-700 text-white"
+                onClick={handleSubmitDeclineReason}
+              >
+                Submit Decline
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <AppointmentModal
         isOpen={showAppointmentModal}
         onClose={() => setShowAppointmentModal(false)}
@@ -1246,6 +1472,22 @@ export default function ChatContainer({
         selectedRecurringDates={selectedRecurringDates}
         setSelectedRecurringDates={setSelectedRecurringDates}
         onSend={handleSendAppointment}
+        currentUserAvailability={
+          clerkUser?.publicMetadata
+            ? userRole === "tutee"
+              ? (clerkUser.publicMetadata.tuteeAvailability as any)
+              : (clerkUser.publicMetadata.tutorAvailability as any)
+            : undefined
+        }
+        otherUserAvailability={
+          activeUser
+            ? userRole === "tutor"
+              ? activeUser.tuteeAvailability
+              : activeUser.tutorAvailability
+            : undefined
+        }
+        subjectAvailability={subjectAvailability}
+        userRole={userRole}
       />
     </div>
   );

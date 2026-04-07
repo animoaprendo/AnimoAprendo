@@ -260,9 +260,9 @@ export default function TuteeAppointmentsClient({ initialEvents }: TuteeAppointm
               </Button>
             )}
             
-            {selectedEvent?.status === 'completed' && (
+            {selectedEvent?.status === 'completed' && selectedEvent?.tutorId && (
               <Button asChild className="bg-blue-700 hover:bg-blue-800">
-                <Link href={`/chat/${selectedEvent.appointmentId}`}>
+                <Link href={`/chat/${selectedEvent.tutorId}`}>
                   View Chat
                 </Link>
               </Button>

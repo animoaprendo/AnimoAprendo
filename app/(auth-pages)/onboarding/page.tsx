@@ -293,7 +293,9 @@ export default function Onboarding() {
                   </Radio>
                   <Radio
                     value="teacher"
-                    className="group w-full relative flex flex-row justify-center cursor-pointer bg-black/5 px-4 py-2 text-black transition focus:not-data-focus:outline-none data-checked:bg-green-500/90 data-focus:outline data-focus:outline-black"
+                    disabled
+                    title="Feature coming soon"
+                    className="group w-full relative flex flex-row justify-center cursor-not-allowed bg-black/5 px-4 py-2 text-black/60 transition focus:not-data-focus:outline-none data-checked:bg-green-500/90 data-focus:outline data-focus:outline-black"
                   >
                     <div className="flex items-center justify-between">
                       <div className="text-sm/6">

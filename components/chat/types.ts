@@ -17,6 +17,7 @@ export interface Message {
     durationMinutes?: number;
     mode: "online" | "in-person";
     status: "pending" | "accepted" | "declined" | "cancelled";
+    declineReason?: string | null;
     subject?: string;
     offeringId?: string;
   };
@@ -43,6 +44,22 @@ export interface User {
   username?: string;
   emailAddress?: string;
   imageUrl?: string;
+  tuteeAvailability?: Array<{
+    day: string;
+    timeRanges: Array<{
+      id: string;
+      timeStart: { hourOfDay: number; minute: number };
+      timeEnd: { hourOfDay: number; minute: number };
+    }>;
+  }>;
+  tutorAvailability?: Array<{
+    day: string;
+    timeRanges: Array<{
+      id: string;
+      timeStart: { hourOfDay: number; minute: number };
+      timeEnd: { hourOfDay: number; minute: number };
+    }>;
+  }>;
 }
 
 export interface Inquiry {
@@ -66,6 +83,22 @@ export interface UserData {
   emailAddress?: string;
   imageUrl?: string;
   displayName: string;
+  tuteeAvailability?: Array<{
+    day: string;
+    timeRanges: Array<{
+      id: string;
+      timeStart: { hourOfDay: number; minute: number };
+      timeEnd: { hourOfDay: number; minute: number };
+    }>;
+  }>;
+  tutorAvailability?: Array<{
+    day: string;
+    timeRanges: Array<{
+      id: string;
+      timeStart: { hourOfDay: number; minute: number };
+      timeEnd: { hourOfDay: number; minute: number };
+    }>;
+  }>;
 }
 
 // Helper function to get message ID in consistent format

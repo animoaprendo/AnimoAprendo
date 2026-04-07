@@ -1,9 +1,11 @@
 import { fetchAppointments, fetchUsers } from "@/app/actions";
 import { currentUser } from "@clerk/nextjs/server";
+import { unstable_noStore as noStore } from "next/cache";
 import { redirect } from "next/navigation";
 import ClientCalendar from "./ClientCalendar";
 
 export default async function TutorAppointmentsPage() {
+  noStore();
   const user = await currentUser();
 
   if (!user) {
@@ -22,12 +24,12 @@ export default async function TutorAppointmentsPage() {
   ];
 
   if (appointmentsResult.success && appointmentsResult.appointments) {
-    // Filter appointments where current user is the tutor
+    // Filter appointments where current user is the tutor and status is accepted/completed
     const tutorAppointments = appointmentsResult.appointments.filter((apt: any) => 
-      apt.tutorId === user.id
+      apt.tutorId === user.id && (apt.status === "accepted" || apt.status === "completed")
     );
 
-    // Calculate real statistics
+    // Calculate statistics for displayed sessions (accepted + completed)
     stats[0].value = tutorAppointments.length;
     stats[1].value = tutorAppointments.filter((apt: any) => apt.status === 'completed').length;
     stats[2].value = tutorAppointments.filter((apt: any) => apt.status === 'accepted').length;

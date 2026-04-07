@@ -112,6 +112,9 @@ export default function OfferDetails({
   const { user } = useUser();
   const [isPreview, setIsPreview] = useState(false);
   const [SUBJECTS, setSUBJECTS] = useState<any[]>([]);
+  const [searchText, setSearchText] = useState("");
+  const [isOpenCombobox, setIsOpenCombobox] = useState(false);
+  const comboboxRef = useRef<HTMLDivElement>(null);
 
   const [submitState, setSubmitState] = useState<
     "default" | "saving" | "success" | "failed"
@@ -156,6 +159,26 @@ export default function OfferDetails({
       }
     });
   }, [user]);
+
+  // Handle click outside combobox to close dropdown
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        comboboxRef.current &&
+        !comboboxRef.current.contains(event.target as Node)
+      ) {
+        setIsOpenCombobox(false);
+        setSearchText("");
+      }
+    };
+
+    if (isOpenCombobox) {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () => {
+        document.removeEventListener("mousedown", handleClickOutside);
+      };
+    }
+  }, [isOpenCombobox]);
 
   const handleAddSlot = () =>
     setAvailability([
@@ -229,18 +252,70 @@ export default function OfferDetails({
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="subject">Subject Name</Label>
-                <Select value={subject} onValueChange={setSubject}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a subject" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {SUBJECTS.map((s) => (
-                      <SelectItem key={s._id} value={`${s.subjectCode} - ${s.subjectName}`}>
-                        {s.subjectCode} - {s.subjectName}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div className="relative" ref={comboboxRef}>
+                  <Input
+                    id="subject"
+                    type="text"
+                    placeholder="Search for a subject..."
+                    value={isOpenCombobox ? searchText : subject}
+                    onChange={(e) => {
+                      setSearchText(e.target.value);
+                      setIsOpenCombobox(true);
+                    }}
+                    onFocus={() => setIsOpenCombobox(true)}
+                    className="w-full"
+                  />
+                  {isOpenCombobox && (
+                    <div className="absolute top-full left-0 right-0 z-50 mt-1 max-h-64 overflow-y-auto border border-input bg-background rounded-md shadow-md">
+                      {SUBJECTS.filter((s) => {
+                        const searchLower = searchText.toLowerCase();
+                        return (
+                          s.subjectCode.toLowerCase().includes(searchLower) ||
+                          s.subjectName.toLowerCase().includes(searchLower)
+                        );
+                      }).length > 0 ? (
+                        SUBJECTS.filter((s) => {
+                          const searchLower = searchText.toLowerCase();
+                          return (
+                            s.subjectCode.toLowerCase().includes(searchLower) ||
+                            s.subjectName.toLowerCase().includes(searchLower)
+                          );
+                        }).map((s) => {
+                          const fullValue = `${s.subjectCode} - ${s.subjectName}`;
+                          const isSelected = subject === fullValue;
+                          return (
+                            <button
+                              key={s._id}
+                              type="button"
+                              onClick={() => {
+                                setSubject(fullValue);
+                                setSearchText("");
+                                setIsOpenCombobox(false);
+                              }}
+                              className={`w-full text-left px-3 py-2 hover:bg-accent hover:text-accent-foreground transition-colors ${
+                                isSelected ? "bg-accent text-accent-foreground" : ""
+                              }`}
+                            >
+                              <div className="font-medium">{s.subjectCode}</div>
+                              <div className="text-sm text-muted-foreground">
+                                {s.subjectName}
+                              </div>
+                            </button>
+                          );
+                        })
+                      ) : (
+                        <div className="px-3 py-2 text-sm text-muted-foreground">
+                          No subjects found
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+                {subject && (
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Selected: <span className="font-medium">{subject}</span>
+                  </p>
+                )}
               </div>
 
               <div className="space-y-2">
