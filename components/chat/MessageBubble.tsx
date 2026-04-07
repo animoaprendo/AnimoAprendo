@@ -132,6 +132,7 @@ function AppointmentMessage({
   const isCreator = message.creatorId === userId;
   const canRespond = !isCreator && appointment.status === "pending";
   const canCancel = isCreator && appointment.status !== "cancelled";
+  const displayMode = appointment.mode === "in-person" ? "Onsite" : "Online";
 
   const formatRecurringDate = (dateString: string) => {
     return new Date(`${dateString}T00:00:00`).toLocaleDateString([], {
@@ -232,7 +233,7 @@ function AppointmentMessage({
           <MapPin className="w-4 h-4" />
           <span className="font-medium">Mode:</span>
           <Badge variant="outline" className="capitalize text-xs bg-green-300">
-            {appointment.mode}
+            {displayMode}
           </Badge>
         </div>
 

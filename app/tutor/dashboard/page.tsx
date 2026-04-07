@@ -515,7 +515,7 @@ export default async function Dashboard() {
                             <Separator orientation="vertical" className="h-4" />
                             <span className="flex items-center gap-1">
                               <MapPin className="w-3 h-3" />
-                              {appt.mode}
+                              {appt.mode === "in-person" ? "Onsite" : "Online"}
                             </span>
                           </div>
                           <p className="text-sm text-muted-foreground">

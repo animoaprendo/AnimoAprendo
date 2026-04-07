@@ -415,8 +415,12 @@ export function calculateOfferingScore(
   
   const normalizedAvailabilities = hasAvailabilityContext
     ? (
-        normalizedAvailabilityOverlap * AVAILABILITY_BLEND.overlap +
-        normalizedAvailabilityDiversity * AVAILABILITY_BLEND.diversity
+        metrics.availabilityOverlapMinutes > 0
+          ? (
+              normalizedAvailabilityOverlap * AVAILABILITY_BLEND.overlap +
+              normalizedAvailabilityDiversity * AVAILABILITY_BLEND.diversity
+            )
+          : 0
       )
     : normalizedAvailabilityDiversity;
   
@@ -649,8 +653,12 @@ export function getScoreBreakdown(
   );
   const normalizedAvailabilityScore = hasAvailabilityContext
     ? (
-        normalizedAvailabilityOverlap * AVAILABILITY_BLEND.overlap +
-        normalizedAvailabilityDiversity * AVAILABILITY_BLEND.diversity
+        metricValues.availabilityOverlapMinutes > 0
+          ? (
+              normalizedAvailabilityOverlap * AVAILABILITY_BLEND.overlap +
+              normalizedAvailabilityDiversity * AVAILABILITY_BLEND.diversity
+            )
+          : 0
       )
     : normalizedAvailabilityDiversity;
 

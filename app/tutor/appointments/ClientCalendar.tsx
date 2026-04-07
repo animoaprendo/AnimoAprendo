@@ -34,6 +34,7 @@ interface ClientCalendarProps {
 export default function ClientCalendar({ events, stats }: ClientCalendarProps) {
   const [view, setView] = useState<View>("month");
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
+  const getModeLabel = (mode?: string) => (mode === "in-person" ? "Onsite" : "Online");
 
   useEffect(() => {
     if (typeof window !== "undefined" && window.innerWidth < 640) {
@@ -223,7 +224,7 @@ export default function ClientCalendar({ events, stats }: ClientCalendarProps) {
                     <MapPin className="w-4 h-4 text-muted-foreground" />
                     <div>
                       <p className="font-medium">Mode</p>
-                      <p className="text-muted-foreground capitalize">{selectedEvent.mode}</p>
+                      <p className="text-muted-foreground">{getModeLabel(selectedEvent.mode)}</p>
                     </div>
                   </div>
                 )}

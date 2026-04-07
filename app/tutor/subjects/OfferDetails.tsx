@@ -129,11 +129,29 @@ export default function OfferDetails({
     getCollectionData("subjectOptions").then((data) => {
       if (data.success && Array.isArray(data.data)) {
         const allSubjects = data.data.map((item: any) => item);
-        
-        const userDept = (user?.publicMetadata as any)?.collegeInformation?.department as string | undefined;
+        const normalize = (value?: string) => (value || "").trim().toLowerCase();
 
-        // Filter subjects by department
-        const filteredSubjects = allSubjects.filter((s: any) => s.department === userDept || s.department === "General");        
+        const userCollege = (user?.publicMetadata as any)?.collegeInformation?.college as string | undefined;
+        const userDept = (user?.publicMetadata as any)?.collegeInformation?.department as string | undefined;
+        const normalizedUserCollege = normalize(userCollege);
+        const normalizedUserDept = normalize(userDept);
+
+        // Keep General subjects scoped to the tutor's own college.
+        const filteredSubjects = allSubjects.filter((s: any) => {
+          const subjectDepartment = normalize(s.department);
+          const subjectCollege = normalize(s.college);
+
+          const isSameDepartment =
+            Boolean(normalizedUserDept) && subjectDepartment === normalizedUserDept;
+          const isGeneralInSameCollege =
+            subjectDepartment === "general" &&
+            Boolean(normalizedUserCollege) &&
+            subjectCollege === normalizedUserCollege;
+
+          if (!normalizedUserDept && !normalizedUserCollege) return true;
+          return isSameDepartment || isGeneralInSameCollege;
+        });
+
         setSUBJECTS(filteredSubjects);
       }
     });

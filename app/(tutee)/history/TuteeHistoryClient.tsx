@@ -71,6 +71,8 @@ export default function TuteeHistoryClient({
     Pending: "bg-yellow-600",
     Cancelled: "bg-red-600",
   };
+  const getModeLabel = (mode: string) =>
+    mode?.toLowerCase() === "in-person" ? "Onsite" : mode;
 
   // Calculate statistics from current data
   const completedSessions = history.filter((item) => item.status === "Completed");
@@ -255,7 +257,7 @@ export default function TuteeHistoryClient({
                         <TableCell>{item.duration}</TableCell>
                         <TableCell>
                           <Badge variant="secondary" className="bg-blue-100 text-blue-800 hover:bg-blue-100">
-                            {item.mode}
+                            {getModeLabel(item.mode)}
                           </Badge>
                         </TableCell>
                         <TableCell className="font-mono text-sm">{item.subject}</TableCell>

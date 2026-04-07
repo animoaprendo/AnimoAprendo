@@ -47,6 +47,8 @@ interface CardInfo {
   _id: string;
   userId: string;
   subject: string;
+  college?: string;
+  department?: string;
   description: string;
   availability: { id: string; day: string; start: string; end: string }[];
   banner: string;
@@ -111,12 +113,27 @@ export default function Browse() {
         const response = await getAllOfferings();
 
         if (response.success && response.data) {
+          const userCollege = (user?.publicMetadata as any)?.collegeInformation
+            ?.college as string | undefined;
           const userDept = (user?.publicMetadata as any)?.collegeInformation
             ?.department as string | undefined;
 
-          // Filter subjects by department or show all if no specific department
+          // General subjects are only visible within the user's assigned college.
           const filteredSubjects = response.data.filter(
-            (s: any) => !userDept || s.department === userDept || s.department === "General"
+            (s: any) => {
+              if (!user) return true;
+
+              const isSameDepartment = Boolean(userDept) && s.department === userDept;
+              const isGeneralInSameCollege =
+                s.department === "General" &&
+                Boolean(userCollege) &&
+                s.college === userCollege;
+
+              // Keep old behavior for users without mapped college/department data.
+              if (!userDept && !userCollege) return true;
+
+              return isSameDepartment || isGeneralInSameCollege;
+            }
           );
 
           setOfferings(filteredSubjects);

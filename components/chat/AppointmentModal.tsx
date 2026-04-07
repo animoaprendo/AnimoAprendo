@@ -267,7 +267,7 @@ export default function AppointmentModal({
                 className="w-full border rounded-lg px-3 py-2"
               >
                 <option value="online">Online</option>
-                <option value="in-person">In-person</option>
+                <option value="in-person">Onsite</option>
               </select>
             </div>
 

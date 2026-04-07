@@ -402,7 +402,17 @@ export default function OfferDetailsPage({
     );
   }
 
-  const buttonLabel = offer.status === "available" ? "Chat Now" : "Inquire Now";
+  const normalizeId = (id?: string) => {
+    if (!id) return "";
+    return id.startsWith("user_") ? id : `user_${id}`;
+  };
+  const isOwnOffering = normalizeId(user?.id) === normalizeId(offer.userId);
+
+  const buttonLabel = isOwnOffering
+    ? "Your Offering"
+    : offer.status === "available"
+      ? "Chat Now"
+      : "Inquire Now";
   const visibleReviews = reviews.slice(0, visibleCount);
   const averageRating = reviews.length > 0 
     ? reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length 
@@ -426,13 +436,19 @@ export default function OfferDetailsPage({
 
   const handleChatNow = async () => {
     try {
+      if (isOwnOffering) {
+        return;
+      }
+
       // Get the current user ID from Clerk authentication
-      const tuteeId = user?.id || "test-user-id"; // Fallback for testing
+      const tuteeId = user?.id;
+      if (!tuteeId) {
+        return;
+      }
       
       console.log('Creating inquiry with tuteeId:', tuteeId, 'tutorId:', offer.userId);
       
       // Normalize IDs (ensure 'user_' prefix for consistency with chat IDs)
-      const normalizeId = (id: string) => (id?.startsWith('user_') ? id : `user_${id}`);
       const normalizedTuteeId = normalizeId(tuteeId);
       const normalizedTutorId = normalizeId(offer.userId);
 
@@ -790,11 +806,18 @@ export default function OfferDetailsPage({
                   
                   <Button
                     onClick={handleChatNow}
+                    disabled={isOwnOffering}
                     className="w-full bg-linear-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white font-semibold text-lg h-12 shadow-lg hover:shadow-xl transition-all"
                   >
                     <MessageCircle className="w-5 h-5 mr-2" />
                     {buttonLabel}
                   </Button>
+
+                  {isOwnOffering && (
+                    <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
+                      You cannot book your own subject offering.
+                    </p>
+                  )}
 
                   <div className="flex items-center justify-center gap-2 pt-2">
                     <div className={`w-2.5 h-2.5 rounded-full ${

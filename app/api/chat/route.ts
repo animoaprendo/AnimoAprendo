@@ -104,7 +104,8 @@ export async function POST(request: NextRequest) {
 
       // Provide a default human-readable message for appointment
       const when = new Date(appointment.datetimeISO).toLocaleString();
-      newMessage.message = message ?? `Appointment proposed for ${when} (${appointment.mode})`;
+      const modeLabel = appointment.mode === 'in-person' ? 'Onsite' : 'Online';
+      newMessage.message = message ?? `Appointment proposed for ${when} (${modeLabel})`;
     } else if (newMessage.type === 'quiz-result') {
       // Validate quiz result payload
       if (!quizResult || !quizResult.appointmentId || !quizResult.attempt || quizResult.score === undefined) {
