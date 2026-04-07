@@ -162,9 +162,14 @@ export async function POST(request: NextRequest) {
 export async function PATCH(request: NextRequest) {
   try {
     const body = await request.json();
-    const { messageId, status, actorId } = body as { messageId?: string; status?: 'accepted' | 'declined' | 'cancelled'; actorId?: string };
+    const { messageId, status, actorId, declineReason } = body as {
+      messageId?: string;
+      status?: 'accepted' | 'declined' | 'cancelled';
+      actorId?: string;
+      declineReason?: string;
+    };
 
-    console.log('PATCH request received:', { messageId, status, actorId });
+    console.log('PATCH request received:', { messageId, status, actorId, declineReason });
 
     if (!messageId || !status) {
       return NextResponse.json({ error: 'Missing messageId or status' }, { status: 400 });
@@ -172,6 +177,10 @@ export async function PATCH(request: NextRequest) {
 
     if ((status === 'accepted' || status === 'declined') && !actorId) {
       return NextResponse.json({ error: 'actorId is required for appointment responses' }, { status: 400 });
+    }
+
+    if (status === 'declined' && !declineReason?.trim()) {
+      return NextResponse.json({ error: 'declineReason is required when declining an appointment' }, { status: 400 });
     }
 
     const client = await clientPromise;
@@ -226,6 +235,7 @@ export async function PATCH(request: NextRequest) {
         $set: {
           'appointment.status': status,
           'appointment.actorId': actorId,
+          'appointment.declineReason': status === 'declined' ? declineReason?.trim() : null,
           'updatedAt': new Date().toISOString(),
         }
       };
@@ -291,6 +301,7 @@ export async function PATCH(request: NextRequest) {
             tutorId,
             tuteeId,
             status: status, // 'accepted' or 'declined'
+            declineReason: status === 'declined' ? declineReason?.trim() : null,
             appointmentType: updated.appointment.appointmentType || 'single',
             datetimeISO: updated.appointment.datetimeISO,
             endDate: updated.appointment.endDate,
@@ -319,6 +330,7 @@ export async function PATCH(request: NextRequest) {
               { 
                 $set: { 
                   status: status,
+                  declineReason: status === 'declined' ? declineReason?.trim() : null,
                   updatedAt: new Date().toISOString()
                 }
               }

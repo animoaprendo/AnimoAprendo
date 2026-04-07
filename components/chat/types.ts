@@ -17,6 +17,7 @@ export interface Message {
     durationMinutes?: number;
     mode: "online" | "in-person";
     status: "pending" | "accepted" | "declined" | "cancelled";
+    declineReason?: string | null;
     subject?: string;
     offeringId?: string;
   };

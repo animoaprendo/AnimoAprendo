@@ -66,10 +66,10 @@ function NavLinksTutor() {
                     </Link>
                   </Button>
                   <Button variant="ghost" className="w-full justify-start" asChild>
-                    <Link href="/tutor/appointments">
+                    <a href="/tutor/appointments">
                       <Calendar className="w-4 h-4 mr-2" />
                       Appointments
-                    </Link>
+                    </a>
                   </Button>
                   <Button variant="ghost" className="w-full justify-start" asChild>
                     <Link href="/tutor/history">
@@ -125,10 +125,10 @@ function NavLinksTutor() {
               </Link>
             </Button>
             <Button variant="ghost" size="sm" className="text-white/98 hover:text-white hover:bg-white/10" asChild>
-              <Link href="/tutor/appointments" className="flex items-center gap-2">
+              <a href="/tutor/appointments" className="flex items-center gap-2">
                 <Calendar className="w-4 h-4" />
                 Appointments
-              </Link>
+              </a>
             </Button>
             <Button variant="ghost" size="sm" className="text-white/98 hover:text-white hover:bg-white/10" asChild>
               <Link href="/tutor/history" className="flex items-center gap-2">

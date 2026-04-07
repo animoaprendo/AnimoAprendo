@@ -3,6 +3,7 @@
 import { InfoIcon, X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { useUser } from "@clerk/nextjs";
 
@@ -46,6 +47,7 @@ export default function ChatContainer({
   userRole = "tutee",
   offeringId,
 }: ChatContainerProps) {
+  const router = useRouter();
   // Get current user from Clerk
   const { user: clerkUser } = useUser();
   
@@ -82,6 +84,9 @@ export default function ChatContainer({
     []
   );
   const [subjectAvailability, setSubjectAvailability] = useState<any[]>([]);
+  const [showDeclineReasonModal, setShowDeclineReasonModal] = useState(false);
+  const [declineReason, setDeclineReason] = useState("");
+  const [pendingDeclineMessage, setPendingDeclineMessage] = useState<Message | null>(null);
 
   // Appointment data
   const [upcomingAppointments, setUpcomingAppointments] = useState<any[]>([]);
@@ -1032,13 +1037,19 @@ export default function ChatContainer({
 
   // Event handlers
   const handleUserSelect = useCallback((user: User) => {
-    setActiveUser(user);
-    setUsers((prev) =>
-      prev.map((u) => (u.id === user.id ? { ...u, unreadCount: 0 } : u))
-    );
+    const basePath = userRole === "tutor" ? "/tutor/chat" : "/chat";
+    const encodedUserId = encodeURIComponent(user.id);
+    const query = userRole === "tutee" && offeringId ? `?offeringId=${encodeURIComponent(offeringId)}` : "";
+    const nextPath = `${basePath}/${encodedUserId}${query}`;
+    router.push(nextPath);
+
     // Close mobile drawer when user is selected
-    closeDrawer();
-  }, []);
+    setIsDrawerAnimating(true);
+    setTimeout(() => {
+      setShowUserListDrawer(false);
+      setIsDrawerAnimating(false);
+    }, 200);
+  }, [router, userRole, offeringId]);
 
   // Animated drawer functions
   const openDrawer = useCallback(() => {
@@ -1078,6 +1089,13 @@ export default function ChatContainer({
 
   const handleAppointmentResponse = useCallback(
     async (msg: Message, action: "accepted" | "declined" | "cancelled") => {
+      if (action === "declined") {
+        setPendingDeclineMessage(msg);
+        setDeclineReason("");
+        setShowDeclineReasonModal(true);
+        return;
+      }
+
       try {
         const messageId = getMessageId(msg);
         const result = await updateAppointmentStatus({
@@ -1095,6 +1113,34 @@ export default function ChatContainer({
     },
     [userId]
   );
+
+  const handleSubmitDeclineReason = useCallback(async () => {
+    if (!pendingDeclineMessage || !userId) return;
+
+    const trimmedReason = declineReason.trim();
+    if (!trimmedReason) {
+      toast.error("Please provide a reason for declining.");
+      return;
+    }
+
+    try {
+      const messageId = getMessageId(pendingDeclineMessage);
+      const result = await updateAppointmentStatus({
+        messageId,
+        status: "declined",
+        actorId: userId,
+        declineReason: trimmedReason,
+      });
+
+      if (result.success) {
+        setShowDeclineReasonModal(false);
+        setPendingDeclineMessage(null);
+        setDeclineReason("");
+      }
+    } catch (error) {
+      console.error("Error declining appointment status:", error);
+    }
+  }, [pendingDeclineMessage, userId, declineReason]);
 
   const handleSendAppointment = useCallback(async () => {
     if (!activeUser || !userId || !appointmentTime) return;
@@ -1370,6 +1416,44 @@ export default function ChatContainer({
       />
 
       {/* Appointment Modal */}
+      {showDeclineReasonModal && (
+        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center px-4">
+          <div className="bg-white w-full max-w-md rounded-2xl shadow-lg p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Decline Appointment</h3>
+            <p className="text-sm text-gray-600 mb-4">
+              Please provide a reason for declining this appointment request.
+            </p>
+
+            <textarea
+              value={declineReason}
+              onChange={(e) => setDeclineReason(e.target.value)}
+              rows={4}
+              className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-200"
+              placeholder="Enter your reason..."
+            />
+
+            <div className="mt-4 flex justify-end gap-2">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowDeclineReasonModal(false);
+                  setPendingDeclineMessage(null);
+                  setDeclineReason("");
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                className="bg-red-600 hover:bg-red-700 text-white"
+                onClick={handleSubmitDeclineReason}
+              >
+                Submit Decline
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <AppointmentModal
         isOpen={showAppointmentModal}
         onClose={() => setShowAppointmentModal(false)}

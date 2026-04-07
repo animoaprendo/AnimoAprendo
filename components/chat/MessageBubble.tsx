@@ -56,8 +56,8 @@ export default function MessageBubble({
         className={`max-w-[75%] shadow-sm border ${
           isOwnMessage
             ? isPending
-              ? "bg-green-600 text-white opacity-70 border-green-700"
-              : "bg-green-600 text-white border-green-700"
+              ? "bg-green-300 text-black opacity-70 border-green-700"
+              : "bg-green-500 text-black border-green-700"
             : "bg-white border-green-100"
         }`}
       >
@@ -81,7 +81,7 @@ export default function MessageBubble({
           )}
           <div
             className={`flex items-center gap-2 text-xs mt-3 ${
-              isOwnMessage ? "text-green-100" : "text-gray-500"
+              isOwnMessage ? "text-gray-800" : "text-gray-500"
             }`}
           >
             <Clock className="w-3 h-3" />
@@ -176,7 +176,7 @@ function AppointmentMessage({
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-2 font-semibold text-white">
+      <div className="flex items-center gap-2 font-semibold text-black">
         <Calendar className="w-5 h-5" />
         Appointment Request
       </div>
@@ -225,7 +225,7 @@ function AppointmentMessage({
             })}
           </span>
           {durationLabel && (
-            <span className="text-xs text-white">({durationLabel})</span>
+            <span className="text-xs text-gray-800">({durationLabel})</span>
           )}
         </div>
 
@@ -245,6 +245,12 @@ function AppointmentMessage({
               appointment.status.slice(1)}
           </Badge>
         </div>
+
+        {appointment.status === "declined" && appointment.declineReason && (
+          <div className="text-sm rounded-md border border-red-200 bg-red-50 px-3 py-2 text-red-800">
+            <span className="font-medium">Reason:</span> {appointment.declineReason}
+          </div>
+        )}
       </div>
 
       {(canRespond || canCancel) && (

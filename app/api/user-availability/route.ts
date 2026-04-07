@@ -29,11 +29,6 @@ export async function GET(request: NextRequest) {
         const user = await client.users.getUser(userId);
         const publicMetadata = user.publicMetadata as any;
 
-        console.log(`DEBUG: Fetching user ${userId}`);
-        console.log("Full publicMetadata:", JSON.stringify(publicMetadata, null, 2));
-        console.log("tuteeAvailability:", publicMetadata?.tuteeAvailability);
-        console.log("tutorAvailability:", publicMetadata?.tutorAvailability);
-
         availabilityData[userId] = {
           tuteeAvailability: publicMetadata?.tuteeAvailability || [],
           tutorAvailability: publicMetadata?.tutorAvailability || [],
