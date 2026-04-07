@@ -37,7 +37,9 @@ export default async function AppointmentsPage() {
     );
   }
 
-  const events = appointmentsResult.appointments || [];
+  const events = (appointmentsResult.appointments || []).filter(
+    (event: { status?: string }) => event.status === "accepted"
+  );
 
   return (
     <TuteeAppointmentsClient initialEvents={events} />

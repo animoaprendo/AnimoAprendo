@@ -22,12 +22,12 @@ export default async function TutorAppointmentsPage() {
   ];
 
   if (appointmentsResult.success && appointmentsResult.appointments) {
-    // Filter appointments where current user is the tutor
+    // Filter appointments where current user is the tutor and status is accepted
     const tutorAppointments = appointmentsResult.appointments.filter((apt: any) => 
-      apt.tutorId === user.id
+      apt.tutorId === user.id && apt.status === "accepted"
     );
 
-    // Calculate real statistics
+    // Calculate statistics for displayed (accepted) sessions
     stats[0].value = tutorAppointments.length;
     stats[1].value = tutorAppointments.filter((apt: any) => apt.status === 'completed').length;
     stats[2].value = tutorAppointments.filter((apt: any) => apt.status === 'accepted').length;
