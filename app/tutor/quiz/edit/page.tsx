@@ -665,7 +665,7 @@ export default function QuizEditPage() {
                 <Users size={20} className="text-green-600" />
                 <div>
                   <p className="text-sm text-gray-500">Mode</p>
-                  <p className="font-medium capitalize">{appointment.mode}</p>
+                  <p className="font-medium">{appointment.mode === 'in-person' ? 'Onsite' : 'Online'}</p>
                 </div>
               </div>
             </div>

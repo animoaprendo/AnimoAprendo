@@ -84,6 +84,8 @@ const TutorHistoryClient: React.FC<TutorHistoryClientProps> = ({
   const filteredData = historyData.filter((item) =>
     item.Tutee.toLowerCase().includes(search.toLowerCase())
   );
+  const getModeLabel = (mode: string) =>
+    mode?.toLowerCase() === "in-person" ? "Onsite" : mode;
 
   const openRatingModal = (session: HistoryItem) => {
     setSelectedSession(session);
@@ -273,7 +275,7 @@ const TutorHistoryClient: React.FC<TutorHistoryClientProps> = ({
                         <TableCell>
                           <div className="flex items-center justify-center gap-1">
                             <MapPin className="w-3 h-3" />
-                            {item.Mode}
+                            {getModeLabel(item.Mode)}
                           </div>
                         </TableCell>
                         <TableCell>{item.Subject}</TableCell>

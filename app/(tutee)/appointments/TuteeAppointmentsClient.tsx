@@ -33,6 +33,7 @@ export default function TuteeAppointmentsClient({ initialEvents }: TuteeAppointm
   const [events] = useState<AppointmentEvent[]>(initialEvents);
   const [view, setView] = useState<View>("month");
   const [selectedEvent, setSelectedEvent] = useState<AppointmentEvent | null>(null);
+  const getModeLabel = (mode?: string) => (mode === "in-person" ? "Onsite" : "Online");
 
   useEffect(() => {
     if (typeof window !== "undefined" && window.innerWidth < 640) {
@@ -208,7 +209,7 @@ export default function TuteeAppointmentsClient({ initialEvents }: TuteeAppointm
               
               <div className="flex justify-between items-center">
                 <span className="font-medium text-gray-700">Mode:</span>
-                <Badge variant="outline">{selectedEvent.mode}</Badge>
+                <Badge variant="outline">{getModeLabel(selectedEvent.mode)}</Badge>
               </div>
               
               <div className="flex justify-between items-center">

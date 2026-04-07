@@ -39,13 +39,21 @@ export async function POST(request: NextRequest) {
       );
     }
 
-  // Overwrite details with offering data
-  const offeringSubject = offeringDoc.subject ?? subject ?? 'Untitled';
-  const offeringBanner = offeringDoc.banner ?? banner ?? '';
-  const offeringDescription = offeringDoc.description ?? description ?? '';
+    // Overwrite details with offering data
+    const offeringSubject = offeringDoc.subject ?? subject ?? 'Untitled';
+    const offeringBanner = offeringDoc.banner ?? banner ?? '';
+    const offeringDescription = offeringDoc.description ?? description ?? '';
     // Prefer tutorId from offering for consistency
     const offeringTutorId = normalizeId(String(offeringDoc.userId ?? tutorId));
     tutorId = offeringTutorId;
+
+    // Prevent users from creating an inquiry on their own offering.
+    if (tuteeId === tutorId) {
+      return NextResponse.json(
+        { success: false, error: 'You cannot book your own subject offering' },
+        { status: 403 }
+      );
+    }
     
     // Upsert inquiry and always refresh the subject/banner/description details
     const now = new Date().toISOString();

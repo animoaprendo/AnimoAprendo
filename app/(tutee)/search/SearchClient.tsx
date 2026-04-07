@@ -44,6 +44,8 @@ interface Offering {
   _id: string;
   userId?: string;
   subject: string;
+  college?: string;
+  department?: string;
   title?: string;
   description: string;
   banner: string;
@@ -96,12 +98,25 @@ export default function SearchClient({ initialOfferings }: SearchClientProps) {
         });
 
         if (response.success && response.data) {
+          const userCollege = (user?.publicMetadata as any)?.collegeInformation
+            ?.college as string | undefined;
           const userDept = (user?.publicMetadata as any)?.collegeInformation
             ?.department as string | undefined;
 
-          // Filter subjects by department
+          // General subjects are only visible within the user's assigned college.
           const filteredSubjects = response.data.filter(
-            (s: any) => s.department === userDept || s.department === "General"
+            (s: any) => {
+              const isSameDepartment = Boolean(userDept) && s.department === userDept;
+              const isGeneralInSameCollege =
+                s.department === "General" &&
+                Boolean(userCollege) &&
+                s.college === userCollege;
+
+              // Keep old behavior for users without mapped college/department data.
+              if (!userDept && !userCollege) return true;
+
+              return isSameDepartment || isGeneralInSameCollege;
+            }
           );
 
           if(user) {

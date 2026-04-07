@@ -289,6 +289,7 @@ export default function AdminAppointments() {
 
   const uniqueStatuses = ['pending', 'accepted', 'declined', 'completed', 'cancelled'];
   const uniqueModes = ['online', 'in-person'];
+  const getModeLabel = (mode: string) => (mode === 'online' ? 'Online' : 'Onsite');
 
   if (loading) {
     return (
@@ -392,7 +393,7 @@ export default function AdminAppointments() {
                 <SelectContent>
                   {uniqueModes.map((mode) => (
                     <SelectItem key={mode} value={mode}>
-                      {mode === 'online' ? 'Online' : 'In-Person'}
+                      {getModeLabel(mode)}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -544,7 +545,7 @@ export default function AdminAppointments() {
                             <MapPin className="w-4 h-4 text-blue-600" />
                           )}
                           <span className="text-sm">
-                            {appointment.mode === 'online' ? 'Online' : 'In-Person'}
+                            {getModeLabel(appointment.mode)}
                           </span>
                         </div>
                       </TableCell>
@@ -672,7 +673,7 @@ export default function AdminAppointments() {
                       ) : (
                         <MapPin className="w-4 h-4 text-blue-600" />
                       )}
-                      <span>{selectedAppointment.mode === 'online' ? 'Online' : 'In-Person'}</span>
+                      <span>{getModeLabel(selectedAppointment.mode)}</span>
                     </div>
                   </div>
                 </div>
