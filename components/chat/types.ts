@@ -20,6 +20,8 @@ export interface Message {
     declineReason?: string | null;
     subject?: string;
     offeringId?: string;
+    meetingUrl?: string | null;
+    meetingId?: string | null;
   };
   quizResult?: {
     appointmentId: string;

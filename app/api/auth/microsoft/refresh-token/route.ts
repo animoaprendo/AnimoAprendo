@@ -1,4 +1,4 @@
-// Alternative Microsoft OAuth token retrieval using Clerk's direct API
+// Alternative Google OAuth token retrieval using Clerk's direct API
 import { auth, clerkClient } from '@clerk/nextjs/server';
 import { NextRequest, NextResponse } from 'next/server';
 
@@ -21,18 +21,18 @@ export async function POST(req: NextRequest) {
     // Get user details first
     const user = await client.users.getUser(targetUserId);
     
-    // Find Microsoft external account
+    // Find Google external account
     const microsoftAccount = user.externalAccounts?.find(
-      account => account.provider === 'oauth_microsoft' && 
+      account => account.provider === 'oauth_google' && 
                 account.verification?.status === 'verified'
     );
 
     if (!microsoftAccount) {
       return NextResponse.json({
         success: false,
-        error: 'No verified Microsoft account found',
+        error: 'No verified Google account found',
         needsConnection: true,
-        action: 'connect_microsoft'
+        action: 'connect_google'
       }, { status: 404 });
     }
 
@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
     // This endpoint will trigger a re-authentication if needed
     try {
       // Use Clerk's OAuth token refresh mechanism (updated API endpoint)
-      const tokenResponse = await fetch(`https://api.clerk.com/v1/users/${targetUserId}/oauth_access_tokens/microsoft`, {
+      const tokenResponse = await fetch(`https://api.clerk.com/v1/users/${targetUserId}/oauth_access_tokens/google`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${process.env.CLERK_SECRET_KEY}`,
@@ -56,7 +56,7 @@ export async function POST(req: NextRequest) {
             success: true,
             tokens: {
               accessToken: tokenData[0].token,
-              provider: 'oauth_microsoft',
+              provider: 'oauth_google',
             }
           });
         }
@@ -72,10 +72,10 @@ export async function POST(req: NextRequest) {
       success: false,
       error: 'OAuth token has expired or needs refresh',
       needsReauth: true,
-      action: 'reauth_microsoft',
+      action: 'reauth_google',
       guidance: [
-        'The Microsoft OAuth token may have expired',
-        'User needs to reconnect their Microsoft account',
+        'The Google OAuth token may have expired',
+        'User needs to reconnect their Google account',
         'This will refresh the OAuth permissions and token'
       ]
     }, { status: 401 });
@@ -84,7 +84,7 @@ export async function POST(req: NextRequest) {
     console.error('Error in refresh token endpoint:', error);
     return NextResponse.json({
       success: false,
-      error: error.message || 'Failed to refresh Microsoft token'
+      error: error.message || 'Failed to refresh Google token'
     }, { status: 500 });
   }
 }

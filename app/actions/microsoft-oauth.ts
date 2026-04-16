@@ -1,4 +1,4 @@
-// Server action to check Microsoft OAuth status directly
+// Server action to check Google OAuth status directly
 'use server';
 
 import { auth, clerkClient } from '@clerk/nextjs/server';
@@ -21,29 +21,29 @@ export async function checkMicrosoftOAuthServerAction(): Promise<MicrosoftOAuthR
         success: false,
         hasConnection: false,
         error: 'User not authenticated',
-        guidance: ['Please sign in to check Microsoft connection status']
+        guidance: ['Please sign in to check Google connection status']
       };
     }
 
     const client = await clerkClient();
     const user = await client.users.getUser(userId);
     
-    const microsoftAccounts = user.externalAccounts?.filter(acc => acc.provider === 'oauth_microsoft') || [];
-    const verifiedAccounts = microsoftAccounts.filter(acc => acc.verification?.status === 'verified');
+    const googleAccounts = user.externalAccounts?.filter(acc => acc.provider === 'oauth_google') || [];
+    const verifiedAccounts = googleAccounts.filter(acc => acc.verification?.status === 'verified');
 
-    console.log('Server action - Microsoft accounts check:', {
-      total: microsoftAccounts.length,
+    console.log('Server action - Google accounts check:', {
+      total: googleAccounts.length,
       verified: verifiedAccounts.length
     });
 
-    if (microsoftAccounts.length === 0) {
+    if (googleAccounts.length === 0) {
       return {
         success: true,
         hasConnection: false,
-        error: 'No Microsoft account connected',
+        error: 'No Google account connected',
         guidance: [
-          'Connect your Microsoft account in your Clerk profile',
-          'This will enable Teams meeting creation for tutoring sessions'
+          'Connect your Google account in your Clerk profile',
+          'This will enable Google Meet creation for tutoring sessions'
         ]
       };
     }
@@ -52,10 +52,10 @@ export async function checkMicrosoftOAuthServerAction(): Promise<MicrosoftOAuthR
       return {
         success: true,
         hasConnection: false,
-        error: 'Microsoft account connected but not verified',
+        error: 'Google account connected but not verified',
         guidance: [
-          'Complete the Microsoft account verification process',
-          'Check your email for verification instructions from Microsoft'
+          'Complete the Google account verification process',
+          'Check your email for verification instructions from Google'
         ]
       };
     }
@@ -63,7 +63,7 @@ export async function checkMicrosoftOAuthServerAction(): Promise<MicrosoftOAuthR
     // Try to get OAuth tokens to verify they're working
     // Note: Using new Clerk API without 'oauth_' prefix
     try {
-      const oauthTokens = await client.users.getUserOauthAccessToken(userId, 'microsoft');
+      const oauthTokens = await client.users.getUserOauthAccessToken(userId, 'google');
       
       if (oauthTokens?.data && oauthTokens.data.length > 0 && oauthTokens.data[0].token) {
         console.log('OAuth tokens successfully retrieved');
@@ -80,21 +80,22 @@ export async function checkMicrosoftOAuthServerAction(): Promise<MicrosoftOAuthR
         return {
           success: true,
           hasConnection: false,
-          error: 'Microsoft account connected but OAuth tokens not available',
+          error: 'Google account connected but OAuth tokens not available',
           needsReauth: true,
           guidance: [
             'OAuth tokens may have expired or scopes are insufficient',
             'This commonly happens when:',
             '  • The initial OAuth consent did not include required scopes',
             '  • Tokens have expired (typically after 1 hour)',
-            '  • The Microsoft app registration is missing permissions',
+            '  • The Google OAuth app configuration is missing permissions',
             '',
             'To fix this:',
-            '1. Disconnect your Microsoft account in account settings',
-            '2. Reconnect your Microsoft account',
+            '1. Disconnect your Google account in account settings',
+            '2. Reconnect your Google account',
             '3. Ensure these scopes are granted during consent:',
-            '  • User.Read (to access basic profile)',
-            '  • OnlineMeetings.ReadWrite (to create Teams meetings)',
+            '  • profile (to access basic profile)',
+            '  • email (to access email)',
+            '  • https://www.googleapis.com/auth/calendar.events (to create Google Meet links)',
             '  • offline_access (for token refresh)'
           ]
         };
@@ -112,7 +113,7 @@ export async function checkMicrosoftOAuthServerAction(): Promise<MicrosoftOAuthR
         error: 'OAuth token retrieval failed - likely expired or insufficient permissions',
         needsReauth: true,
         guidance: [
-          'The Microsoft OAuth connection needs to be refreshed',
+          'The Google OAuth connection needs to be refreshed',
           'This usually happens when:',
           '  • Tokens have expired',
           '  • Required scopes are missing from the OAuth configuration',
@@ -120,13 +121,13 @@ export async function checkMicrosoftOAuthServerAction(): Promise<MicrosoftOAuthR
           '',
           'To fix this:',
           '1. Go to your account settings',
-          '2. Disconnect your Microsoft account',
-          '3. Reconnect your Microsoft account',
+          '2. Disconnect your Google account',
+          '3. Reconnect your Google account',
           '4. Grant all requested permissions'
         ],
         debug: {
           tokenError: tokenError.message,
-          accountsFound: microsoftAccounts.length,
+          accountsFound: googleAccounts.length,
           verifiedAccounts: verifiedAccounts.length
         }
       };

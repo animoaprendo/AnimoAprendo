@@ -468,6 +468,8 @@ export async function updateAppointmentStatus(params: {
   status: 'accepted' | 'declined' | 'cancelled';
   actorId: string;
   declineReason?: string;
+  meetingUrl?: string;
+  meetingId?: string;
 }): Promise<{ success: boolean; data?: any; error?: string }> {
   try {
     const response = await fetch(
@@ -931,6 +933,8 @@ export async function fetchTuteeAppointments(userId?: string): Promise<{
         subject: appointment.subject || "No Subject",
         mode: appointment.mode || "Online",
         status: appointment.status || "active",
+        meetingUrl: appointment.meetingUrl || null,
+        meetingId: appointment.meetingId || null,
         resource: appointment
       };
     });
@@ -1017,6 +1021,8 @@ export async function fetchTuteeHistory(userId?: string): Promise<{
         subject: appointment.subject || "No Subject",
         status: appointment.status === 'completed' ? 'Completed' : 
                 appointment.status === 'cancelled' ? 'Cancelled' : 'Pending',
+        meetingUrl: appointment.meetingUrl || null,
+        meetingId: appointment.meetingId || null,
         rated: appointment.tuteeRated || false,
         ratings: appointment.tuteeRating ? {
           experience: appointment.tuteeRating,

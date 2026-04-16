@@ -68,7 +68,9 @@ export default async function TutorAppointmentsPage() {
           status: apt.status,
           mode: apt.mode,
           tuteeId: apt.tuteeId,
-          tuteeName: tuteeName
+          tuteeName: tuteeName,
+          meetingUrl: apt.meetingUrl || null,
+          meetingId: apt.meetingId || null
         };
       });
     }

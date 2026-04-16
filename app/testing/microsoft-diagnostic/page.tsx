@@ -1,4 +1,4 @@
-// Microsoft OAuth diagnostic page
+// Google OAuth diagnostic page
 import { runMicrosoftOAuthDiagnostic } from '@/app/actions/microsoft-diagnostic';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -42,10 +42,10 @@ export default async function MicrosoftDiagnosticPage() {
               <div className="w-8 h-8 bg-blue-600 rounded flex items-center justify-center text-white text-sm font-bold">
                 M
               </div>
-              Microsoft OAuth Diagnostic Report
+              Google OAuth Diagnostic Report
             </CardTitle>
             <p className="text-gray-600">
-              This report helps identify issues with Microsoft OAuth integration and provides
+              This report helps identify issues with Google OAuth integration and provides
               specific recommendations for resolving them.
             </p>
           </CardHeader>
@@ -127,8 +127,8 @@ export default async function MicrosoftDiagnosticPage() {
                 <ol className="list-decimal list-inside space-y-2 text-sm text-gray-700">
                   <li className="font-medium">Go to your Clerk account settings/profile</li>
                   <li className="font-medium">Find "Connected Accounts" or "Social Connections"</li>
-                  <li className="font-medium text-red-600">Disconnect your Microsoft account completely</li>
-                  <li className="font-medium text-green-600">Reconnect your Microsoft account</li>
+                  <li className="font-medium text-red-600">Disconnect your Google account completely</li>
+                  <li className="font-medium text-green-600">Reconnect your Google account</li>
                   <li className="font-medium">During reconnection, carefully grant ALL permissions when prompted</li>
                   <li>Return here and refresh to verify the fix</li>
                 </ol>
@@ -144,11 +144,12 @@ export default async function MicrosoftDiagnosticPage() {
                     <h4 className="font-medium text-blue-800">1. Clerk Dashboard Configuration:</h4>
                     <ul className="list-disc list-inside ml-4 text-blue-700 space-y-1">
                       <li>Go to Clerk Dashboard → Configure → SSO Connections</li>
-                      <li>Verify Microsoft OAuth provider is configured</li>
+                      <li>Verify Google OAuth provider is configured</li>
                       <li>Ensure these scopes are included:
                         <div className="bg-blue-100 p-2 rounded mt-1 font-mono text-xs">
-                          https://graph.microsoft.com/User.Read<br/>
-                          https://graph.microsoft.com/OnlineMeetings.ReadWrite<br/>
+                          profile<br/>
+                          email<br/>
+                          https://www.googleapis.com/auth/calendar.events<br/>
                           offline_access
                         </div>
                       </li>
@@ -156,27 +157,28 @@ export default async function MicrosoftDiagnosticPage() {
                   </div>
                   
                   <div>
-                    <h4 className="font-medium text-blue-800">2. Azure AD App Registration:</h4>
+                    <h4 className="font-medium text-blue-800">2. Google Cloud OAuth App:</h4>
                     <ul className="list-disc list-inside ml-4 text-blue-700 space-y-1">
-                      <li>Go to Azure AD → App Registrations → Your App</li>
-                      <li>Navigate to "API Permissions"</li>
+                      <li>Go to Google Cloud Console → APIs & Services → Credentials</li>
+                      <li>Navigate to OAuth client and consent screen settings</li>
                       <li>Verify these permissions are added:
                         <div className="bg-blue-100 p-2 rounded mt-1 text-xs">
-                          • Microsoft Graph → User.Read (Delegated)<br/>
-                          • Microsoft Graph → OnlineMeetings.ReadWrite (Delegated)
+                          • profile<br/>
+                          • email<br/>
+                          • https://www.googleapis.com/auth/calendar.events
                         </div>
                       </li>
-                      <li className="font-medium text-red-600">Click "Grant admin consent" for your organization</li>
-                      <li>Verify "Admin consent required" shows "Yes" and status is "Granted"</li>
+                      <li className="font-medium text-red-600">Ensure consent screen is published for your target users</li>
+                      <li>Verify scopes are approved and available in OAuth consent</li>
                     </ul>
                   </div>
                   
                   <div>
                     <h4 className="font-medium text-blue-800">3. Authentication Configuration:</h4>
                     <ul className="list-disc list-inside ml-4 text-blue-700 space-y-1">
-                      <li>In Azure AD app → Authentication</li>
+                      <li>In Google OAuth client settings</li>
                       <li>Verify Clerk's redirect URI is configured</li>
-                      <li>Enable "Access tokens" and "ID tokens"</li>
+                      <li>Enable Google Calendar API in APIs & Services</li>
                     </ul>
                   </div>
                 </div>
@@ -195,7 +197,7 @@ export default async function MicrosoftDiagnosticPage() {
               <ol className="list-decimal list-inside space-y-1 ml-4">
                 <li>Refresh this diagnostic page</li>
                 <li>"OAuth Token Retrieval" should show SUCCESS ✅</li>
-                <li>Test creating a Teams meeting from the app</li>
+                <li>Test creating a Google Meet link from the app</li>
                 <li>Verify the meeting link works</li>
               </ol>
             </div>

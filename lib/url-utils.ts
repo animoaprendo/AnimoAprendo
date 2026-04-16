@@ -21,7 +21,7 @@ export function getBaseUrl(): string {
 
 /**
  * Build an absolute API URL
- * @param path API path (e.g., '/api/auth/microsoft/token')
+ * @param path API path (e.g., '/api/auth/google/token')
  */
 export function buildApiUrl(path: string): string {
   const baseUrl = getBaseUrl();

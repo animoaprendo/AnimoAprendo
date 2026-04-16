@@ -1,4 +1,4 @@
-// API route to refresh Microsoft access token
+// API route to refresh Google access token
 import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(req: NextRequest) {
@@ -12,24 +12,24 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Refresh the Microsoft access token
-    const tokenResponse = await fetch('https://login.microsoftonline.com/common/oauth2/v2.0/token', {
+    // Refresh the Google access token
+    const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
       },
       body: new URLSearchParams({
-        client_id: process.env.MICROSOFT_CLIENT_ID!,
-        client_secret: process.env.MICROSOFT_CLIENT_SECRET!,
+        client_id: process.env.GOOGLE_CLIENT_ID!,
+        client_secret: process.env.GOOGLE_CLIENT_SECRET!,
         grant_type: 'refresh_token',
         refresh_token: refreshToken,
-        scope: 'https://graph.microsoft.com/OnlineMeetings.ReadWrite https://graph.microsoft.com/User.Read',
+        scope: 'profile email https://www.googleapis.com/auth/calendar.events',
       }),
     });
 
     if (!tokenResponse.ok) {
       const errorData = await tokenResponse.json();
-      console.error('Microsoft token refresh error:', errorData);
+      console.error('Google token refresh error:', errorData);
       return NextResponse.json(
         { success: false, error: 'Failed to refresh token' },
         { status: 401 }
@@ -48,7 +48,7 @@ export async function POST(req: NextRequest) {
     });
 
   } catch (error: any) {
-    console.error('Error refreshing Microsoft access token:', error);
+    console.error('Error refreshing Google access token:', error);
     
     return NextResponse.json(
       { 

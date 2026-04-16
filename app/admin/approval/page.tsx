@@ -8,12 +8,15 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import {
   AlertCircle,
   BookOpen,
   Calendar,
   Check,
   Clock,
+  Eye,
   RefreshCw,
   User,
   X
@@ -63,6 +66,8 @@ export default function OfferApprovalsPage() {
   const [loading, setLoading] = useState(true);
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [usersData, setUsersData] = useState<Record<string, UserData>>({});
+  const [selectedOffer, setSelectedOffer] = useState<PendingOffer | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   // Check if user is superadmin
   const isSuperAdmin = user?.publicMetadata?.isAdmin === true && user?.publicMetadata?.adminRole === "superadmin";
@@ -150,7 +155,7 @@ export default function OfferApprovalsPage() {
             lastName: user.lastName,
             emailAddresses: user.emailAddresses || [{ emailAddress: user.email }],
             imageUrl: user.imageUrl,
-            collegeInformation: user.public_metadata?.collegeInformation
+            collegeInformation: user.collegeInformation
           };
         } else {
           // Fallback for users not found
@@ -318,56 +323,170 @@ export default function OfferApprovalsPage() {
           </p>
         </div>
       ) : (
-        <div className="grid gap-6">
-          {pendingOffers.map((offer) => {
-            const user = usersData[offer.userId];
-            return (
-              <Card key={offer._id} className="overflow-hidden">
-                <CardHeader className="pb-4">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center space-x-4">
-                      <Avatar className="w-12 h-12">
-                        <AvatarImage src={user?.imageUrl} />
-                        <AvatarFallback>
-                          <User className="w-6 h-6" />
-                        </AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <CardTitle className="text-lg">
-                          {user ? `${user.firstName} ${user.lastName}` : 'Loading...'}
-                        </CardTitle>
-                        <CardDescription>
-                          <div>{user?.emailAddresses?.[0]?.emailAddress || offer.userId}</div>
-                          {user?.collegeInformation && (
-                            <div className="flex gap-1 mt-1">
-                              {user.collegeInformation.college && (
-                                <Badge variant="outline" className="text-xs">
-                                  {user.collegeInformation.college}
-                                </Badge>
-                              )}
-                              {user.collegeInformation.department && (
-                                <Badge variant="secondary" className="text-xs">
-                                  {user.collegeInformation.department}
-                                </Badge>
-                              )}
-                            </div>
-                          )}
-                        </CardDescription>
+        <div className="border rounded-lg overflow-hidden">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-32">Tutor</TableHead>
+                <TableHead>Email</TableHead>
+                <TableHead>Subject</TableHead>
+                <TableHead>College</TableHead>
+                <TableHead>Department</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {pendingOffers.map((offer) => {
+                const userData = usersData[offer.userId];
+                return (
+                  <TableRow key={offer._id}>
+                    <TableCell className="font-medium">
+                      <div className="flex items-center space-x-2">
+                        <Avatar className="w-8 h-8">
+                          <AvatarImage src={userData?.imageUrl} />
+                          <AvatarFallback>
+                            <User className="w-4 h-4" />
+                          </AvatarFallback>
+                        </Avatar>
+                        <span>
+                          {userData ? `${userData.firstName} ${userData.lastName}` : 'Loading...'}
+                        </span>
                       </div>
+                    </TableCell>
+                    <TableCell>{userData?.emailAddresses?.[0]?.emailAddress || offer.userId}</TableCell>
+                    <TableCell className="font-semibold text-primary">{offer.subject}</TableCell>
+                    <TableCell>
+                      {userData?.collegeInformation?.college ? (
+                        <Badge variant="outline" className="text-xs">
+                          {userData.collegeInformation.college}
+                        </Badge>
+                      ) : (
+                        <span className="text-muted-foreground text-xs">-</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {userData?.collegeInformation?.department ? (
+                        <Badge variant="secondary" className="text-xs">
+                          {userData.collegeInformation.department}
+                        </Badge>
+                      ) : (
+                        <span className="text-muted-foreground text-xs">-</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200 text-xs">
+                        <Clock className="w-3 h-3 mr-1" />
+                        Pending
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            setSelectedOffer(offer);
+                            setIsModalOpen(true);
+                          }}
+                        >
+                          <Eye className="w-4 h-4 mr-2" />
+                          Preview
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleReject(offer._id)}
+                          disabled={processingId === offer._id}
+                          className="text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700 hover:border-red-300"
+                        >
+                          {processingId === offer._id ? (
+                            <RefreshCw className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <X className="w-4 h-4" />
+                          )}
+                        </Button>
+                        <Button
+                          size="sm"
+                          onClick={() => handleApprove(offer._id)}
+                          disabled={processingId === offer._id}
+                          className="bg-green-600 hover:bg-green-700 text-white"
+                        >
+                          {processingId === offer._id ? (
+                            <RefreshCw className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <Check className="w-4 h-4" />
+                          )}
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        </div>
+      )}
+
+      {/* Preview Modal */}
+      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+        <DialogContent className="max-h-[90vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle>Offer Details</DialogTitle>
+          </DialogHeader>
+          
+          {selectedOffer && (
+            <ScrollArea className="flex-1 pr-4">
+              <div className="space-y-6">
+                {/* Tutor Info */}
+                <div>
+                  <h3 className="font-semibold mb-3 flex items-center">
+                    <User className="w-4 h-4 mr-2" />
+                    Tutor Information
+                  </h3>
+                  <div className="flex items-center space-x-4 p-4 bg-muted/50 rounded-lg">
+                    <Avatar className="w-12 h-12">
+                      <AvatarImage src={usersData[selectedOffer.userId]?.imageUrl} />
+                      <AvatarFallback>
+                        <User className="w-6 h-6" />
+                      </AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <div className="font-semibold">
+                        {usersData[selectedOffer.userId] 
+                          ? `${usersData[selectedOffer.userId].firstName} ${usersData[selectedOffer.userId].lastName}` 
+                          : 'Loading...'}
+                      </div>
+                      <div className="text-sm text-muted-foreground">
+                        {usersData[selectedOffer.userId]?.emailAddresses?.[0]?.emailAddress || selectedOffer.userId}
+                      </div>
+                      {usersData[selectedOffer.userId]?.collegeInformation && (
+                        <div className="flex gap-2 mt-2">
+                          {usersData[selectedOffer.userId]?.collegeInformation?.college && (
+                            <Badge variant="outline" className="text-xs">
+                              {usersData[selectedOffer.userId]?.collegeInformation?.college}
+                            </Badge>
+                          )}
+                          {usersData[selectedOffer.userId]?.collegeInformation?.department && (
+                            <Badge variant="secondary" className="text-xs">
+                              {usersData[selectedOffer.userId]?.collegeInformation?.department}
+                            </Badge>
+                          )}
+                        </div>
+                      )}
                     </div>
-                    <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">
-                      <Clock className="w-3 h-3 mr-1" />
-                      Pending
-                    </Badge>
                   </div>
-                </CardHeader>
-                
-                <CardContent className="space-y-6">
-                  {/* Offer Banner */}
-                  {offer.banner && (
-                    <div className="relative h-48 rounded-lg overflow-hidden bg-muted">
+                </div>
+
+                <Separator />
+
+                {/* Offer Banner */}
+                {selectedOffer.banner && (
+                  <div>
+                    <h3 className="font-semibold mb-3">Offer Banner</h3>
+                    <div className="relative h-40 rounded-lg overflow-hidden bg-muted">
                       <img
-                        src={offer.banner}
+                        src={selectedOffer.banner}
                         alt="Offer banner"
                         className="w-full h-full object-cover"
                         onError={(e) => {
@@ -375,84 +494,94 @@ export default function OfferApprovalsPage() {
                         }}
                       />
                     </div>
-                  )}
-                  
-                  {/* Subject Info */}
-                  <div className="flex items-center space-x-2">
-                    <BookOpen className="w-5 h-5 text-primary" />
-                    <span className="font-semibold text-lg">{offer.subject}</span>
                   </div>
-                  
-                  {/* Description */}
-                  <div>
-                    <h4 className="font-medium mb-2">Description</h4>
-                    <div className="bg-muted/50 p-3 rounded-lg">
-                      <p className="text-sm text-muted-foreground">
-                        {stripHtml(offer.description) || 'No description provided'}
-                      </p>
-                    </div>
+                )}
+                
+                {/* Subject Info */}
+                <div>
+                  <h3 className="font-semibold mb-3 flex items-center">
+                    <BookOpen className="w-4 h-4 mr-2" />
+                    Subject
+                  </h3>
+                  <div className="p-3 bg-muted/50 rounded-lg font-semibold text-lg text-primary">
+                    {selectedOffer.subject}
                   </div>
-                  
-                  {/* Availability */}
-                  <div>
-                    <h4 className="font-medium mb-2 flex items-center">
-                      <Calendar className="w-4 h-4 mr-2" />
-                      Available Times
-                    </h4>
-                    <ScrollArea className="h-24">
-                      <div className="space-y-2">
-                        {offer.availability.map((slot) => (
-                          <div key={slot.id} className="flex items-center justify-between bg-muted/50 p-2 rounded text-sm">
-                            <span className="font-medium">{slot.day}</span>
-                            <span className="text-muted-foreground">{slot.start} - {slot.end}</span>
-                          </div>
-                        ))}
+                </div>
+                
+                {/* Description */}
+                <div>
+                  <h3 className="font-semibold mb-3">Description</h3>
+                  <div className="bg-muted/50 p-4 rounded-lg">
+                    <p className="text-sm text-muted-foreground">
+                      {stripHtml(selectedOffer.description) || 'No description provided'}
+                    </p>
+                  </div>
+                </div>
+                
+                {/* Availability */}
+                <div>
+                  <h3 className="font-semibold mb-3 flex items-center">
+                    <Calendar className="w-4 h-4 mr-2" />
+                    Available Times
+                  </h3>
+                  <div className="space-y-2">
+                    {selectedOffer.availability.map((slot) => (
+                      <div key={slot.id} className="flex items-center justify-between bg-muted/50 p-3 rounded">
+                        <span className="font-medium text-sm">{slot.day}</span>
+                        <span className="text-muted-foreground text-sm">{slot.start} - {slot.end}</span>
                       </div>
-                    </ScrollArea>
+                    ))}
                   </div>
-                  
-                  {/* Timestamps */}
-                  <div className="flex items-center justify-between text-xs text-muted-foreground">
-                    <span>Submitted: {new Date(offer.createdAt).toLocaleDateString()}</span>
-                    <span>Updated: {new Date(offer.updatedAt).toLocaleDateString()}</span>
-                  </div>
-                  
-                  <Separator />
-                  
-                  {/* Action Buttons */}
-                  <div className="flex items-center justify-end space-x-3">
-                    <Button
-                      variant="outline"
-                      onClick={() => handleReject(offer._id)}
-                      disabled={processingId === offer._id}
-                      className="text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700 hover:border-red-300"
-                    >
-                      {processingId === offer._id ? (
-                        <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                      ) : (
-                        <X className="w-4 h-4 mr-2" />
-                      )}
-                      Reject
-                    </Button>
-                    <Button
-                      onClick={() => handleApprove(offer._id)}
-                      disabled={processingId === offer._id}
-                      className="bg-green-600 hover:bg-green-700 text-white"
-                    >
-                      {processingId === offer._id ? (
-                        <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                      ) : (
-                        <Check className="w-4 h-4 mr-2" />
-                      )}
-                      Approve
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
-      )}
+                </div>
+                
+                {/* Timestamps */}
+                <div className="text-xs text-muted-foreground space-y-1">
+                  <div>Submitted: {new Date(selectedOffer.createdAt).toLocaleDateString()}</div>
+                  <div>Updated: {new Date(selectedOffer.updatedAt).toLocaleDateString()}</div>
+                </div>
+              </div>
+            </ScrollArea>
+          )}
+
+          <DialogFooter className="border-t pt-4 mt-4">
+            {selectedOffer && (
+              <div className="flex items-center justify-end gap-3">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    handleReject(selectedOffer._id);
+                    setIsModalOpen(false);
+                  }}
+                  disabled={processingId === selectedOffer._id}
+                  className="text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700 hover:border-red-300"
+                >
+                  {processingId === selectedOffer._id ? (
+                    <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                  ) : (
+                    <X className="w-4 h-4 mr-2" />
+                  )}
+                  Reject
+                </Button>
+                <Button
+                  onClick={() => {
+                    handleApprove(selectedOffer._id);
+                    setIsModalOpen(false);
+                  }}
+                  disabled={processingId === selectedOffer._id}
+                  className="bg-green-600 hover:bg-green-700 text-white"
+                >
+                  {processingId === selectedOffer._id ? (
+                    <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                  ) : (
+                    <Check className="w-4 h-4 mr-2" />
+                  )}
+                  Approve
+                </Button>
+              </div>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

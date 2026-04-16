@@ -1,4 +1,4 @@
-// Direct Microsoft OAuth token retrieval using server actions
+// Direct Google OAuth token retrieval using server actions
 'use server';
 
 import { auth, clerkClient } from '@clerk/nextjs/server';
@@ -25,21 +25,21 @@ export async function getMicrosoftAccessTokenServerAction(userId?: string): Prom
     const client = await clerkClient();
     const user = await client.users.getUser(targetUserId);
     
-    const microsoftAccounts = user.externalAccounts?.filter(acc => 
-      acc.provider === 'oauth_microsoft' && acc.verification?.status === 'verified'
+    const googleAccounts = user.externalAccounts?.filter(acc => 
+      acc.provider === 'oauth_google' && acc.verification?.status === 'verified'
     ) || [];
 
-    if (microsoftAccounts.length === 0) {
+    if (googleAccounts.length === 0) {
       return {
         success: false,
-        error: 'No verified Microsoft account found',
+        error: 'No verified Google account found',
         needsReauth: false
       };
     }
 
     try {
       // Use new Clerk API without 'oauth_' prefix
-      const oauthTokens = await client.users.getUserOauthAccessToken(targetUserId, 'microsoft');
+      const oauthTokens = await client.users.getUserOauthAccessToken(targetUserId, 'google');
       
       console.log('Token retrieval attempt:', {
         hasData: !!oauthTokens?.data,
@@ -76,7 +76,7 @@ export async function getMicrosoftAccessTokenServerAction(userId?: string): Prom
       if (isTokenRetrievalError) {
         return {
           success: false,
-          error: 'Microsoft OAuth token has expired or insufficient permissions were granted',
+          error: 'Google OAuth token has expired or insufficient permissions were granted',
           needsReauth: true
         };
       }

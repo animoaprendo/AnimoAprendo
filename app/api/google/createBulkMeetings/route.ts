@@ -3,8 +3,8 @@ import { NextRequest, NextResponse } from "next/server";
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { 
-      meetings, // Array of meeting objects
+    const {
+      meetings,
       accessToken,
       options = {}
     } = body;
@@ -14,12 +14,11 @@ export async function POST(req: NextRequest) {
       continueOnError = true
     } = options;
 
-    // Validate required fields
     if (!meetings || !Array.isArray(meetings) || meetings.length === 0) {
       return NextResponse.json(
-        { 
-          success: false, 
-          error: "meetings array is required and cannot be empty" 
+        {
+          success: false,
+          error: "meetings array is required and cannot be empty"
         },
         { status: 400 }
       );
@@ -27,9 +26,9 @@ export async function POST(req: NextRequest) {
 
     if (!accessToken) {
       return NextResponse.json(
-        { 
-          success: false, 
-          error: "accessToken is required" 
+        {
+          success: false,
+          error: "accessToken is required"
         },
         { status: 400 }
       );
@@ -39,12 +38,10 @@ export async function POST(req: NextRequest) {
     let successCount = 0;
     let failureCount = 0;
 
-    // Process each meeting
     for (let i = 0; i < meetings.length; i++) {
       const meetingData = meetings[i];
-      
+
       try {
-        // Validate individual meeting data
         if (!meetingData.startDateTime || !meetingData.endDateTime || !meetingData.subject) {
           throw new Error("Missing required fields: startDateTime, endDateTime, subject");
         }
@@ -104,27 +101,24 @@ export async function POST(req: NextRequest) {
           },
           originalData: meetingData
         });
-        
+
         successCount++;
-        
-        // Add delay between requests to avoid rate limiting (except for last item)
+
         if (i < meetings.length - 1 && delayBetweenRequests > 0) {
           await new Promise(resolve => setTimeout(resolve, delayBetweenRequests));
         }
-
       } catch (error: any) {
         const errorMessage = error.message || 'Unknown error occurred';
-        
+
         results.push({
           index: i,
           success: false,
           error: errorMessage,
           originalData: meetingData
         });
-        
+
         failureCount++;
 
-        // If not continuing on error, return immediately
         if (!continueOnError) {
           return NextResponse.json({
             success: false,
@@ -154,11 +148,10 @@ export async function POST(req: NextRequest) {
         failed: failureCount,
         successRate: Math.round(successRate * 100) / 100
       },
-      message: overallSuccess 
+      message: overallSuccess
         ? `All ${meetings.length} meetings created successfully`
         : `${successCount} of ${meetings.length} meetings created successfully`
     });
-
   } catch (error: any) {
     console.error("Error in bulk Google Meet creation:", error);
 

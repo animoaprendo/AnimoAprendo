@@ -1,12 +1,12 @@
-// Updated example showing how to create Teams meetings with the new authentication system
+// Updated example showing how to create Google Meet meetings with the new authentication system
 
-import { createTeamsMeetingWithAuth, createMeetingTimes } from '@/lib/microsoft-teams';
+import { createGoogleMeetMeetingWithAuth, createMeetingTimes } from '@/lib/google-meet';
 import { buildApiUrl } from './url-utils';
 
 /**
- * Example: Create a Teams meeting when an appointment is accepted
+ * Example: Create a Google Meet meeting when an appointment is accepted
  */
-export async function createAppointmentTeamsMeeting(appointment: {
+export async function createAppointmentGoogleMeetMeeting(appointment: {
   datetimeISO: string;
   subject: string;
   tutorId: string; // Clerk user ID of the tutor
@@ -27,31 +27,30 @@ export async function createAppointmentTeamsMeeting(appointment: {
       attendees.push(...appointment.additionalAttendees);
     }
 
-    // Create the meeting using the tutor's Microsoft account
-    const result = await createTeamsMeetingWithAuth({
+    // Create the meeting using the tutor's Google account
+    const result = await createGoogleMeetMeetingWithAuth({
       startDateTime,
       endDateTime,
       subject: appointment.subject,
-      isPasscodeRequired: true,
       attendees: attendees.length > 0 ? attendees : undefined
     }, appointment.tutorId); // Pass the tutor's user ID
 
     if (result.success && result.meeting) {
-      console.log('Teams meeting created:', result.meeting.joinUrl);
+      console.log('Google Meet link created:', result.meeting.joinUrl);
       return {
         success: true,
         meetingUrl: result.meeting.joinUrl,
         meetingId: result.meeting.id
       };
     } else {
-      console.error('Failed to create Teams meeting:', result.error);
+      console.error('Failed to create Google Meet link:', result.error);
       return {
         success: false,
         error: result.error
       };
     }
   } catch (error) {
-    console.error('Error in createAppointmentTeamsMeeting:', error);
+    console.error('Error in createAppointmentGoogleMeetMeeting:', error);
     return {
       success: false,
       error: 'Failed to create meeting'
@@ -60,9 +59,9 @@ export async function createAppointmentTeamsMeeting(appointment: {
 }
 
 /**
- * Example: Check if a user has connected their Microsoft account via Clerk OAuth
+ * Example: Check if a user has connected their Google account via Clerk OAuth
  */
-export async function checkMicrosoftConnection(userId?: string): Promise<boolean> {
+export async function checkGoogleConnection(userId?: string): Promise<boolean> {
   try {
     const url = buildApiUrl('/api/auth/microsoft/token');
 
@@ -77,7 +76,7 @@ export async function checkMicrosoftConnection(userId?: string): Promise<boolean
     const data = await response.json();
     return data.success;
   } catch (error) {
-    console.error('Error checking Microsoft connection:', error);
+    console.error('Error checking Google connection:', error);
     return false;
   }
 }
@@ -85,7 +84,7 @@ export async function checkMicrosoftConnection(userId?: string): Promise<boolean
 /**
  * Example: Integration with appointment acceptance flow
  */
-export async function acceptAppointmentWithTeamsMeeting(
+export async function acceptAppointmentWithGoogleMeet(
   messageId: string,
   tutorId: string,
   tuteeEmail?: string
@@ -107,18 +106,18 @@ export async function acceptAppointmentWithTeamsMeeting(
 
     const appointment = await acceptResult.json();
 
-    // 2. Check if tutor has Microsoft account connected
-    const hasConnection = await checkMicrosoftConnection(tutorId);
+    // 2. Check if tutor has Google account connected
+    const hasConnection = await checkGoogleConnection(tutorId);
     if (!hasConnection) {
       return {
         success: true,
         appointment: appointment,
-        warning: 'Appointment accepted, but tutor needs to connect Microsoft account to create Teams meeting'
+        warning: 'Appointment accepted, but tutor needs to connect Google account to create Google Meet link'
       };
     }
 
-    // 3. Create Teams meeting
-    const meetingResult = await createAppointmentTeamsMeeting({
+    // 3. Create Google Meet meeting
+    const meetingResult = await createAppointmentGoogleMeetMeeting({
       datetimeISO: appointment.datetime,
       subject: `Tutoring: ${appointment.subject}`,
       tutorId: tutorId,
@@ -133,7 +132,7 @@ export async function acceptAppointmentWithTeamsMeeting(
     };
 
   } catch (error) {
-    console.error('Error in acceptAppointmentWithTeamsMeeting:', error);
+    console.error('Error in acceptAppointmentWithGoogleMeet:', error);
     return {
       success: false,
       error: 'Failed to process appointment'
@@ -156,7 +155,7 @@ export async function createBulkMeetingsForAppointments(
   const results = [];
 
   for (const appointment of appointments) {
-    const result = await createAppointmentTeamsMeeting(appointment);
+    const result = await createAppointmentGoogleMeetMeeting(appointment);
     results.push({
       appointmentId: appointment.id,
       ...result
@@ -173,3 +172,4 @@ export async function createBulkMeetingsForAppointments(
     results
   };
 }
+

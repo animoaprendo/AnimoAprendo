@@ -38,13 +38,13 @@ function AuthSuccessContent() {
         <CardHeader>
           <CardTitle className="text-center text-green-900 flex items-center justify-center gap-2">
             <CheckCircle className="w-6 h-6 text-green-600" />
-            Microsoft Authentication Successful!
+            Google Authentication Successful!
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="text-center">
             <p className="text-sm text-gray-600">
-              You've successfully connected your Microsoft account. You can now create Teams meetings.
+              You've successfully connected your Google account. You can now create Google Meet links.
             </p>
           </div>
 
@@ -62,7 +62,7 @@ function AuthSuccessContent() {
                     variant="outline"
                     size="sm"
                     onClick={handleCopy}
-                    className="flex-shrink-0"
+                    className="shrink-0"
                   >
                     <Copy className="w-4 h-4" />
                     {copied ? "Copied!" : "Copy"}
@@ -74,7 +74,7 @@ function AuthSuccessContent() {
                 <h3 className="font-semibold text-blue-900 mb-2">Next Steps:</h3>
                 <ol className="list-decimal list-inside space-y-1 text-sm text-blue-800">
                   <li>Copy the access token above</li>
-                  <li>Use it in your Teams meeting creation calls</li>
+                  <li>Use it in your Google Meet creation calls</li>
                   <li>Store it securely (expires in ~1 hour)</li>
                   <li>Implement token refresh for production use</li>
                 </ol>
@@ -99,7 +99,7 @@ function AuthSuccessContent() {
             </Button>
             <Button 
               variant="outline"
-              onClick={() => window.location.href = '/auth/microsoft'}
+              onClick={() => window.location.href = '/auth/google'}
             >
               Re-authenticate
             </Button>
@@ -122,7 +122,7 @@ function LoadingFallback() {
         </CardHeader>
         <CardContent className="text-center">
           <p className="text-sm text-gray-600">
-            Processing your Microsoft authentication...
+            Processing your Google authentication...
           </p>
         </CardContent>
       </Card>

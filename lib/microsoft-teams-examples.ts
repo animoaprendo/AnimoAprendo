@@ -1,13 +1,13 @@
-// Example usage of Microsoft Teams integration
+// Example usage of Google Meet integration
 // This can be integrated into your appointment creation or chat system
 
-import { createTeamsMeeting, createMeetingTimes, CreateMeetingRequest } from '@/lib/microsoft-teams';
+import { createGoogleMeetMeeting, createMeetingTimes, CreateMeetingRequest } from '@/lib/google-meet';
 
-// Example 1: Create a Teams meeting when an appointment is accepted
-export async function createAppointmentTeamsMeeting(appointment: {
+// Example 1: Create a Google Meet link when an appointment is accepted
+export async function createAppointmentGoogleMeetMeeting(appointment: {
   datetimeISO: string;
   subject: string;
-  tutorAccessToken: string; // You'll need to get this from Microsoft OAuth
+  tutorAccessToken: string; // You'll need to get this from Google OAuth
   tuteeEmail?: string; // Optional: add tutee as attendee
   additionalAttendees?: string[]; // Optional: other attendees
 }) {
@@ -28,29 +28,28 @@ export async function createAppointmentTeamsMeeting(appointment: {
       startDateTime,
       endDateTime,
       subject: `Tutoring Session: ${appointment.subject}`,
-      isPasscodeRequired: true, // For security
       accessToken: appointment.tutorAccessToken,
       attendees: attendees.length > 0 ? attendees : undefined
     };
 
-    const result = await createTeamsMeeting(meetingRequest);
+    const result = await createGoogleMeetMeeting(meetingRequest);
     
     if (result.success && result.meeting) {
-      console.log('Teams meeting created:', result.meeting.joinUrl);
+      console.log('Google Meet link created:', result.meeting.joinUrl);
       return {
         success: true,
         meetingUrl: result.meeting.joinUrl,
         meetingId: result.meeting.id
       };
     } else {
-      console.error('Failed to create Teams meeting:', result.error);
+      console.error('Failed to create Google Meet link:', result.error);
       return {
         success: false,
         error: result.error
       };
     }
   } catch (error) {
-    console.error('Error in createAppointmentTeamsMeeting:', error);
+    console.error('Error in createAppointmentGoogleMeetMeeting:', error);
     return {
       success: false,
       error: 'Failed to create meeting'
@@ -58,13 +57,13 @@ export async function createAppointmentTeamsMeeting(appointment: {
   }
 }
 
-// Example 2: Function to handle Teams meeting creation (for use in React components)
-export async function handleTeamsMeetingCreation(
+// Example 2: Function to handle Google Meet creation (for use in React components)
+export async function handleGoogleMeetCreation(
   appointment: { datetimeISO: string; subject: string },
   accessToken: string,
   onMeetingCreated: (meetingUrl: string) => void
 ) {
-  const result = await createAppointmentTeamsMeeting({
+  const result = await createAppointmentGoogleMeetMeeting({
     ...appointment,
     tutorAccessToken: accessToken
   });
@@ -77,12 +76,12 @@ export async function handleTeamsMeetingCreation(
 }
 
 // Example 3: Integration with your existing appointment system
-export async function enhanceAppointmentWithTeamsMeeting(
+export async function enhanceAppointmentWithGoogleMeet(
   appointmentMessage: any, // Your existing appointment message
   tutorAccessToken: string
 ) {
   if (appointmentMessage.type === 'appointment' && appointmentMessage.appointment) {
-    const meeting = await createAppointmentTeamsMeeting({
+    const meeting = await createAppointmentGoogleMeetMeeting({
       datetimeISO: appointmentMessage.appointment.datetimeISO,
       subject: appointmentMessage.appointment.subject || 'Tutoring Session',
       tutorAccessToken
@@ -105,7 +104,7 @@ export async function enhanceAppointmentWithTeamsMeeting(
 }
 
 // Example 4: Advanced meeting creation with multiple attendees and roles
-export async function createAdvancedTeamsMeeting({
+export async function createAdvancedGoogleMeetMeeting({
   startDateTime,
   endDateTime,
   subject,
@@ -127,11 +126,10 @@ export async function createAdvancedTeamsMeeting({
     ...observers.map(obs => obs.email)
   ];
 
-  const meeting = await createTeamsMeeting({
+  const meeting = await createGoogleMeetMeeting({
     startDateTime,
     endDateTime,
     subject: `${subject} - ${organizer.name} & ${tutee.name}`,
-    isPasscodeRequired: true,
     accessToken,
     attendees
   });
@@ -147,7 +145,7 @@ export async function createAdvancedTeamsMeeting({
 }
 
 // Example 5: Advanced recurring meeting creation with multiple patterns
-export async function createRecurringTeamsMeetings({
+export async function createRecurringGoogleMeetMeetings({
   baseAppointment,
   recurrencePattern,
   tutorAccessToken,
@@ -170,13 +168,11 @@ export async function createRecurringTeamsMeetings({
   tuteeEmail: string;
   additionalAttendees?: string[];
   options?: {
-    isPasscodeRequired?: boolean;
     delayBetweenCreations?: number; // ms delay to avoid rate limiting
     subjectPrefix?: string;
   };
 }) {
   const {
-    isPasscodeRequired = true,
     delayBetweenCreations = 200,
     subjectPrefix = "Session"
   } = options;
@@ -205,11 +201,10 @@ export async function createRecurringTeamsMeetings({
     try {
       const { startDateTime, endDateTime } = createMeetingTimes(new Date(meetingDate), duration);
       
-      const meeting = await createTeamsMeeting({
+      const meeting = await createGoogleMeetMeeting({
         startDateTime,
         endDateTime,
         subject: `${subjectPrefix} ${sessionNumber}: ${baseAppointment.subject}`,
-        isPasscodeRequired,
         accessToken: tutorAccessToken,
         attendees: [tuteeEmail, ...additionalAttendees]
       });
@@ -340,7 +335,7 @@ export async function createWeeklyTutoringMeetings({
   tuteeEmail: string;
   sessionDuration?: number; // minutes
 }) {
-  return createRecurringTeamsMeetings({
+  return createRecurringGoogleMeetMeetings({
     baseAppointment: {
       startDateTime: firstSessionDate,
       subject,
@@ -354,7 +349,6 @@ export async function createWeeklyTutoringMeetings({
     tuteeEmail,
     options: {
       subjectPrefix: 'Weekly Session',
-      isPasscodeRequired: true
     }
   });
 }
@@ -387,7 +381,7 @@ export async function createScheduledTutoringMeetings({
   
   const totalSessions = numberOfWeeks * daysOfWeek.length;
   
-  return createRecurringTeamsMeetings({
+  return createRecurringGoogleMeetMeetings({
     baseAppointment: {
       startDateTime: baseDate.toISOString(),
       subject,
@@ -406,3 +400,4 @@ export async function createScheduledTutoringMeetings({
     }
   });
 }
+
