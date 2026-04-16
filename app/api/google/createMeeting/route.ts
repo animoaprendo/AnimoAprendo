@@ -153,6 +153,10 @@ export async function POST(req: NextRequest) {
         timeZone: timezone,
       },
       attendees: attendees.map((email: string) => ({ email })),
+      // Allow guests to join and invite others without organizer approval
+      guestCanInviteOthers: true,
+      guestCanModify: false,
+      guestCanSeeOtherGuests: true,
     };
 
     const requestId = `meet-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
@@ -166,6 +170,8 @@ export async function POST(req: NextRequest) {
             type: 'hangoutsMeet',
           },
         },
+        // Allow unauthenticated users to join the Meet without asking organizer
+        entryPointFeatures: ['supportsUnauthenticatedAccess'],
       },
     };
 
@@ -175,6 +181,8 @@ export async function POST(req: NextRequest) {
         createRequest: {
           requestId,
         },
+        // Allow unauthenticated users to join the Meet without asking organizer
+        entryPointFeatures: ['supportsUnauthenticatedAccess'],
       },
     };
 
