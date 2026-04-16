@@ -68,10 +68,36 @@ export async function PATCH(req: Request) {
     const existingSubject = await db
       .collection("subjects")
       .findOne({ _id: ObjectId.createFromHexString(documentId) });
+
+    let resolvedStatus = rest.status;
+    let resolvedAutoApproved = rest.autoApproved;
+
+    // When a tutor submits a draft, status is sent as pending.
+    // Resolve it against the department auto-approve setting.
+    if (rest.status === 'pending') {
+      const effectiveUserId = rest.userId || existingSubject?.userId;
+
+      if (effectiveUserId) {
+        const userData = await db.collection("users").findOne({ id: effectiveUserId });
+        const userCollege = userData?.public_metadata?.collegeInformation?.college || null;
+        const userDepartment = userData?.public_metadata?.collegeInformation?.department || null;
+        const departmentName = userDepartment && userDepartment !== 'ALL_DEPARTMENTS' ? userDepartment : null;
+
+        const shouldAutoApprove =
+          userCollege && departmentName
+            ? await getDepartmentAutoApprove(db, userCollege, departmentName)
+            : false;
+
+        resolvedStatus = shouldAutoApprove ? 'available' : 'pending';
+        resolvedAutoApproved = shouldAutoApprove;
+      }
+    }
     
     // Add updated timestamp to the update data
     const updateDataWithTimestamp = {
       ...rest,
+      ...(resolvedStatus !== undefined ? { status: resolvedStatus } : {}),
+      ...(resolvedAutoApproved !== undefined ? { autoApproved: resolvedAutoApproved } : {}),
       updatedAt: new Date().toISOString()
     };
     
@@ -83,7 +109,7 @@ export async function PATCH(req: Request) {
       );
 
     if (
-      rest.status === 'available' &&
+      resolvedStatus === 'available' &&
       existingSubject?.status !== 'available' &&
       existingSubject?.userId
     ) {
