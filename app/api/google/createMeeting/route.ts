@@ -96,7 +96,7 @@ export async function POST(req: NextRequest) {
       conferenceType: 'hangoutsMeet',
     });
 
-    const eventPayload = {
+    const baseEventPayload = {
       summary: subject,
       description,
       start: {
@@ -108,52 +108,104 @@ export async function POST(req: NextRequest) {
         timeZone: timezone,
       },
       attendees: attendees.map((email: string) => ({ email })),
-      conferenceData: {
-        createRequest: {
-          requestId: `meet-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`,
-          conferenceSolutionKey: {
-            type: 'hangoutsMeet'
-          }
-        }
-      }
     };
 
-    const googleResponse = await fetch(
-      `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events?conferenceDataVersion=1`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${resolvedAccessToken}`,
+    const requestId = `meet-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+
+    const eventPayloadWithMeetType = {
+      ...baseEventPayload,
+      conferenceData: {
+        createRequest: {
+          requestId,
+          conferenceSolutionKey: {
+            type: 'hangoutsMeet',
+          },
         },
-        body: JSON.stringify(eventPayload),
-      }
-    );
+      },
+    };
+
+    const eventPayloadWithoutType = {
+      ...baseEventPayload,
+      conferenceData: {
+        createRequest: {
+          requestId,
+        },
+      },
+    };
+
+    const createEvent = async (payload: unknown) => {
+      return fetch(
+        `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events?conferenceDataVersion=1`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${resolvedAccessToken}`,
+          },
+          body: JSON.stringify(payload),
+        }
+      );
+    };
+
+    let googleResponse = await createEvent(eventPayloadWithMeetType);
 
     if (!googleResponse.ok) {
-      const errorBody = await googleResponse.text();
-      console.error('[GoogleMeet][createMeeting] Google Calendar API error', {
-        traceId,
-        status: googleResponse.status,
-        statusText: googleResponse.statusText,
-        responseSnippet: errorBody.slice(0, 500),
-      });
+      const initialErrorBody = await googleResponse.text();
+      const isInvalidConferenceType =
+        googleResponse.status === 400 &&
+        initialErrorBody.toLowerCase().includes('invalid conference type value');
 
-      const hint =
-        googleResponse.status === 401
-          ? 'Unauthorized token. Verify GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY is the full PEM private key and redeploy.'
-          : googleResponse.status === 403
-            ? 'Token is valid but lacks calendar permissions. Ensure Calendar API is enabled and the service account has calendar access.'
-            : undefined;
+      if (isInvalidConferenceType) {
+        console.warn('[GoogleMeet][createMeeting] Retrying without explicit conferenceSolutionKey.type', {
+          traceId,
+          calendarId,
+        });
 
-      return NextResponse.json(
-        {
-          success: false,
-          error: `Failed to create Google Meet event: ${errorBody}`,
-          hint,
-        },
-        { status: googleResponse.status }
-      );
+        googleResponse = await createEvent(eventPayloadWithoutType);
+
+        if (!googleResponse.ok) {
+          const retryErrorBody = await googleResponse.text();
+          console.error('[GoogleMeet][createMeeting] Google Calendar API error after retry', {
+            traceId,
+            status: googleResponse.status,
+            statusText: googleResponse.statusText,
+            responseSnippet: retryErrorBody.slice(0, 500),
+          });
+
+          return NextResponse.json(
+            {
+              success: false,
+              error: `Failed to create Google Meet event: ${retryErrorBody}`,
+              hint:
+                'Calendar event creation works, but Meet conference creation is not enabled for this calendar/account. Use a Google Workspace user calendar with Meet enabled, or set GOOGLE_MEET_CALENDAR_ID to a supported calendar.',
+            },
+            { status: googleResponse.status }
+          );
+        }
+      } else {
+        console.error('[GoogleMeet][createMeeting] Google Calendar API error', {
+          traceId,
+          status: googleResponse.status,
+          statusText: googleResponse.statusText,
+          responseSnippet: initialErrorBody.slice(0, 500),
+        });
+
+        const hint =
+          googleResponse.status === 401
+            ? 'Unauthorized token. Verify GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY is the full PEM private key and redeploy.'
+            : googleResponse.status === 403
+              ? 'Token is valid but lacks calendar permissions. Ensure Calendar API is enabled and the service account has calendar access.'
+              : undefined;
+
+        return NextResponse.json(
+          {
+            success: false,
+            error: `Failed to create Google Meet event: ${initialErrorBody}`,
+            hint,
+          },
+          { status: googleResponse.status }
+        );
+      }
     }
 
     const meeting = await googleResponse.json();
