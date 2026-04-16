@@ -8,10 +8,18 @@ import {
 } from '@/lib/google-service-account';
 
 export async function POST(req: NextRequest) {
+  const traceId = `svc-token-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   try {
+    console.log('[GoogleMeet][serviceAccountToken] Request received', { traceId });
+
     // Validate that service account is configured
     const validation = validateServiceAccountConfig();
     if (!validation.isValid) {
+      console.error('[GoogleMeet][serviceAccountToken] Invalid service account config', {
+        traceId,
+        validationErrors: validation.errors,
+      });
+
       return NextResponse.json(
         {
           success: false,
@@ -24,6 +32,10 @@ export async function POST(req: NextRequest) {
 
     // Get access token from service account
     const accessToken = await getServiceAccountAccessToken();
+    console.log('[GoogleMeet][serviceAccountToken] Token acquired', {
+      traceId,
+      tokenLength: accessToken.length,
+    });
 
     return NextResponse.json({
       success: true,
@@ -33,7 +45,12 @@ export async function POST(req: NextRequest) {
       },
     });
   } catch (error: any) {
-    console.error('Error getting service account access token:', error);
+    console.error('[GoogleMeet][serviceAccountToken] Unhandled error', {
+      traceId,
+      message: error?.message,
+      name: error?.name,
+      stack: error?.stack,
+    });
 
     return NextResponse.json(
       {

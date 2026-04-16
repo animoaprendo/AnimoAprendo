@@ -5,19 +5,36 @@ import {
 } from "@/lib/google-service-account";
 
 export async function POST(req: NextRequest) {
+  const traceId = `meet-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   try {
     const body = await req.json();
     const {
       startDateTime,
       endDateTime,
       subject,
-      accessToken,
       attendees = [],
       timezone = 'UTC',
       description = ''
     } = body;
 
+    console.log('[GoogleMeet][createMeeting] Request received', {
+      traceId,
+      hasStartDateTime: !!startDateTime,
+      hasEndDateTime: !!endDateTime,
+      hasSubject: !!subject,
+      attendeesCount: Array.isArray(attendees) ? attendees.length : -1,
+      timezone,
+      hasDescription: !!description,
+    });
+
     if (!startDateTime || !endDateTime || !subject) {
+      console.warn('[GoogleMeet][createMeeting] Validation failed: missing fields', {
+        traceId,
+        hasStartDateTime: !!startDateTime,
+        hasEndDateTime: !!endDateTime,
+        hasSubject: !!subject,
+      });
+
       return NextResponse.json(
         {
           success: false,
@@ -28,6 +45,11 @@ export async function POST(req: NextRequest) {
     }
 
     if (attendees && !Array.isArray(attendees)) {
+      console.warn('[GoogleMeet][createMeeting] Validation failed: attendees is not an array', {
+        traceId,
+        attendeesType: typeof attendees,
+      });
+
       return NextResponse.json(
         {
           success: false,
@@ -37,26 +59,37 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Prefer caller token when provided; otherwise mint a fresh service-account token.
-    let resolvedAccessToken = accessToken as string | undefined;
+    // Always mint a fresh service-account token server-side.
+    // This avoids client-supplied stale OAuth tokens causing 401 responses.
+    const validation = validateServiceAccountConfig();
+    if (!validation.isValid) {
+      console.error('[GoogleMeet][createMeeting] Service account config invalid', {
+        traceId,
+        validationErrors: validation.errors,
+      });
 
-    if (!resolvedAccessToken) {
-      const validation = validateServiceAccountConfig();
-      if (!validation.isValid) {
-        return NextResponse.json(
-          {
-            success: false,
-            error: "No access token provided and Google Service Account is not configured.",
-            details: validation.errors,
-          },
-          { status: 500 }
-        );
-      }
-
-      resolvedAccessToken = await getServiceAccountAccessToken();
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Google Service Account is not configured.",
+          details: validation.errors,
+        },
+        { status: 500 }
+      );
     }
 
+    const resolvedAccessToken = await getServiceAccountAccessToken();
+    console.log('[GoogleMeet][createMeeting] Service account token acquired', {
+      traceId,
+      tokenLength: resolvedAccessToken.length,
+    });
+
     const calendarId = process.env.GOOGLE_MEET_CALENDAR_ID || "primary";
+    console.log('[GoogleMeet][createMeeting] Calling Google Calendar API', {
+      traceId,
+      calendarId,
+      conferenceType: 'hangoutsMeet',
+    });
 
     const eventPayload = {
       summary: subject,
@@ -94,6 +127,13 @@ export async function POST(req: NextRequest) {
 
     if (!googleResponse.ok) {
       const errorBody = await googleResponse.text();
+      console.error('[GoogleMeet][createMeeting] Google Calendar API error', {
+        traceId,
+        status: googleResponse.status,
+        statusText: googleResponse.statusText,
+        responseSnippet: errorBody.slice(0, 500),
+      });
+
       const hint =
         googleResponse.status === 401
           ? 'Unauthorized token. Verify GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY is the full PEM private key and redeploy.'
@@ -115,6 +155,13 @@ export async function POST(req: NextRequest) {
     const entryPoints = meeting?.conferenceData?.entryPoints || [];
     const videoEntry = entryPoints.find((entry: any) => entry.entryPointType === 'video');
 
+    console.log('[GoogleMeet][createMeeting] Meeting created successfully', {
+      traceId,
+      meetingId: meeting?.id,
+      organizerEmail: meeting?.organizer?.email,
+      hasJoinUrl: !!(videoEntry?.uri || meeting?.hangoutLink),
+    });
+
     return NextResponse.json({
       success: true,
       meeting: {
@@ -127,7 +174,12 @@ export async function POST(req: NextRequest) {
       }
     });
   } catch (error: any) {
-    console.error("Error creating Google Meet event:", error);
+    console.error('[GoogleMeet][createMeeting] Unhandled error', {
+      traceId,
+      message: error?.message,
+      name: error?.name,
+      stack: error?.stack,
+    });
 
     return NextResponse.json(
       {
