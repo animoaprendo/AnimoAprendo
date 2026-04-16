@@ -260,14 +260,13 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    console.log('[GoogleMeet][createMeeting] Meeting created successfully', {
-      traceId,
-      meetingId: meeting?.id,
-      organizerEmail: meeting?.organizer?.email,
-      hasJoinUrl: !!joinUrl,
-    });
-
     if (!joinUrl) {
+      console.error('[GoogleMeet][createMeeting] Conference generation failed (event created without join URL)', {
+        traceId,
+        meetingId: meeting?.id,
+        organizerEmail: meeting?.organizer?.email,
+      });
+
       return NextResponse.json(
         {
           success: false,
@@ -283,6 +282,13 @@ export async function POST(req: NextRequest) {
         { status: 502 }
       );
     }
+
+    console.log('[GoogleMeet][createMeeting] Meeting created successfully', {
+      traceId,
+      meetingId: meeting?.id,
+      organizerEmail: meeting?.organizer?.email,
+      hasJoinUrl: true,
+    });
 
     return NextResponse.json({
       success: true,
