@@ -3,42 +3,57 @@
 
 import { google } from 'googleapis';
 
-/**
- * Get the Google OAuth2 client using service account credentials
- */
-export function getServiceAccountAuth() {
+const GOOGLE_SCOPES = [
+  'https://www.googleapis.com/auth/calendar',
+  'https://www.googleapis.com/auth/calendar.events',
+];
+
+function normalizePrivateKey(privateKey: string) {
+  return privateKey.includes('\\n') ? privateKey.replace(/\\n/g, '\n') : privateKey;
+}
+
+function looksLikePemPrivateKey(privateKey: string) {
+  return /-----BEGIN (?:RSA )?PRIVATE KEY-----/.test(privateKey.trim());
+}
+
+function getServiceAccountCredentials() {
   const email = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
   const privateKey = process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY;
   const projectId = process.env.GOOGLE_SERVICE_ACCOUNT_PROJECT_ID;
 
   if (!email || !privateKey || !projectId) {
     throw new Error(
-      'Google Service Account credentials not configured. ' +
-      'Please set GOOGLE_SERVICE_ACCOUNT_EMAIL, GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY, and GOOGLE_SERVICE_ACCOUNT_PROJECT_ID in .env.local'
+      'Google Service Account credentials not configured. Set GOOGLE_SERVICE_ACCOUNT_EMAIL, GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY, and GOOGLE_SERVICE_ACCOUNT_PROJECT_ID.'
     );
   }
 
-  // Replace escaped newlines if they come as strings
-  const formattedPrivateKey = privateKey.includes('\\n')
-    ? privateKey.replace(/\\n/g, '\n')
-    : privateKey;
+  const formattedPrivateKey = normalizePrivateKey(privateKey);
 
-  const auth = new google.auth.GoogleAuth({
-    credentials: {
-      type: 'service_account' as const,
-      project_id: projectId,
-      private_key_id: 'service-account',
-      private_key: formattedPrivateKey,
-      client_email: email,
-      client_id: '0',
-    } as any,
-    scopes: [
-      'https://www.googleapis.com/auth/calendar',
-      'https://www.googleapis.com/auth/calendar.events',
-    ],
+  if (!looksLikePemPrivateKey(formattedPrivateKey)) {
+    throw new Error(
+      'GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY must contain a full PEM private key from the service account JSON file. ' +
+      'Use the private_key value from Google Cloud JSON credentials, including BEGIN/END PRIVATE KEY lines.'
+    );
+  }
+
+  return {
+    email,
+    privateKey: formattedPrivateKey,
+    projectId,
+  };
+}
+
+/**
+ * Get the Google OAuth2 client using service account credentials
+ */
+export function getServiceAccountAuth() {
+  const { email, privateKey } = getServiceAccountCredentials();
+
+  return new google.auth.JWT({
+    email,
+    key: privateKey,
+    scopes: GOOGLE_SCOPES,
   });
-
-  return auth;
 }
 
 /**
@@ -78,6 +93,8 @@ export function validateServiceAccountConfig(): {
 
   if (!process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY) {
     errors.push('GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY is not set');
+  } else if (!looksLikePemPrivateKey(normalizePrivateKey(process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY))) {
+    errors.push('GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY is not a full PEM private key');
   }
 
   if (!process.env.GOOGLE_SERVICE_ACCOUNT_PROJECT_ID) {
