@@ -1,6 +1,6 @@
 "use client";
 
-import { searchOfferings } from "@/app/actions";
+import { getEffectiveSubjectSortingWeights, searchOfferings } from "@/app/actions";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -16,7 +16,7 @@ import { Calendar, Clock, Filter, Loader2, Search, SearchX, Star, User } from "l
 import Link from "next/link";
 import { useQueryState } from "nuqs";
 import React, { useEffect, useMemo, useState } from "react";
-import { AVAILABILITY_WEIGHTS, calculateOfferingScore, DEFAULT_WEIGHTS } from "@/lib/subject-sorting";
+import { calculateOfferingScore, DEFAULT_WEIGHTS, type SortingWeights } from "@/lib/subject-sorting";
 
 interface Availability {
   id: string;
@@ -80,10 +80,29 @@ export default function SearchClient({ initialOfferings }: SearchClientProps) {
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [results, setResults] = useState<Offering[]>(initialOfferings);
   const [isLoading, setIsLoading] = useState(false);
+  const [sortingWeights, setSortingWeights] = useState<SortingWeights>(DEFAULT_WEIGHTS);
   const tuteeAvailability = useMemo(
     () => ((user?.publicMetadata as any)?.tuteeAvailability as TuteeAvailability[] | undefined) || [],
     [user]
   );
+
+  useEffect(() => {
+    const loadSortingWeights = async () => {
+      try {
+        const response = await getEffectiveSubjectSortingWeights();
+        if (response.success && response.weights) {
+          setSortingWeights(response.weights);
+        } else {
+          setSortingWeights(DEFAULT_WEIGHTS);
+        }
+      } catch (error) {
+        console.error("Error loading sorting weights:", error);
+        setSortingWeights(DEFAULT_WEIGHTS);
+      }
+    };
+
+    loadSortingWeights();
+  }, []);
 
   useEffect(() => {
     const fetchFilteredResults = async () => {
@@ -173,13 +192,13 @@ export default function SearchClient({ initialOfferings }: SearchClientProps) {
   const resultsWithMatch = useMemo(
     () =>
       results.map((item) => {
-        const score = calculateOfferingScore(item, AVAILABILITY_WEIGHTS, { tuteeAvailability });
+        const score = calculateOfferingScore(item, sortingWeights, { tuteeAvailability });
         return {
           ...item,
           matchPercent: Math.round(Math.max(0, Math.min(100, score))),
         };
       }),
-    [results, tuteeAvailability]
+    [results, tuteeAvailability, sortingWeights]
   );
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {

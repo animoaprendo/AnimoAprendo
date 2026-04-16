@@ -1,5 +1,5 @@
 "use client";
-import { getAllOfferings } from "@/app/actions";
+import { getAllOfferings, getEffectiveSubjectSortingWeights } from "@/app/actions";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -26,7 +26,13 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { getOfferingsWithScores, sortOfferingsByScore, AVAILABILITY_WEIGHTS, calculateAvailabilityOverlapMinutes } from "@/lib/subject-sorting";
+import {
+  calculateAvailabilityOverlapMinutes,
+  DEFAULT_WEIGHTS,
+  getOfferingsWithScores,
+  sortOfferingsByScore,
+  type SortingWeights,
+} from "@/lib/subject-sorting";
 
 type TuteeAvailability = {
   day: string;
@@ -91,6 +97,7 @@ export default function Browse() {
   const { user } = useUser();
   const scrollRef = useRef<HTMLDivElement>(null);
   const [offerings, setOfferings] = useState<CardInfo[]>([]);
+  const [sortingWeights, setSortingWeights] = useState<SortingWeights>(DEFAULT_WEIGHTS);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("all");
@@ -110,7 +117,16 @@ export default function Browse() {
     const fetchOfferings = async () => {
       try {
         setLoading(true);
-        const response = await getAllOfferings();
+        const [response, weightsResponse] = await Promise.all([
+          getAllOfferings(),
+          getEffectiveSubjectSortingWeights(),
+        ]);
+
+        if (weightsResponse.success && weightsResponse.weights) {
+          setSortingWeights(weightsResponse.weights as SortingWeights);
+        } else {
+          setSortingWeights(DEFAULT_WEIGHTS);
+        }
 
         if (response.success && response.data) {
           const userCollege = (user?.publicMetadata as any)?.collegeInformation
@@ -213,7 +229,7 @@ export default function Browse() {
     switch (filters.sortBy) {
       case "weighted":
         // Use the weighted algorithm for smart sorting
-        filtered = sortOfferingsByScore(filtered, AVAILABILITY_WEIGHTS, {
+        filtered = sortOfferingsByScore(filtered, sortingWeights, {
           tuteeAvailability,
         }) as CardInfo[];
         
@@ -247,7 +263,7 @@ export default function Browse() {
     }
 
     return filtered;
-  }, [offerings, filters, tuteeAvailability]);
+  }, [offerings, filters, tuteeAvailability, sortingWeights]);
 
   const scroll = (dir: "left" | "right") => {
     if (scrollRef.current) {
@@ -602,19 +618,19 @@ export default function Browse() {
           </TabsList>
 
           <TabsContent value="all" className="mt-8 min-h-[500px] w-full">
-            <TutorGrid offerings={currentOfferings} tuteeAvailability={tuteeAvailability} />
+            <TutorGrid offerings={currentOfferings} tuteeAvailability={tuteeAvailability} sortingWeights={sortingWeights} />
           </TabsContent>
 
           <TabsContent value="top-rated" className="mt-8 min-h-[500px] w-full">
-            <TutorGrid offerings={currentOfferings} tuteeAvailability={tuteeAvailability} />
+            <TutorGrid offerings={currentOfferings} tuteeAvailability={tuteeAvailability} sortingWeights={sortingWeights} />
           </TabsContent>
 
           <TabsContent value="newest" className="mt-8 min-h-[500px] w-full">
-            <TutorGrid offerings={currentOfferings} tuteeAvailability={tuteeAvailability} />
+            <TutorGrid offerings={currentOfferings} tuteeAvailability={tuteeAvailability} sortingWeights={sortingWeights} />
           </TabsContent>
 
           <TabsContent value="trending" className="mt-8 min-h-[500px] w-full">
-            <TutorGrid offerings={currentOfferings} tuteeAvailability={tuteeAvailability} />
+            <TutorGrid offerings={currentOfferings} tuteeAvailability={tuteeAvailability} sortingWeights={sortingWeights} />
           </TabsContent>
         </Tabs>
       </div>
@@ -623,13 +639,21 @@ export default function Browse() {
 }
 
 // Reusable Tutor Grid Component
-function TutorGrid({ offerings, tuteeAvailability }: { offerings: CardInfo[]; tuteeAvailability: TuteeAvailability[] }) {
+function TutorGrid({
+  offerings,
+  tuteeAvailability,
+  sortingWeights,
+}: {
+  offerings: CardInfo[];
+  tuteeAvailability: TuteeAvailability[];
+  sortingWeights: SortingWeights;
+}) {
   const hasTuteeAvailability = tuteeAvailability.some(
     (slot) => Array.isArray(slot.timeRanges) && slot.timeRanges.length > 0
   );
 
   const offeringsWithMatch = useMemo(
-    () => getOfferingsWithScores(offerings, AVAILABILITY_WEIGHTS, { tuteeAvailability }).map(({ offering, score }) => {
+    () => getOfferingsWithScores(offerings, sortingWeights, { tuteeAvailability }).map(({ offering, score }) => {
       const overlapMinutes = calculateAvailabilityOverlapMinutes(
         offering.availability,
         tuteeAvailability
@@ -641,7 +665,7 @@ function TutorGrid({ offerings, tuteeAvailability }: { offerings: CardInfo[]; tu
         overlapMinutes,
       };
     }),
-    [offerings, tuteeAvailability]
+    [offerings, tuteeAvailability, sortingWeights]
   );
 
   if (offerings.length === 0) {

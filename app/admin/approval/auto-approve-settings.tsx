@@ -222,12 +222,6 @@ export default function AutoApproveSettingsPanel() {
         </div>
       </CardHeader>
 
-      <CardContent>
-        <div className="rounded-lg border bg-muted/30 p-4 text-sm text-muted-foreground">
-          Superadmins can manage any college. College admins can manage departments under their college. Department admins can only manage their assigned department.
-        </div>
-      </CardContent>
-
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-h-[90vh] overflow-hidden flex flex-col sm:max-w-2xl">
           <DialogHeader>

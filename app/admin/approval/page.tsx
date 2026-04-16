@@ -11,6 +11,7 @@ import { Separator } from "@/components/ui/separator";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import AutoApproveSettingsPanel from "./auto-approve-settings";
+import SubjectSortingWeightsSettingsPanel from "./subject-sorting-weights-settings";
 import {
   AlertCircle,
   BookOpen,
@@ -281,7 +282,10 @@ export default function OfferApprovalsPage() {
 
   return (
     <div className="container mx-auto py-6 space-y-6">
-      <AutoApproveSettingsPanel />
+      <div className="grid grid-cols-2 gap-4">
+        <AutoApproveSettingsPanel />
+      <SubjectSortingWeightsSettingsPanel />
+      </div>
 
       {/* Header */}
       <div className="flex items-center justify-between">

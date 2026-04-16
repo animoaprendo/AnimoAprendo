@@ -3,6 +3,8 @@ import { auth } from "@clerk/nextjs/server";
 import { ObjectId } from "mongodb";
 import clientPromise from "@/lib/mongodb";
 import { getTutorQuestionBank, mergeDuplicateQuestionBankEntries } from "@/lib/question-bank";
+import { getSubjectSortingWeights } from "@/lib/subject-sorting-settings";
+import type { SortingWeights } from "@/lib/subject-sorting";
 
 const daysOfWeek = [
   { name: "M", value: "monday" },
@@ -1221,6 +1223,7 @@ export async function searchOfferings(params: {
 }): Promise<{ success: boolean; data?: any[]; error?: string }> {
   try {
     const { query, sortBy, day, rating, tuteeAvailability } = params;
+    const sortingWeights = await getSubjectSortingWeights();
     
     // Get all offerings first
     const offeringsResponse = await getAllOfferings();
@@ -1268,8 +1271,8 @@ export async function searchOfferings(params: {
       switch (sortBy) {
         case "weighted":
           // Use weighted algorithm for smart sorting
-          const { sortOfferingsByScore, DEFAULT_WEIGHTS } = await import('@/lib/subject-sorting');
-          filtered = sortOfferingsByScore(filtered, DEFAULT_WEIGHTS, { tuteeAvailability });
+          const { sortOfferingsByScore } = await import('@/lib/subject-sorting');
+          filtered = sortOfferingsByScore(filtered, sortingWeights, { tuteeAvailability });
           break;
         case "highest-rated":
           filtered.sort((a, b) => (b.averageRating || 0) - (a.averageRating || 0));
@@ -1281,13 +1284,13 @@ export async function searchOfferings(params: {
           break;
         default:
           // Default to weighted sorting for best results
-          const { sortOfferingsByScore: sortDefault, DEFAULT_WEIGHTS: weightsDefault } = await import('@/lib/subject-sorting');
-          filtered = sortDefault(filtered, weightsDefault, { tuteeAvailability });
+          const { sortOfferingsByScore: sortDefault } = await import('@/lib/subject-sorting');
+          filtered = sortDefault(filtered, sortingWeights, { tuteeAvailability });
       }
     } else {
       // No sortBy specified, use weighted as default
-      const { sortOfferingsByScore: sortDefault, DEFAULT_WEIGHTS: weightsDefault } = await import('@/lib/subject-sorting');
-      filtered = sortDefault(filtered, weightsDefault, { tuteeAvailability });
+      const { sortOfferingsByScore: sortDefault } = await import('@/lib/subject-sorting');
+      filtered = sortDefault(filtered, sortingWeights, { tuteeAvailability });
     }
 
     return { success: true, data: filtered };
@@ -1295,5 +1298,22 @@ export async function searchOfferings(params: {
   } catch (error) {
     console.error('Server action: Error searching offerings:', error);
     return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+  }
+}
+
+export async function getEffectiveSubjectSortingWeights(): Promise<{
+  success: boolean;
+  weights?: SortingWeights;
+  error?: string;
+}> {
+  try {
+    const weights = await getSubjectSortingWeights();
+    return { success: true, weights };
+  } catch (error) {
+    console.error("Server action: Error loading effective subject sorting weights:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error",
+    };
   }
 }
