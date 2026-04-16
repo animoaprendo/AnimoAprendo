@@ -147,6 +147,24 @@ export async function POST(req: NextRequest) {
       );
     };
 
+    const extractJoinUrl = (event: any): string => {
+      const entryPoints = event?.conferenceData?.entryPoints || [];
+      const videoEntry = entryPoints.find((entry: any) => entry.entryPointType === 'video');
+      return videoEntry?.uri || event?.hangoutLink || '';
+    };
+
+    const fetchEventById = async (eventId: string) => {
+      return fetch(
+        `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events/${encodeURIComponent(eventId)}?conferenceDataVersion=1`,
+        {
+          method: 'GET',
+          headers: {
+            Authorization: `Bearer ${resolvedAccessToken}`,
+          },
+        }
+      );
+    };
+
     let googleResponse = await createEvent(eventPayloadWithMeetType);
 
     if (!googleResponse.ok) {
@@ -208,22 +226,69 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const meeting = await googleResponse.json();
-    const entryPoints = meeting?.conferenceData?.entryPoints || [];
-    const videoEntry = entryPoints.find((entry: any) => entry.entryPointType === 'video');
+    let meeting = await googleResponse.json();
+    let joinUrl = extractJoinUrl(meeting);
+
+    // Google sometimes returns conferenceData asynchronously; poll the event briefly.
+    if (!joinUrl && meeting?.id) {
+      for (let attempt = 1; attempt <= 3; attempt++) {
+        await new Promise((resolve) => setTimeout(resolve, 500));
+
+        const eventResponse = await fetchEventById(meeting.id);
+        if (!eventResponse.ok) {
+          const eventErrorBody = await eventResponse.text();
+          console.warn('[GoogleMeet][createMeeting] Failed to fetch event during conference poll', {
+            traceId,
+            attempt,
+            status: eventResponse.status,
+            responseSnippet: eventErrorBody.slice(0, 300),
+          });
+          continue;
+        }
+
+        meeting = await eventResponse.json();
+        joinUrl = extractJoinUrl(meeting);
+
+        if (joinUrl) {
+          console.log('[GoogleMeet][createMeeting] Conference link became available after poll', {
+            traceId,
+            attempt,
+            meetingId: meeting?.id,
+          });
+          break;
+        }
+      }
+    }
 
     console.log('[GoogleMeet][createMeeting] Meeting created successfully', {
       traceId,
       meetingId: meeting?.id,
       organizerEmail: meeting?.organizer?.email,
-      hasJoinUrl: !!(videoEntry?.uri || meeting?.hangoutLink),
+      hasJoinUrl: !!joinUrl,
     });
+
+    if (!joinUrl) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Calendar event was created but Google Meet link was not generated.',
+          hint:
+            'The calendar/account can create events, but Meet conferencing is not enabled for it. Use a Workspace user calendar with Meet enabled and set GOOGLE_MEET_CALENDAR_ID to that calendar.',
+          debug: {
+            traceId,
+            meetingId: meeting?.id,
+            organizerEmail: meeting?.organizer?.email,
+          },
+        },
+        { status: 502 }
+      );
+    }
 
     return NextResponse.json({
       success: true,
       meeting: {
         id: meeting.id,
-        joinUrl: videoEntry?.uri || meeting.hangoutLink || '',
+        joinUrl,
         subject: meeting.summary,
         startDateTime: meeting.start?.dateTime,
         endDateTime: meeting.end?.dateTime,
