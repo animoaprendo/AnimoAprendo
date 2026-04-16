@@ -16,6 +16,10 @@ interface MessagesContainerProps {
     msg: Message,
     action: "accepted" | "declined" | "cancelled"
   ) => void;
+  appointmentActionLoading?: {
+    messageId: string;
+    action: "accepted" | "declined" | "cancelled";
+  } | null;
   onOpenAppointmentModal: () => void;
   onShowSidebar: () => void;
   onShowUserListDrawer?: () => void;
@@ -31,6 +35,7 @@ export default function MessagesContainer({
   pendingMessages,
   onReply,
   onAppointmentResponse,
+  appointmentActionLoading,
   onOpenAppointmentModal,
   onShowSidebar,
   onShowUserListDrawer,
@@ -80,6 +85,7 @@ export default function MessagesContainer({
               pendingMessages={pendingMessages}
               onReply={onReply}
               onAppointmentResponse={onAppointmentResponse}
+              appointmentActionLoading={appointmentActionLoading}
               userRole={userRole}
               messages={messages}
             />

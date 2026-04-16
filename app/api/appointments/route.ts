@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
 import clientPromise from "@/lib/mongodb";
+import { upsertTutorQuestionBankEntries } from "@/lib/question-bank";
 
 // Question type based on QuizEditor.tsx
 type Question = {
@@ -131,16 +132,37 @@ export async function PATCH(request: NextRequest) {
         { returnDocument: "after" }
       );
 
-      if (!updated) {
+      const updatedDoc = ((updated as any)?.value ?? updated) as any;
+
+      if (!updatedDoc) {
         return NextResponse.json(
           { error: "Appointment not found or unauthorized" },
           { status: 404 }
         );
       }
 
+      const subjectOfferingId =
+        updatedDoc.offeringId || updatedDoc.appointment?.offeringId || null;
+      const subjectName =
+        updatedDoc.subject || updatedDoc.appointment?.subject || null;
+
+      try {
+        await upsertTutorQuestionBankEntries({
+          db,
+          tutorId: userId,
+          subjectOfferingId,
+          subjectName,
+          appointmentMessageId: messageId,
+          quiz,
+        });
+      } catch (error) {
+        // Saving quiz should not fail if question bank sync fails.
+        console.error("Error syncing quiz question bank:", error);
+      }
+
       return NextResponse.json({
         success: true,
-        appointment: { ...updated, _id: updated._id.toString() },
+        appointment: { ...updatedDoc, _id: updatedDoc._id.toString() },
       });
     }
 

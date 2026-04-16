@@ -88,6 +88,12 @@ export default function ChatContainer({
   const [showDeclineReasonModal, setShowDeclineReasonModal] = useState(false);
   const [declineReason, setDeclineReason] = useState("");
   const [pendingDeclineMessage, setPendingDeclineMessage] = useState<Message | null>(null);
+  const [isSendingAppointment, setIsSendingAppointment] = useState(false);
+  const [isSubmittingDeclineReason, setIsSubmittingDeclineReason] = useState(false);
+  const [appointmentActionLoading, setAppointmentActionLoading] = useState<{
+    messageId: string;
+    action: "accepted" | "declined" | "cancelled";
+  } | null>(null);
 
   // Appointment data
   const [upcomingAppointments, setUpcomingAppointments] = useState<any[]>([]);
@@ -1090,6 +1096,12 @@ export default function ChatContainer({
 
   const handleAppointmentResponse = useCallback(
     async (msg: Message, action: "accepted" | "declined" | "cancelled") => {
+      const messageId = getMessageId(msg);
+
+      if (appointmentActionLoading?.messageId === messageId) {
+        return;
+      }
+
       if (action === "declined") {
         setPendingDeclineMessage(msg);
         setDeclineReason("");
@@ -1098,7 +1110,7 @@ export default function ChatContainer({
       }
 
       try {
-        const messageId = getMessageId(msg);
+        setAppointmentActionLoading({ messageId, action });
         const result = await updateAppointmentStatus({
           messageId,
           status: action,
@@ -1151,13 +1163,18 @@ export default function ChatContainer({
         }
       } catch (error) {
         console.error("Error updating appointment status:", error);
+      } finally {
+        setAppointmentActionLoading((prev) =>
+          prev?.messageId === messageId ? null : prev
+        );
       }
     },
-    [userId]
+    [userId, appointmentActionLoading]
   );
 
   const handleSubmitDeclineReason = useCallback(async () => {
     if (!pendingDeclineMessage || !userId) return;
+    if (isSubmittingDeclineReason) return;
 
     const trimmedReason = declineReason.trim();
     if (!trimmedReason) {
@@ -1165,8 +1182,11 @@ export default function ChatContainer({
       return;
     }
 
+    const messageId = getMessageId(pendingDeclineMessage);
+
     try {
-      const messageId = getMessageId(pendingDeclineMessage);
+      setIsSubmittingDeclineReason(true);
+      setAppointmentActionLoading({ messageId, action: "declined" });
       const result = await updateAppointmentStatus({
         messageId,
         status: "declined",
@@ -1181,11 +1201,17 @@ export default function ChatContainer({
       }
     } catch (error) {
       console.error("Error declining appointment status:", error);
+    } finally {
+      setIsSubmittingDeclineReason(false);
+      setAppointmentActionLoading((prev) =>
+        prev?.messageId === messageId ? null : prev
+      );
     }
-  }, [pendingDeclineMessage, userId, declineReason]);
+  }, [pendingDeclineMessage, userId, declineReason, isSubmittingDeclineReason]);
 
   const handleSendAppointment = useCallback(async () => {
     if (!activeUser || !userId || !appointmentTime) return;
+    if (isSendingAppointment) return;
 
     const durationMinutes =
       appointmentDurationOption === "custom"
@@ -1222,6 +1248,7 @@ export default function ChatContainer({
     const hasMoreRecurringDates = sortedRecurringDates.length > 4;
 
     try {
+      setIsSendingAppointment(true);
       const appointmentMessage =
         appointmentType === "recurring"
           ? `Recurring appointment request (${sortedRecurringDates.length} sessions) on ${recurringDateSummary}${
@@ -1273,6 +1300,8 @@ export default function ChatContainer({
       }
     } catch (error) {
       console.error("Error sending appointment:", error);
+    } finally {
+      setIsSendingAppointment(false);
     }
   }, [
     activeUser,
@@ -1287,6 +1316,7 @@ export default function ChatContainer({
     offeringId,
     appointmentType,
     selectedRecurringDates,
+    isSendingAppointment,
   ]);
 
   // Loading state
@@ -1347,6 +1377,7 @@ export default function ChatContainer({
           pendingMessages={pendingMessages}
           onReply={handleReply}
           onAppointmentResponse={handleAppointmentResponse}
+          appointmentActionLoading={appointmentActionLoading}
           onOpenAppointmentModal={() => setShowAppointmentModal(true)}
           onShowSidebar={() => setShowSidebar(true)}
           onShowUserListDrawer={openDrawer}
@@ -1477,7 +1508,9 @@ export default function ChatContainer({
             <div className="mt-4 flex justify-end gap-2">
               <Button
                 variant="outline"
+                disabled={isSubmittingDeclineReason}
                 onClick={() => {
+                  if (isSubmittingDeclineReason) return;
                   setShowDeclineReasonModal(false);
                   setPendingDeclineMessage(null);
                   setDeclineReason("");
@@ -1487,9 +1520,10 @@ export default function ChatContainer({
               </Button>
               <Button
                 className="bg-red-600 hover:bg-red-700 text-white"
+                disabled={isSubmittingDeclineReason}
                 onClick={handleSubmitDeclineReason}
               >
-                Submit Decline
+                {isSubmittingDeclineReason ? "Submitting..." : "Submit Decline"}
               </Button>
             </div>
           </div>
@@ -1514,6 +1548,7 @@ export default function ChatContainer({
         selectedRecurringDates={selectedRecurringDates}
         setSelectedRecurringDates={setSelectedRecurringDates}
         onSend={handleSendAppointment}
+        isSubmitting={isSendingAppointment}
         currentUserAvailability={
           clerkUser?.publicMetadata
             ? userRole === "tutee"

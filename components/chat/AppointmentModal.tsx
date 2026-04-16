@@ -31,6 +31,7 @@ interface AppointmentModalProps {
   selectedRecurringDates: string[];
   setSelectedRecurringDates: (dates: string[]) => void;
   onSend: () => void;
+  isSubmitting?: boolean;
   currentUserAvailability?: AvailabilitySlot[];
   otherUserAvailability?: AvailabilitySlot[];
   subjectAvailability?: AvailabilitySlot[];
@@ -55,6 +56,7 @@ export default function AppointmentModal({
   selectedRecurringDates,
   setSelectedRecurringDates,
   onSend,
+  isSubmitting = false,
   currentUserAvailability = [],
   otherUserAvailability = [],
   subjectAvailability = [],
@@ -638,16 +640,17 @@ export default function AppointmentModal({
         <div className="flex justify-end gap-2 mt-6">
           <button
             onClick={onClose}
+            disabled={isSubmitting}
             className="px-4 py-2 rounded-lg bg-gray-100 text-gray-700"
           >
             Cancel
           </button>
           <button
             onClick={onSend}
-            disabled={!canSend}
+            disabled={!canSend || isSubmitting}
             className="px-4 py-2 rounded-lg bg-green-700 text-white disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Send
+            {isSubmitting ? "Sending..." : "Send"}
           </button>
         </div>
       </div>

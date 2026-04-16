@@ -730,6 +730,117 @@ export async function updateAppointmentQuiz(params: {
   }
 }
 
+export async function fetchTutorQuestionBank(params: {
+  subjectOfferingId?: string;
+  subjectName?: string;
+  limit?: number;
+  includeArchived?: boolean;
+}): Promise<{ success: boolean; entries?: any[]; error?: string }> {
+  try {
+    const { userId } = await auth();
+    if (!userId) {
+      return { success: false, error: "Unauthorized" };
+    }
+
+    const searchParams = new URLSearchParams({ tutorId: userId });
+    if (params.subjectOfferingId) {
+      searchParams.append("subjectOfferingId", params.subjectOfferingId);
+    }
+    if (params.subjectName) {
+      searchParams.append("subjectName", params.subjectName);
+    }
+    if (params.limit && Number.isFinite(params.limit)) {
+      searchParams.append("limit", String(params.limit));
+    }
+    if (params.includeArchived === true) {
+      searchParams.append("includeArchived", "true");
+    }
+
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_BASE_URL}/api/tutor/question-bank?${searchParams.toString()}`,
+      { method: "GET", cache: "no-store" }
+    );
+
+    if (!response.ok) {
+      const text = await response.text();
+      return { success: false, error: `HTTP ${response.status}: ${text}` };
+    }
+
+    const data = await response.json();
+    return { success: true, entries: data.entries || [] };
+  } catch (error) {
+    console.error("Server action: Error fetching tutor question bank:", error);
+    return { success: false, error: error instanceof Error ? error.message : "Unknown error" };
+  }
+}
+
+export async function updateTutorQuestionBankEntry(params: {
+  entryId: string;
+  isFavorite?: boolean;
+  isArchived?: boolean;
+}): Promise<{ success: boolean; entry?: any; error?: string }> {
+  try {
+    const { userId } = await auth();
+    if (!userId) {
+      return { success: false, error: "Unauthorized" };
+    }
+
+    const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/tutor/question-bank`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        entryId: params.entryId,
+        ...(typeof params.isFavorite === "boolean" ? { isFavorite: params.isFavorite } : {}),
+        ...(typeof params.isArchived === "boolean" ? { isArchived: params.isArchived } : {}),
+      }),
+    });
+
+    if (!response.ok) {
+      const text = await response.text();
+      return { success: false, error: `HTTP ${response.status}: ${text}` };
+    }
+
+    const data = await response.json();
+    return { success: true, entry: data.entry };
+  } catch (error) {
+    console.error("Server action: Error updating question bank entry:", error);
+    return { success: false, error: error instanceof Error ? error.message : "Unknown error" };
+  }
+}
+
+export async function cleanupTutorQuestionBankDuplicates(params: {
+  subjectOfferingId?: string;
+  subjectName?: string;
+}): Promise<{ success: boolean; result?: { groupsMerged: number; duplicatesRemoved: number }; error?: string }> {
+  try {
+    const { userId } = await auth();
+    if (!userId) {
+      return { success: false, error: "Unauthorized" };
+    }
+
+    const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/tutor/question-bank`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: "cleanup-duplicates",
+        ...(params.subjectOfferingId ? { subjectOfferingId: params.subjectOfferingId } : {}),
+        ...(params.subjectName ? { subjectName: params.subjectName } : {}),
+      }),
+    });
+
+    if (!response.ok) {
+      const text = await response.text();
+      return { success: false, error: `HTTP ${response.status}: ${text}` };
+    }
+
+    const data = await response.json();
+    return { success: true, result: data.result };
+  } catch (error) {
+    console.error("Server action: Error cleaning up question bank duplicates:", error);
+    return { success: false, error: error instanceof Error ? error.message : "Unknown error" };
+  }
+}
+
 // Create a review for an appointment
 export async function createReview(params: {
   appointmentId: string;

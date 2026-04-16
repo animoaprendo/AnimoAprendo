@@ -25,6 +25,10 @@ interface MessageBubbleProps {
     msg: Message,
     action: "accepted" | "declined" | "cancelled"
   ) => void;
+  appointmentActionLoading?: {
+    messageId: string;
+    action: "accepted" | "declined" | "cancelled";
+  } | null;
   userRole: "tutee" | "tutor";
   messages: Message[];
 }
@@ -35,6 +39,7 @@ export default function MessageBubble({
   pendingMessages,
   onReply,
   onAppointmentResponse,
+  appointmentActionLoading,
   userRole,
   messages,
 }: MessageBubbleProps) {
@@ -73,6 +78,7 @@ export default function MessageBubble({
               userId={userId}
               userRole={userRole}
               onAppointmentResponse={onAppointmentResponse}
+              appointmentActionLoading={appointmentActionLoading}
             />
           ) : message.type === "quiz-result" && message.quizResult ? (
             <QuizResultMessage message={message} />
@@ -114,6 +120,7 @@ function AppointmentMessage({
   userId,
   userRole,
   onAppointmentResponse,
+  appointmentActionLoading,
 }: {
   message: Message;
   userId: string;
@@ -122,6 +129,10 @@ function AppointmentMessage({
     msg: Message,
     action: "accepted" | "declined" | "cancelled"
   ) => void;
+  appointmentActionLoading?: {
+    messageId: string;
+    action: "accepted" | "declined" | "cancelled";
+  } | null;
 }) {
   const appointment = message.appointment!;
   const date = new Date(appointment.datetimeISO);
@@ -133,6 +144,14 @@ function AppointmentMessage({
   const canRespond = !isCreator && appointment.status === "pending";
   const canCancel = isCreator && appointment.status !== "cancelled";
   const displayMode = appointment.mode === "in-person" ? "Onsite" : "Online";
+  const currentMessageId = getMessageId(message);
+  const isActionLoading = appointmentActionLoading?.messageId === currentMessageId;
+  const isAcceptLoading =
+    isActionLoading && appointmentActionLoading?.action === "accepted";
+  const isDeclineLoading =
+    isActionLoading && appointmentActionLoading?.action === "declined";
+  const isCancelLoading =
+    isActionLoading && appointmentActionLoading?.action === "cancelled";
 
   const formatRecurringDate = (dateString: string) => {
     return new Date(`${dateString}T00:00:00`).toLocaleDateString([], {
@@ -261,20 +280,22 @@ function AppointmentMessage({
               <>
                 <Button
                   onClick={() => onAppointmentResponse(message, "accepted")}
+                  disabled={isActionLoading}
                   className="bg-green-600 hover:bg-green-700 text-white flex-1"
                   size="sm"
                 >
                   <CheckCircle className="w-4 h-4 mr-2" />
-                  Accept
+                  {isAcceptLoading ? "Accepting..." : "Accept"}
                 </Button>
                 <Button
                   onClick={() => onAppointmentResponse(message, "declined")}
                   variant="destructive"
+                  disabled={isActionLoading}
                   className="flex-1"
                   size="sm"
                 >
                   <XCircle className="w-4 h-4 mr-2" />
-                  Decline
+                  {isDeclineLoading ? "Declining..." : "Decline"}
                 </Button>
               </>
             )}
@@ -285,11 +306,12 @@ function AppointmentMessage({
                 <Button
                   onClick={() => onAppointmentResponse(message, "cancelled")}
                   variant="outline"
+                  disabled={isActionLoading}
                   className="border-gray-300 text-gray-700 hover:bg-gray-50"
                   size="sm"
                 >
                   <XCircle className="w-4 h-4 mr-2" />
-                  Cancel
+                  {isCancelLoading ? "Cancelling..." : "Cancel"}
                 </Button>
               )}
           </div>
