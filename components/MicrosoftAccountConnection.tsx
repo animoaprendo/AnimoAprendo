@@ -36,12 +36,12 @@ export default function MicrosoftAccountConnection() {
         needsConnection: !result.hasConnection && !result.needsReauth
       });
     } catch (error: any) {
-      console.error('Error checking Microsoft OAuth status:', error);
+      console.error('Error checking Google OAuth status:', error);
       setStatus({ 
         connected: false, 
         error: 'Failed to check connection status',
         guidance: [
-          'Error occurred while checking Microsoft connection',
+          'Error occurred while checking Google connection',
           'This may be a server issue',
           'Try refreshing the page or contact support if this persists'
         ],
@@ -56,11 +56,11 @@ export default function MicrosoftAccountConnection() {
       let message = '';
       
       if (status.needsReauth) {
-        message = `Microsoft OAuth connection needs refresh.\n\nSteps:\n1. Go to your Clerk account settings\n2. Disconnect your Microsoft account\n3. Reconnect your Microsoft account\n4. Grant all requested permissions\n\nThis will generate fresh OAuth tokens.`;
+        message = `Google OAuth connection needs refresh.\n\nSteps:\n1. Go to your Clerk account settings\n2. Disconnect your Google account\n3. Reconnect your Google account\n4. Grant all requested permissions\n\nThis will generate fresh OAuth tokens.`;
       } else if (status.needsConnection) {
-        message = `Microsoft account needs to be connected.\n\nSteps:\n1. Go to your Clerk account settings\n2. Add Microsoft as a connected account\n3. Complete the OAuth flow\n4. Grant required permissions:\n   • User.Read\n   • OnlineMeetings.ReadWrite`;
+        message = `Google account needs to be connected.\n\nSteps:\n1. Go to your Clerk account settings\n2. Add Google as a connected account\n3. Complete the OAuth flow\n4. Grant required permissions:\n   • profile\n   • email\n   • https://www.googleapis.com/auth/calendar.events`;
       } else {
-        message = `Microsoft OAuth needs to be set up.\n\nSteps:\n1. Configure Microsoft OAuth in Clerk Dashboard\n2. Add required scopes and permissions\n3. Connect your Microsoft account\n4. Test the integration`;
+        message = `Google OAuth needs to be set up.\n\nSteps:\n1. Configure Google OAuth in Clerk Dashboard\n2. Add required scopes and permissions\n3. Connect your Google account\n4. Test the integration`;
       }
       
       alert(message);
@@ -70,7 +70,7 @@ export default function MicrosoftAccountConnection() {
         checkConnectionStatus();
       }, 1000);
     } catch (error) {
-      console.error('Error connecting to Microsoft:', error);
+      console.error('Error connecting to Google:', error);
       setStatus(prev => ({ ...prev, error: 'Failed to initiate connection' }));
     } finally {
       setLoading(false);
@@ -82,10 +82,10 @@ export default function MicrosoftAccountConnection() {
     try {
       // For Clerk OAuth, disconnection should be done through Clerk's UI
       // You can redirect users to their account management page
-      alert('To disconnect your Microsoft account, please go to your account settings and remove the Microsoft connection.');
+      alert('To disconnect your Google account, please go to your account settings and remove the Google connection.');
       setStatus({ connected: false });
     } catch (error) {
-      console.error('Error disconnecting Microsoft:', error);
+      console.error('Error disconnecting Google:', error);
       setStatus({ connected: true, error: 'Failed to disconnect' });
     } finally {
       setLoading(false);
@@ -104,10 +104,10 @@ export default function MicrosoftAccountConnection() {
           <div className="w-6 h-6 bg-blue-600 rounded flex items-center justify-center text-white text-xs font-bold">
             M
           </div>
-          Microsoft Teams Integration
+          Google Meet Integration
         </CardTitle>
         <CardDescription>
-          Connect your Microsoft account to create Teams meetings for tutoring sessions.
+          Connect your Google account to create Google Meet links for tutoring sessions.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -115,7 +115,7 @@ export default function MicrosoftAccountConnection() {
           <div className="space-y-3">
             <div className="flex items-center gap-2 text-green-600">
               <CheckCircle className="w-5 h-5" />
-              <span className="font-medium">Connected to Microsoft</span>
+              <span className="font-medium">Connected to Google</span>
             </div>
             {status.email && (
               <p className="text-sm text-gray-600">Account: {status.email}</p>
@@ -126,14 +126,14 @@ export default function MicrosoftAccountConnection() {
               disabled={loading}
               className="w-full"
             >
-              Disconnect Microsoft Account
+              Disconnect Google Account
             </Button>
           </div>
         ) : (
           <div className="space-y-3">
             <div className="flex items-center gap-2 text-gray-500">
               <AlertCircle className="w-5 h-5" />
-              <span>Microsoft account not connected</span>
+              <span>Google account not connected</span>
             </div>
             {status.error && (
               <div className="space-y-2">
@@ -174,14 +174,14 @@ export default function MicrosoftAccountConnection() {
             >
               <ExternalLink className="w-4 h-4 mr-2" />
               {status.needsReauth 
-                ? 'Reconnect Microsoft Account'
+                ? 'Reconnect Google Account'
                 : status.needsConnection
-                ? 'Connect Microsoft Account'
-                : 'Set Up Microsoft Account'
+                ? 'Connect Google Account'
+                : 'Set Up Google Account'
               }
             </Button>
             <p className="text-xs text-gray-500">
-              This will allow the app to create Teams meetings on your behalf when appointments are scheduled.
+              This will allow the app to create Google Meet links on your behalf when appointments are scheduled.
             </p>
           </div>
         )}

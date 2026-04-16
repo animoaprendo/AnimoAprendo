@@ -1,4 +1,4 @@
-// Comprehensive Microsoft OAuth diagnostic tool
+// Comprehensive Google OAuth diagnostic tool
 'use server';
 
 import { auth, clerkClient } from '@clerk/nextjs/server';
@@ -49,12 +49,12 @@ export async function runMicrosoftOAuthDiagnostic(): Promise<DiagnosticResult[]>
 
     // Step 3: Check external accounts
     const externalAccounts = user.externalAccounts || [];
-    const microsoftAccounts = externalAccounts.filter(acc => acc.provider === 'oauth_microsoft');
+    const microsoftAccounts = externalAccounts.filter(acc => acc.provider === 'oauth_google');
     
     results.push({
       step: 'External Accounts',
       status: microsoftAccounts.length > 0 ? 'success' : 'error',
-      message: `Found ${externalAccounts.length} external accounts, ${microsoftAccounts.length} Microsoft accounts`,
+      message: `Found ${externalAccounts.length} external accounts, ${microsoftAccounts.length} Google accounts`,
       details: {
         allAccounts: externalAccounts.map(acc => ({
           provider: acc.provider,
@@ -72,9 +72,9 @@ export async function runMicrosoftOAuthDiagnostic(): Promise<DiagnosticResult[]>
         }))
       },
       recommendations: microsoftAccounts.length === 0 ? [
-        'No Microsoft accounts connected',
-        'User needs to add Microsoft as a connected account in Clerk',
-        'Go to account settings and connect Microsoft account'
+        'No Google accounts connected',
+        'User needs to add Google as a connected account in Clerk',
+        'Go to account settings and connect Google account'
       ] : undefined
     });
 
@@ -84,7 +84,7 @@ export async function runMicrosoftOAuthDiagnostic(): Promise<DiagnosticResult[]>
     results.push({
       step: 'Account Verification',
       status: verifiedMicrosoftAccounts.length > 0 ? 'success' : 'error',
-      message: `${verifiedMicrosoftAccounts.length} of ${microsoftAccounts.length} Microsoft accounts are verified`,
+      message: `${verifiedMicrosoftAccounts.length} of ${microsoftAccounts.length} Google accounts are verified`,
       details: {
         verificationStatuses: microsoftAccounts.map(acc => ({
           id: acc.id,
@@ -94,9 +94,9 @@ export async function runMicrosoftOAuthDiagnostic(): Promise<DiagnosticResult[]>
         }))
       },
       recommendations: verifiedMicrosoftAccounts.length === 0 && microsoftAccounts.length > 0 ? [
-        'Microsoft accounts are not verified',
+        'Google accounts are not verified',
         'Complete the email verification process',
-        'Check for verification emails from Microsoft'
+        'Check for verification emails from Google'
       ] : undefined
     });
 
@@ -104,7 +104,7 @@ export async function runMicrosoftOAuthDiagnostic(): Promise<DiagnosticResult[]>
     if (verifiedMicrosoftAccounts.length > 0) {
       try {
         console.log('Attempting OAuth token retrieval with new API...');
-        const oauthTokens = await client.users.getUserOauthAccessToken(userId, 'microsoft');
+        const oauthTokens = await client.users.getUserOauthAccessToken(userId, 'google');
         
         const hasValidTokens = oauthTokens?.data && oauthTokens.data.length > 0 && oauthTokens.data[0].token;
         
@@ -125,18 +125,20 @@ export async function runMicrosoftOAuthDiagnostic(): Promise<DiagnosticResult[]>
             'This typically indicates:',
             '  • Tokens have expired (usually after 1 hour)',
             '  • Required scopes were not granted during initial consent',
-            '  • The Microsoft app registration lacks necessary permissions',
+            '  • The Google OAuth app lacks necessary permissions',
             '',
             'Recommended actions:',
-            '1. Check Microsoft app registration permissions in Azure AD',
+            '1. Check Google OAuth app scopes in Google Cloud Console',
             '2. Ensure these API permissions are granted:',
-            '   • Microsoft Graph - User.Read (Delegated)',
-            '   • Microsoft Graph - OnlineMeetings.ReadWrite (Delegated)',
+            '   • profile',
+            '   • email',
+            '   • https://www.googleapis.com/auth/calendar.events',
             '3. Verify Clerk OAuth configuration includes these scopes:',
-            '   • https://graph.microsoft.com/User.Read',
-            '   • https://graph.microsoft.com/OnlineMeetings.ReadWrite',
+            '   • profile',
+            '   • email',
+            '   • https://www.googleapis.com/auth/calendar.events',
             '   • offline_access',
-            '4. User should disconnect and reconnect Microsoft account',
+            '4. User should disconnect and reconnect Google account',
             '5. During reconnection, ensure all permissions are granted'
           ] : undefined
         });
@@ -156,15 +158,15 @@ export async function runMicrosoftOAuthDiagnostic(): Promise<DiagnosticResult[]>
             'OAuth token retrieval failed with error',
             'Common causes:',
             '  • Insufficient OAuth scopes configured in Clerk',
-            '  • Missing API permissions in Microsoft app registration',
+            '  • Missing OAuth scopes in Google app registration',
             '  • Expired or revoked tokens',
             '  • User needs to re-consent to the application',
             '',
             'Next steps:',
             '1. Verify Clerk Dashboard OAuth configuration',
-            '2. Check Microsoft Azure AD app registration',
+            '2. Check Google Cloud OAuth consent/app registration',
             '3. Ensure all required permissions are granted and admin-consented',
-            '4. Have user disconnect and reconnect Microsoft account'
+            '4. Have user disconnect and reconnect Google account'
           ]
         });
       }
@@ -172,41 +174,37 @@ export async function runMicrosoftOAuthDiagnostic(): Promise<DiagnosticResult[]>
 
     // Step 6: Environment variables check
     const envVars = {
-      MICROSOFT_CLIENT_ID: !!process.env.MICROSOFT_CLIENT_ID,
-      MICROSOFT_CLIENT_SECRET: !!process.env.MICROSOFT_CLIENT_SECRET,
-      MICROSOFT_CLIENT_TENANT_ID: !!process.env.MICROSOFT_CLIENT_TENANT_ID,
+      GOOGLE_CLIENT_ID: !!process.env.GOOGLE_CLIENT_ID,
+      GOOGLE_CLIENT_SECRET: !!process.env.GOOGLE_CLIENT_SECRET,
       CLERK_SECRET_KEY: !!process.env.CLERK_SECRET_KEY,
       NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: !!process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
     };
 
-    // Step 7: Microsoft App Configuration Check
+    // Step 7: Google App Configuration Check
     try {
-      if (process.env.MICROSOFT_CLIENT_ID) {
-        const appCheckUrl = `https://graph.microsoft.com/v1.0/applications(appId='${process.env.MICROSOFT_CLIENT_ID}')`;
+      if (process.env.GOOGLE_CLIENT_ID) {
+        const appCheckUrl = `https://console.cloud.google.com/apis/credentials?project=${process.env.GOOGLE_PROJECT_ID || ''}`;
         
         results.push({
-          step: 'Microsoft App Configuration',
+          step: 'Google App Configuration',
           status: 'warning',
-          message: 'Microsoft app configuration needs manual verification',
+          message: 'Google OAuth app configuration needs manual verification',
           details: {
-            clientId: process.env.MICROSOFT_CLIENT_ID,
-            tenantId: process.env.MICROSOFT_CLIENT_TENANT_ID,
+            clientId: process.env.GOOGLE_CLIENT_ID,
             checkUrl: appCheckUrl
           },
           recommendations: [
-            'Manual verification required in Azure AD:',
+            'Manual verification required in Google Cloud Console:',
             '',
-            '1. Go to Azure AD → App Registrations',
-            `2. Find app with Client ID: ${process.env.MICROSOFT_CLIENT_ID}`,
-            '3. Check API Permissions tab:',
-            '   • Microsoft Graph → User.Read (Delegated)',
-            '   • Microsoft Graph → OnlineMeetings.ReadWrite (Delegated)',
-            '4. Verify Admin Consent Status:',
-            '   • Status should be "Granted for [your-org]"',
-            '   • If not granted, click "Grant admin consent"',
-            '5. Check Authentication tab:',
+            '1. Go to Google Cloud Console → APIs & Services → Credentials',
+            `2. Find app with Client ID: ${process.env.GOOGLE_CLIENT_ID}`,
+            '3. Check OAuth consent screen scopes:',
+            '   • profile',
+            '   • email',
+            '   • https://www.googleapis.com/auth/calendar.events',
+            '4. Check OAuth Client redirect URIs:',
             '   • Verify Clerk redirect URI is configured',
-            '   • Enable "Access tokens" and "ID tokens"'
+            '5. Verify Google Calendar API is enabled in your project'
           ]
         });
       }
@@ -223,7 +221,7 @@ export async function runMicrosoftOAuthDiagnostic(): Promise<DiagnosticResult[]>
       details: envVars,
       recommendations: missingEnvVars.length > 0 ? [
         `Missing environment variables: ${missingEnvVars.join(', ')}`,
-        'Ensure all Microsoft and Clerk environment variables are configured'
+        'Ensure all Google and Clerk environment variables are configured'
       ] : undefined
     });
 

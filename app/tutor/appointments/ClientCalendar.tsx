@@ -24,6 +24,8 @@ interface CalendarEvent extends RBCEvent {
   mode?: string;
   tuteeId?: string;
   tuteeName?: string;
+  meetingUrl?: string | null;
+  meetingId?: string | null;
 }
 
 interface ClientCalendarProps {
@@ -251,6 +253,25 @@ export default function ClientCalendar({ events, stats }: ClientCalendarProps) {
                       }>
                         {selectedEvent.status}
                       </Badge>
+                    </div>
+                  </div>
+                )}
+
+                {selectedEvent.meetingUrl && selectedEvent.status === 'accepted' && (
+                  <div className="flex items-center gap-2 text-sm">
+                    <div className="w-4 h-4 flex items-center justify-center">
+                      <div className="w-2 h-2 rounded-full bg-emerald-500" />
+                    </div>
+                    <div>
+                      <p className="font-medium">Meeting</p>
+                      <a
+                        href={selectedEvent.meetingUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-700 hover:underline"
+                      >
+                        Join Google Meet
+                      </a>
                     </div>
                   </div>
                 )}

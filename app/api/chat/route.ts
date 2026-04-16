@@ -100,6 +100,8 @@ export async function POST(request: NextRequest) {
         status: (appointment.status ?? 'pending') as 'pending' | 'accepted' | 'declined',
         subject: appointment.subject,
         offeringId: appointment.offeringId,
+        meetingUrl: appointment.meetingUrl,
+        meetingId: appointment.meetingId,
       };
 
       // Provide a default human-readable message for appointment
@@ -162,14 +164,16 @@ export async function POST(request: NextRequest) {
 export async function PATCH(request: NextRequest) {
   try {
     const body = await request.json();
-    const { messageId, status, actorId, declineReason } = body as {
+    const { messageId, status, actorId, declineReason, meetingUrl, meetingId } = body as {
       messageId?: string;
       status?: 'accepted' | 'declined' | 'cancelled';
       actorId?: string;
       declineReason?: string;
+      meetingUrl?: string;
+      meetingId?: string;
     };
 
-    console.log('PATCH request received:', { messageId, status, actorId, declineReason });
+    console.log('PATCH request received:', { messageId, status, actorId, declineReason, meetingUrl, meetingId });
 
     if (!messageId || !status) {
       return NextResponse.json({ error: 'Missing messageId or status' }, { status: 400 });
@@ -236,6 +240,8 @@ export async function PATCH(request: NextRequest) {
           'appointment.status': status,
           'appointment.actorId': actorId,
           'appointment.declineReason': status === 'declined' ? declineReason?.trim() : null,
+          'appointment.meetingUrl': meetingUrl || null,
+          'appointment.meetingId': meetingId || null,
           'updatedAt': new Date().toISOString(),
         }
       };
@@ -302,6 +308,8 @@ export async function PATCH(request: NextRequest) {
             tuteeId,
             status: status, // 'accepted' or 'declined'
             declineReason: status === 'declined' ? declineReason?.trim() : null,
+            meetingUrl: meetingUrl || null,
+            meetingId: meetingId || null,
             appointmentType: updated.appointment.appointmentType || 'single',
             datetimeISO: updated.appointment.datetimeISO,
             endDate: updated.appointment.endDate,
@@ -331,6 +339,8 @@ export async function PATCH(request: NextRequest) {
                 $set: { 
                   status: status,
                   declineReason: status === 'declined' ? declineReason?.trim() : null,
+                  meetingUrl: meetingUrl || null,
+                  meetingId: meetingId || null,
                   updatedAt: new Date().toISOString()
                 }
               }

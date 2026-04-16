@@ -126,7 +126,7 @@ export default function ComingSoonPage() {
                   <CardContent>
                     <p className="text-gray-600">
                       Engage in real-time chat, and video calls. 
-                      Learn together with Microsoft Teams integration.
+                      Learn together with Google Meet integration.
                     </p>
                   </CardContent>
                 </Card>

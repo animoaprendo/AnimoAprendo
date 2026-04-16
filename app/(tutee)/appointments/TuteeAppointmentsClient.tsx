@@ -23,6 +23,8 @@ interface AppointmentEvent extends RBCEvent {
   subject: string;
   mode: string;
   status: string;
+  meetingUrl?: string | null;
+  meetingId?: string | null;
 }
 
 interface TuteeAppointmentsClientProps {
@@ -76,9 +78,13 @@ export default function TuteeAppointmentsClient({ initialEvents }: TuteeAppointm
 
   const handleJoinSession = (event: AppointmentEvent | null) => {
     if (!event) return;
-    // You can implement the join logic here
-    // For now, just show an alert
-    alert(`📌 Joining session with ${event.tutorName}!`);
+
+    if (event.meetingUrl) {
+      window.open(event.meetingUrl, "_blank", "noopener,noreferrer");
+    } else {
+      alert(`📌 Joining session with ${event.tutorName}!`);
+    }
+
     setSelectedEvent(null);
   };
 
@@ -240,6 +246,19 @@ export default function TuteeAppointmentsClient({ initialEvents }: TuteeAppointm
                   </span>
                 </div>
               </div>
+
+              {selectedEvent.meetingUrl && selectedEvent.status === "accepted" && (
+                <div className="pt-2">
+                  <a
+                    href={selectedEvent.meetingUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center justify-center rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+                  >
+                    Join Google Meet
+                  </a>
+                </div>
+              )}
             </div>
           )}
 

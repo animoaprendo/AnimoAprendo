@@ -410,6 +410,17 @@ function AppointmentReminder({
         <div className="text-xs opacity-75">Status: Accepted</div>
       )}
 
+      {appointment.status === "accepted" && appointment.meetingUrl && (
+        <a
+          href={appointment.meetingUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="px-3 py-2 bg-blue-500 hover:bg-blue-600 text-white text-xs font-medium rounded transition-colors duration-200 text-center"
+        >
+          Join Google Meet
+        </a>
+      )}
+
       {/* Mark as Complete Button for Tutors */}
       {canMarkComplete && (
         <div className="space-y-2">

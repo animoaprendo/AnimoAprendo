@@ -11,9 +11,9 @@ export default function TestingIndexPage() {
   return (
     <div className="container mx-auto p-6 max-w-4xl">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">Microsoft OAuth Testing & Setup</h1>
+        <h1 className="text-3xl font-bold mb-2">Google OAuth Testing & Setup</h1>
         <p className="text-gray-600">
-          Tools and guides for diagnosing and configuring Microsoft OAuth integration
+          Tools and guides for diagnosing and configuring Google OAuth integration
         </p>
       </div>
 
@@ -43,7 +43,7 @@ export default function TestingIndexPage() {
             </div>
             <div className="mt-3 text-xs text-green-600">
               ✓ Checks Clerk authentication<br/>
-              ✓ Verifies Microsoft account connection<br/>
+              ✓ Verifies Google account connection<br/>
               ✓ Tests OAuth token retrieval<br/>
               ✓ Provides specific error analysis
             </div>
@@ -60,7 +60,7 @@ export default function TestingIndexPage() {
           </CardHeader>
           <CardContent>
             <p className="text-sm text-blue-700 mb-4">
-              Comprehensive setup instructions, environment variable checks, and Azure AD verification checklists.
+              Comprehensive setup instructions, environment variable checks, and Google OAuth verification checklists.
             </p>
             <div className="flex gap-3">
               <Link
@@ -74,7 +74,7 @@ export default function TestingIndexPage() {
             </div>
             <div className="mt-3 text-xs text-blue-600">
               ✓ Environment variables verification<br/>
-              ✓ Azure AD app registration checklist<br/>
+              ✓ Google OAuth app checklist<br/>
               ✓ Clerk configuration steps<br/>
               ✓ Common issues & solutions
             </div>
@@ -104,9 +104,9 @@ export default function TestingIndexPage() {
                 <p className="font-medium text-orange-800 mb-2">Most Likely Causes:</p>
                 <ul className="text-orange-700 text-xs space-y-1">
                   <li>• OAuth tokens expired or insufficient scopes</li>
-                  <li>• Microsoft app registration missing API permissions</li>
-                  <li>• Admin consent not granted in Azure AD</li>
-                  <li>• User needs to disconnect/reconnect Microsoft account</li>
+                  <li>• Google OAuth app missing required scopes</li>
+                  <li>• OAuth consent screen is incomplete in Google Cloud</li>
+                  <li>• User needs to disconnect/reconnect Google account</li>
                 </ul>
               </div>
               
@@ -142,7 +142,7 @@ export default function TestingIndexPage() {
                 className="flex items-center gap-2 p-2 border border-gray-300 rounded hover:bg-gray-50 transition-colors text-sm"
               >
                 <ExternalLink className="h-4 w-4 text-blue-600" />
-                <span>Azure AD App Registrations</span>
+                <span>Google Cloud OAuth Credentials</span>
               </a>
               
               <a 

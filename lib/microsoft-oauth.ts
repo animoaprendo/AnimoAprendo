@@ -1,4 +1,4 @@
-// Microsoft OAuth integration with Clerk
+// Google OAuth integration with Clerk
 import { useUser } from '@clerk/nextjs';
 import { buildApiUrl } from './url-utils';
 
@@ -9,8 +9,8 @@ export interface MicrosoftTokens {
 }
 
 /**
- * Get Microsoft access token from Clerk user's OAuth tokens
- * This requires Microsoft to be configured as an OAuth provider in Clerk Dashboard
+ * Get Google access token from Clerk user's OAuth tokens
+ * This requires Google to be configured as an OAuth provider in Clerk Dashboard
  */
 export async function getMicrosoftAccessToken(userId?: string): Promise<MicrosoftTokens | null> {
   try {
@@ -26,7 +26,7 @@ export async function getMicrosoftAccessToken(userId?: string): Promise<Microsof
 
     if (!response.ok) {
       const errorData = await response.json();
-      console.error('Microsoft OAuth error details:', errorData);
+      console.error('Google OAuth error details:', errorData);
       
       throw new Error(errorData.error || `Failed to get token: ${response.status}`);
     }
@@ -34,13 +34,13 @@ export async function getMicrosoftAccessToken(userId?: string): Promise<Microsof
     const data = await response.json();
     return data.success ? data.tokens : null;
   } catch (error) {
-    console.error('Error getting Microsoft access token:', error);
+    console.error('Error getting Google access token:', error);
     return null;
   }
 }
 
 /**
- * Hook to get Microsoft access token for the current user
+ * Hook to get Google access token for the current user
  */
 export function useMicrosoftToken() {
   const { user } = useUser();
@@ -54,7 +54,7 @@ export function useMicrosoftToken() {
 }
 
 /**
- * Refresh Microsoft access token using refresh token
+ * Refresh Google access token using refresh token
  */
 export async function refreshMicrosoftAccessToken(refreshToken: string): Promise<MicrosoftTokens | null> {
   try {
@@ -73,7 +73,7 @@ export async function refreshMicrosoftAccessToken(refreshToken: string): Promise
     const data = await response.json();
     return data.success ? data.tokens : null;
   } catch (error) {
-    console.error('Error refreshing Microsoft access token:', error);
+    console.error('Error refreshing Google access token:', error);
     return null;
   }
 }
