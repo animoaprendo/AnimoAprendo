@@ -20,6 +20,7 @@ function getServiceAccountCredentials() {
   const email = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
   const privateKey = process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY;
   const projectId = process.env.GOOGLE_SERVICE_ACCOUNT_PROJECT_ID;
+  const impersonatedUser = process.env.GOOGLE_WORKSPACE_IMPERSONATED_USER;
 
   if (!email || !privateKey || !projectId) {
     throw new Error(
@@ -40,6 +41,7 @@ function getServiceAccountCredentials() {
     email,
     privateKey: formattedPrivateKey,
     projectId,
+    impersonatedUser,
   };
 }
 
@@ -47,12 +49,13 @@ function getServiceAccountCredentials() {
  * Get the Google OAuth2 client using service account credentials
  */
 export function getServiceAccountAuth() {
-  const { email, privateKey } = getServiceAccountCredentials();
+  const { email, privateKey, impersonatedUser } = getServiceAccountCredentials();
 
   return new google.auth.JWT({
     email,
     key: privateKey,
     scopes: GOOGLE_SCOPES,
+    subject: impersonatedUser,
   });
 }
 
@@ -116,6 +119,13 @@ export function validateServiceAccountConfig(): {
 
   if (!process.env.GOOGLE_SERVICE_ACCOUNT_PROJECT_ID) {
     errors.push('GOOGLE_SERVICE_ACCOUNT_PROJECT_ID is not set');
+  }
+
+  if (
+    process.env.GOOGLE_WORKSPACE_IMPERSONATED_USER &&
+    !process.env.GOOGLE_WORKSPACE_IMPERSONATED_USER.includes('@')
+  ) {
+    errors.push('GOOGLE_WORKSPACE_IMPERSONATED_USER must be a valid email');
   }
 
   return {

@@ -3,6 +3,10 @@ import {
   getServiceAccountAccessToken,
   validateServiceAccountConfig,
 } from "@/lib/google-service-account";
+import {
+  getAdminAccessToken,
+  validateAdminOAuthConfig,
+} from "@/lib/google-admin-oauth";
 
 export async function POST(req: NextRequest) {
   const traceId = `meet-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -59,41 +63,82 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Always mint a fresh service-account token server-side.
-    // This avoids client-supplied stale OAuth tokens causing 401 responses.
-    const validation = validateServiceAccountConfig();
-    if (!validation.isValid) {
-      console.error('[GoogleMeet][createMeeting] Service account config invalid', {
-        traceId,
-        validationErrors: validation.errors,
-      });
+    // Try to get admin OAuth token first (preferred method without admin calendar)
+    let resolvedAccessToken: string | null = null;
+    let authMethod = 'none';
 
-      return NextResponse.json(
-        {
-          success: false,
-          error: "Google Service Account is not configured.",
-          details: validation.errors,
-        },
-        { status: 500 }
-      );
+    const adminValidation = validateAdminOAuthConfig();
+    if (adminValidation.isValid) {
+      try {
+        const refreshToken = process.env.GOOGLE_ADMIN_REFRESH_TOKEN!;
+        resolvedAccessToken = await getAdminAccessToken(refreshToken);
+        authMethod = 'admin-oauth';
+        console.log('[GoogleMeet][createMeeting] Admin OAuth token acquired', {
+          traceId,
+          tokenType: typeof resolvedAccessToken,
+          tokenLength: resolvedAccessToken.length,
+        });
+      } catch (error) {
+        console.warn('[GoogleMeet][createMeeting] Admin OAuth token refresh failed, falling back to service account', {
+          traceId,
+          error: error instanceof Error ? error.message : 'Unknown error',
+        });
+      }
     }
 
-    const resolvedAccessToken = await getServiceAccountAccessToken();
+    // Fallback to service account if admin OAuth not available
+    if (!resolvedAccessToken) {
+      const serviceAccountValidation = validateServiceAccountConfig();
+      if (!serviceAccountValidation.isValid) {
+        const allErrors = [
+          ...adminValidation.errors,
+          ...serviceAccountValidation.errors,
+        ];
+        console.error('[GoogleMeet][createMeeting] No valid auth method configured', {
+          traceId,
+          adminOAuthErrors: adminValidation.errors,
+          serviceAccountErrors: serviceAccountValidation.errors,
+        });
+
+        return NextResponse.json(
+          {
+            success: false,
+            error: "No Google authentication method is configured.",
+            details: allErrors,
+          },
+          { status: 500 }
+        );
+      }
+
+      try {
+        resolvedAccessToken = await getServiceAccountAccessToken();
+        authMethod = 'service-account';
+        console.log('[GoogleMeet][createMeeting] Service account token acquired', {
+          traceId,
+          tokenType: typeof resolvedAccessToken,
+          tokenLength: resolvedAccessToken.length,
+        });
+      } catch (error) {
+        console.error('[GoogleMeet][createMeeting] Failed to get service account token', {
+          traceId,
+          error: error instanceof Error ? error.message : 'Unknown error',
+        });
+        throw error;
+      }
+    }
+
     if (typeof resolvedAccessToken !== 'string' || !resolvedAccessToken) {
-      throw new Error('Service account token is not a valid string');
+      throw new Error('Failed to acquire a valid access token');
     }
-
-    console.log('[GoogleMeet][createMeeting] Service account token acquired', {
-      traceId,
-      tokenType: typeof resolvedAccessToken,
-      tokenLength: resolvedAccessToken.length,
-    });
 
     const calendarId = process.env.GOOGLE_MEET_CALENDAR_ID || "primary";
+    const impersonatedUser = process.env.GOOGLE_WORKSPACE_IMPERSONATED_USER;
     console.log('[GoogleMeet][createMeeting] Calling Google Calendar API', {
       traceId,
       calendarId,
+      authMethod,
       conferenceType: 'hangoutsMeet',
+      usingWorkspaceImpersonation: !!impersonatedUser,
     });
 
     const baseEventPayload = {
@@ -210,7 +255,9 @@ export async function POST(req: NextRequest) {
 
         const hint =
           googleResponse.status === 401
-            ? 'Unauthorized token. Verify GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY is the full PEM private key and redeploy.'
+            ? authMethod === 'admin-oauth'
+              ? 'Admin OAuth token is invalid or revoked. Go to /api/auth/google-admin-login to re-authenticate.'
+              : 'Unauthorized token. Verify GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY is the full PEM private key and redeploy.'
             : googleResponse.status === 403
               ? 'Token is valid but lacks calendar permissions. Ensure Calendar API is enabled and the service account has calendar access.'
               : undefined;
@@ -261,10 +308,13 @@ export async function POST(req: NextRequest) {
     }
 
     if (!joinUrl) {
+      const isGroupCalendar = calendarId.endsWith('@group.calendar.google.com');
       console.error('[GoogleMeet][createMeeting] Conference generation failed (event created without join URL)', {
         traceId,
         meetingId: meeting?.id,
         organizerEmail: meeting?.organizer?.email,
+        calendarId,
+        usingWorkspaceImpersonation: !!impersonatedUser,
       });
 
       return NextResponse.json(
@@ -272,11 +322,15 @@ export async function POST(req: NextRequest) {
           success: false,
           error: 'Calendar event was created but Google Meet link was not generated.',
           hint:
-            'The calendar/account can create events, but Meet conferencing is not enabled for it. Use a Workspace user calendar with Meet enabled and set GOOGLE_MEET_CALENDAR_ID to that calendar.',
+            isGroupCalendar
+              ? 'Group calendars often cannot provision Meet links via service account identity. Use a licensed Workspace user calendar ID and configure GOOGLE_WORKSPACE_IMPERSONATED_USER for domain-wide delegation.'
+              : 'The calendar/account can create events, but Meet conferencing is not enabled for it. Use a Workspace user calendar with Meet enabled and set GOOGLE_MEET_CALENDAR_ID to that calendar.',
           debug: {
             traceId,
             meetingId: meeting?.id,
             organizerEmail: meeting?.organizer?.email,
+            calendarId,
+            usingWorkspaceImpersonation: !!impersonatedUser,
           },
         },
         { status: 502 }
