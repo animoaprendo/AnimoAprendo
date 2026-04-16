@@ -2,6 +2,7 @@ import clientPromise from "@/lib/mongodb";
 import { ObjectId } from "mongodb";
 import { NextResponse } from "next/server";
 import { processApprovedSubjectOfferingMilestones } from "@/app/gamification-actions";
+import { getDepartmentAutoApprove } from "@/lib/approval-settings";
 
 export async function POST(req: Request) {
   console.log("Saving subject...");
@@ -14,11 +15,22 @@ export async function POST(req: Request) {
       .collection("users")
       .findOne({ id: sendData.userId });
 
+    const userCollege = userData?.public_metadata?.collegeInformation?.college || null;
+    const userDepartment = userData?.public_metadata?.collegeInformation?.department || null;
+    const departmentName = userDepartment && userDepartment !== 'ALL_DEPARTMENTS' ? userDepartment : null;
+
+    const shouldAutoApprove =
+      userCollege && departmentName
+        ? await getDepartmentAutoApprove(db, userCollege, departmentName)
+        : false;
+
     // Add timestamps to the subject data
     const subjectWithTimestamps = {
       ...sendData,
-      college: userData?.public_metadata.collegeInformation.college || null,
-      department: userData?.public_metadata.collegeInformation.department || null,
+      college: userCollege,
+      department: userDepartment,
+      status: shouldAutoApprove ? 'available' : (sendData.status || 'pending'),
+      autoApproved: shouldAutoApprove,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
