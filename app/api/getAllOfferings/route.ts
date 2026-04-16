@@ -35,6 +35,12 @@ export async function GET(request: NextRequest) {
           ]
         });
 
+        const userCollegeInfo =
+          user?.public_metadata?.collegeInformation ||
+          user?.publicMetadata?.collegeInformation ||
+          null;
+        const tutorYearLevel = Number(userCollegeInfo?.yearLevel || 0) || undefined;
+
         // Calculate average rating for this tutor from tutee reviews
         const tutorReviews = await reviewsCollection.find({
           offerId: offering._id.toString(),
@@ -99,10 +105,12 @@ export async function GET(request: NextRequest) {
             lastName: user.last_name || user.lastName,
             username: user.username,
             imageUrl: user.image_url || user.profile_image_url || user.imageUrl,
+            collegeInformation: userCollegeInfo,
             displayName: (user.first_name && user.last_name) 
               ? `${user.first_name} ${user.last_name}`.trim() 
               : user.username || 'Anonymous'
-          } : null
+          } : null,
+          tutorYearLevel,
         };
       })
     );

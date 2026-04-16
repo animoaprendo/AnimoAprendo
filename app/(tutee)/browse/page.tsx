@@ -1,5 +1,5 @@
 "use client";
-import { getAllOfferings, getEffectiveSubjectSortingWeights } from "@/app/actions";
+import { getAllOfferings } from "@/app/actions";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -65,12 +65,16 @@ interface CardInfo {
   totalBookingsCount?: number;
   repeatBookingsCount?: number;
   availabilityCount?: number;
+  tutorYearLevel?: number;
   user?: {
     id: string;
     firstName?: string;
     lastName?: string;
     username?: string;
     imageUrl?: string;
+    collegeInformation?: {
+      yearLevel?: number;
+    };
     displayName: string;
   };
 }
@@ -119,11 +123,13 @@ export default function Browse() {
         setLoading(true);
         const [response, weightsResponse] = await Promise.all([
           getAllOfferings(),
-          getEffectiveSubjectSortingWeights(),
+          fetch("/api/subject-sorting-weights", { method: "GET", cache: "no-store" }),
         ]);
 
-        if (weightsResponse.success && weightsResponse.weights) {
-          setSortingWeights(weightsResponse.weights as SortingWeights);
+        const weightsData = await weightsResponse.json();
+
+        if (weightsResponse.ok && weightsData?.success && weightsData?.weights) {
+          setSortingWeights(weightsData.weights as SortingWeights);
         } else {
           setSortingWeights(DEFAULT_WEIGHTS);
         }
@@ -182,6 +188,10 @@ export default function Browse() {
     () => ((user?.publicMetadata as any)?.tuteeAvailability as TuteeAvailability[] | undefined) || [],
     [user]
   );
+  const tuteeYearLevel = useMemo(
+    () => Number((user?.publicMetadata as any)?.collegeInformation?.yearLevel || 0) || undefined,
+    [user]
+  );
 
   // Filter and sort offerings based on current filters
   const filteredOfferings = useMemo(() => {
@@ -231,6 +241,7 @@ export default function Browse() {
         // Use the weighted algorithm for smart sorting
         filtered = sortOfferingsByScore(filtered, sortingWeights, {
           tuteeAvailability,
+          tuteeYearLevel,
         }) as CardInfo[];
         
         // Log score breakdowns for debugging (temporary)
@@ -263,7 +274,7 @@ export default function Browse() {
     }
 
     return filtered;
-  }, [offerings, filters, tuteeAvailability, sortingWeights]);
+  }, [offerings, filters, tuteeAvailability, tuteeYearLevel, sortingWeights]);
 
   const scroll = (dir: "left" | "right") => {
     if (scrollRef.current) {
@@ -618,19 +629,19 @@ export default function Browse() {
           </TabsList>
 
           <TabsContent value="all" className="mt-8 min-h-[500px] w-full">
-            <TutorGrid offerings={currentOfferings} tuteeAvailability={tuteeAvailability} sortingWeights={sortingWeights} />
+            <TutorGrid offerings={currentOfferings} tuteeAvailability={tuteeAvailability} tuteeYearLevel={tuteeYearLevel} sortingWeights={sortingWeights} />
           </TabsContent>
 
           <TabsContent value="top-rated" className="mt-8 min-h-[500px] w-full">
-            <TutorGrid offerings={currentOfferings} tuteeAvailability={tuteeAvailability} sortingWeights={sortingWeights} />
+            <TutorGrid offerings={currentOfferings} tuteeAvailability={tuteeAvailability} tuteeYearLevel={tuteeYearLevel} sortingWeights={sortingWeights} />
           </TabsContent>
 
           <TabsContent value="newest" className="mt-8 min-h-[500px] w-full">
-            <TutorGrid offerings={currentOfferings} tuteeAvailability={tuteeAvailability} sortingWeights={sortingWeights} />
+            <TutorGrid offerings={currentOfferings} tuteeAvailability={tuteeAvailability} tuteeYearLevel={tuteeYearLevel} sortingWeights={sortingWeights} />
           </TabsContent>
 
           <TabsContent value="trending" className="mt-8 min-h-[500px] w-full">
-            <TutorGrid offerings={currentOfferings} tuteeAvailability={tuteeAvailability} sortingWeights={sortingWeights} />
+            <TutorGrid offerings={currentOfferings} tuteeAvailability={tuteeAvailability} tuteeYearLevel={tuteeYearLevel} sortingWeights={sortingWeights} />
           </TabsContent>
         </Tabs>
       </div>
@@ -642,10 +653,12 @@ export default function Browse() {
 function TutorGrid({
   offerings,
   tuteeAvailability,
+  tuteeYearLevel,
   sortingWeights,
 }: {
   offerings: CardInfo[];
   tuteeAvailability: TuteeAvailability[];
+  tuteeYearLevel?: number;
   sortingWeights: SortingWeights;
 }) {
   const hasTuteeAvailability = tuteeAvailability.some(
@@ -653,7 +666,7 @@ function TutorGrid({
   );
 
   const offeringsWithMatch = useMemo(
-    () => getOfferingsWithScores(offerings, sortingWeights, { tuteeAvailability }).map(({ offering, score }) => {
+    () => getOfferingsWithScores(offerings, sortingWeights, { tuteeAvailability, tuteeYearLevel }).map(({ offering, score }) => {
       const overlapMinutes = calculateAvailabilityOverlapMinutes(
         offering.availability,
         tuteeAvailability
@@ -665,7 +678,7 @@ function TutorGrid({
         overlapMinutes,
       };
     }),
-    [offerings, tuteeAvailability, sortingWeights]
+    [offerings, tuteeAvailability, tuteeYearLevel, sortingWeights]
   );
 
   if (offerings.length === 0) {

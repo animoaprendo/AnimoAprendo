@@ -11,6 +11,7 @@ export interface SortingWeights {
   availabilities: number;      // Diversity of days offered
   repeatBookings: number;      // Number of unique tutees who booked multiple times
   bookingFrequency: number;    // Total number of completed/accepted appointments
+  yearLevelProximity: number;  // How close tutor and tutee year levels are
 }
 
 export interface OfferingStats {
@@ -49,6 +50,7 @@ export interface TuteeAvailabilitySlot {
 
 export interface ScoringOptions {
   tuteeAvailability?: TuteeAvailabilitySlot[];
+  tuteeYearLevel?: number;
   normalizationContext?: MetricNormalizationContext;
 }
 
@@ -77,6 +79,7 @@ export const DEFAULT_WEIGHTS: SortingWeights = {
   availabilities: 15,
   repeatBookings: 10,
   bookingFrequency: 5,
+  yearLevelProximity: 0,
 };
 
 export const AVAILABILITY_WEIGHTS: SortingWeights = {
@@ -85,6 +88,7 @@ export const AVAILABILITY_WEIGHTS: SortingWeights = {
   availabilities: 70,
   repeatBookings: 5,
   bookingFrequency: 5,
+  yearLevelProximity: 0,
 };
 
 /**
@@ -124,6 +128,12 @@ const ROBUST_PERCENTILES = {
 const AVAILABILITY_BLEND = {
   overlap: 0.7,
   diversity: 0.3,
+};
+
+const YEAR_LEVEL_SCORING = {
+  maxGap: 6,
+  sameLevelScore: 0.55,
+  lowerTutorFloor: 0.1,
 };
 
 /**
@@ -250,6 +260,50 @@ function hasTuteeAvailability(tuteeAvailability?: TuteeAvailabilitySlot[]): bool
 
   return tuteeAvailability.some(
     (slot) => Array.isArray(slot.timeRanges) && slot.timeRanges.length > 0
+  );
+}
+
+function toYearLevel(value: unknown): number | null {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed <= 0) return null;
+  return Math.round(parsed);
+}
+
+function getTutorYearLevel(offering: Offering): number | null {
+  const fromNestedUser =
+    offering?.user?.collegeInformation?.yearLevel ??
+    offering?.user?.public_metadata?.collegeInformation?.yearLevel ??
+    offering?.user?.publicMetadata?.collegeInformation?.yearLevel;
+
+  const fromOffering =
+    offering?.tutorYearLevel ??
+    offering?.yearLevel ??
+    offering?.collegeInformation?.yearLevel;
+
+  return toYearLevel(fromNestedUser ?? fromOffering);
+}
+
+function getYearLevelProximityScore(
+  tuteeYearLevel: number | null,
+  tutorYearLevel: number | null
+): number | null {
+  if (!tuteeYearLevel || !tutorYearLevel) return null;
+
+  const yearLevelDelta = tutorYearLevel - tuteeYearLevel;
+  const clampedDelta = Math.min(Math.abs(yearLevelDelta), YEAR_LEVEL_SCORING.maxGap);
+  const normalizedDelta = clampedDelta / YEAR_LEVEL_SCORING.maxGap;
+
+  if (yearLevelDelta >= 0) {
+    // Higher-year tutors score higher since they are expected to have more experience.
+    return clamp01(
+      YEAR_LEVEL_SCORING.sameLevelScore +
+        normalizedDelta * (1 - YEAR_LEVEL_SCORING.sameLevelScore)
+    );
+  }
+
+  return clamp01(
+    YEAR_LEVEL_SCORING.sameLevelScore -
+      normalizedDelta * (YEAR_LEVEL_SCORING.sameLevelScore - YEAR_LEVEL_SCORING.lowerTutorFloor)
   );
 }
 
@@ -442,6 +496,10 @@ export function calculateOfferingScore(
   const normalizedTutorScore = hasReviewSignals ? normalizedTutorRating : 0.5;
   const normalizedRepeatBookingScore = hasBookingSignals ? normalizedRepeatBookings : 0.5;
   const normalizedBookingFrequencyScore = hasBookingSignals ? normalizedBookingFrequency : 0.5;
+  const tuteeYearLevel = toYearLevel(options.tuteeYearLevel);
+  const tutorYearLevel = getTutorYearLevel(offering);
+  const yearLevelProximity = getYearLevelProximityScore(tuteeYearLevel, tutorYearLevel);
+  const normalizedYearLevelScore = yearLevelProximity ?? 0.5;
 
   const metricEntries = [
     {
@@ -469,6 +527,11 @@ export function calculateOfferingScore(
       weight: weights.bookingFrequency,
       enabled: true,
     },
+    {
+      normalized: normalizedYearLevelScore,
+      weight: weights.yearLevelProximity,
+      enabled: true,
+    },
   ];
 
   const activeWeight = metricEntries
@@ -485,7 +548,6 @@ export function calculateOfferingScore(
     const effectiveWeight = (entry.weight / activeWeight) * 100;
     return sum + (entry.normalized * effectiveWeight);
   }, 0);
-
   return score;
 }
 
@@ -581,6 +643,7 @@ export const WEIGHT_PRESETS = {
     availabilities: 10,
     repeatBookings: 3,
     bookingFrequency: 2,
+    yearLevelProximity: 0,
   } as SortingWeights,
   
   AVAILABILITY_FOCUSED: {
@@ -589,6 +652,7 @@ export const WEIGHT_PRESETS = {
     availabilities: 35,
     repeatBookings: 10,
     bookingFrequency: 10,
+    yearLevelProximity: 0,
   } as SortingWeights,
   
   POPULARITY_FOCUSED: {
@@ -597,6 +661,7 @@ export const WEIGHT_PRESETS = {
     availabilities: 10,
     repeatBookings: 25,
     bookingFrequency: 25,
+    yearLevelProximity: 0,
   } as SortingWeights,
   
   BALANCED: DEFAULT_WEIGHTS,
@@ -623,6 +688,9 @@ export function getScoreBreakdown(
   const context = options.normalizationContext;
   const hasAvailabilityContext = context?.hasAvailabilityContext ?? hasTuteeAvailability(options.tuteeAvailability);
   const metricValues = getOfferingMetricValues(offering, options);
+  const tuteeYearLevel = toYearLevel(options.tuteeYearLevel);
+  const tutorYearLevel = getTutorYearLevel(offering);
+  const yearLevelProximity = getYearLevelProximityScore(tuteeYearLevel, tutorYearLevel);
   const hasReviewSignals = metricValues.reviewCount > 0;
   const hasBookingSignals = metricValues.bookingFrequency > 0;
 
@@ -694,6 +762,7 @@ export function getScoreBreakdown(
         true
       )
     : 0.5;
+  const normalizedYearLevelScore = yearLevelProximity ?? 0.5;
 
   const metricBreakdown = [
     {
@@ -731,6 +800,15 @@ export function getScoreBreakdown(
       value: effectiveBookingFrequency,
       normalized: normalizedBookingFrequencyScore,
       weight: weights.bookingFrequency,
+      enabled: true,
+    },
+    {
+      metric: 'Year Level Advantage',
+      value: yearLevelProximity === null
+        ? 0
+        : (tutorYearLevel || 0) - (tuteeYearLevel || 0),
+      normalized: normalizedYearLevelScore,
+      weight: weights.yearLevelProximity,
       enabled: true,
     },
   ];

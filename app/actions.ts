@@ -1206,6 +1206,7 @@ export async function searchOfferings(params: {
   sortBy?: string;
   day?: string;
   rating?: string;
+  tuteeYearLevel?: number;
   tuteeAvailability?: Array<{
     day: string;
     timeRanges: Array<{
@@ -1222,7 +1223,7 @@ export async function searchOfferings(params: {
   }>;
 }): Promise<{ success: boolean; data?: any[]; error?: string }> {
   try {
-    const { query, sortBy, day, rating, tuteeAvailability } = params;
+    const { query, sortBy, day, rating, tuteeAvailability, tuteeYearLevel } = params;
     const sortingWeights = await getSubjectSortingWeights();
     
     // Get all offerings first
@@ -1272,7 +1273,7 @@ export async function searchOfferings(params: {
         case "weighted":
           // Use weighted algorithm for smart sorting
           const { sortOfferingsByScore } = await import('@/lib/subject-sorting');
-          filtered = sortOfferingsByScore(filtered, sortingWeights, { tuteeAvailability });
+          filtered = sortOfferingsByScore(filtered, sortingWeights, { tuteeAvailability, tuteeYearLevel });
           break;
         case "highest-rated":
           filtered.sort((a, b) => (b.averageRating || 0) - (a.averageRating || 0));
@@ -1285,12 +1286,12 @@ export async function searchOfferings(params: {
         default:
           // Default to weighted sorting for best results
           const { sortOfferingsByScore: sortDefault } = await import('@/lib/subject-sorting');
-          filtered = sortDefault(filtered, sortingWeights, { tuteeAvailability });
+          filtered = sortDefault(filtered, sortingWeights, { tuteeAvailability, tuteeYearLevel });
       }
     } else {
       // No sortBy specified, use weighted as default
       const { sortOfferingsByScore: sortDefault } = await import('@/lib/subject-sorting');
-      filtered = sortDefault(filtered, sortingWeights, { tuteeAvailability });
+      filtered = sortDefault(filtered, sortingWeights, { tuteeAvailability, tuteeYearLevel });
     }
 
     return { success: true, data: filtered };

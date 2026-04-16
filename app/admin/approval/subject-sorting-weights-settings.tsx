@@ -34,6 +34,7 @@ const WEIGHT_FIELDS: Array<{ key: keyof SortingWeights; label: string; hint: str
   { key: "availabilities", label: "Availabilities", hint: "Schedule match and flexibility" },
   { key: "repeatBookings", label: "Repeat Bookings", hint: "Returning tutee signals" },
   { key: "bookingFrequency", label: "Booking Frequency", hint: "Overall session activity" },
+  { key: "yearLevelProximity", label: "Year-Level Advantage", hint: "Prioritize tutors from higher year levels" },
 ];
 
 function totalOf(weights: SortingWeights): number {
@@ -153,7 +154,7 @@ export default function SubjectSortingWeightsSettingsPanel() {
           <div className="space-y-4">
             {WEIGHT_FIELDS.map((field) => (
               <div key={field.key} className="space-y-2">
-                <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4 justify-between">
                   <Label htmlFor={`weight-${field.key}`}>{field.label}</Label>
                   <span className="text-xs text-muted-foreground">{field.hint}</span>
                 </div>

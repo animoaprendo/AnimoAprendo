@@ -12,6 +12,7 @@ const WEIGHT_KEYS: Array<keyof SortingWeights> = [
   "availabilities",
   "repeatBookings",
   "bookingFrequency",
+  "yearLevelProximity",
 ];
 
 export type SubjectSortingWeightsDocument = {
@@ -30,6 +31,7 @@ export function sanitizeSortingWeights(
     availabilities: sanitizeWeight(input?.availabilities, DEFAULT_WEIGHTS.availabilities),
     repeatBookings: sanitizeWeight(input?.repeatBookings, DEFAULT_WEIGHTS.repeatBookings),
     bookingFrequency: sanitizeWeight(input?.bookingFrequency, DEFAULT_WEIGHTS.bookingFrequency),
+    yearLevelProximity: sanitizeWeight(input?.yearLevelProximity, DEFAULT_WEIGHTS.yearLevelProximity),
   };
 }
 
@@ -39,6 +41,46 @@ export function getWeightsTotal(weights: SortingWeights): number {
 
 export function hasValidWeightsTotal(weights: SortingWeights): boolean {
   return getWeightsTotal(weights) === 100;
+}
+
+function normalizeWeightsToHundred(weights: SortingWeights): SortingWeights {
+  const total = getWeightsTotal(weights);
+  if (total <= 0) return { ...DEFAULT_WEIGHTS };
+
+  const keys: Array<keyof SortingWeights> = [
+    "subjectRating",
+    "tutorRating",
+    "availabilities",
+    "repeatBookings",
+    "bookingFrequency",
+    "yearLevelProximity",
+  ];
+
+  const normalized = keys.map((key) => ({
+    key,
+    raw: (weights[key] / total) * 100,
+  }));
+
+  const floored = normalized.map((item) => ({
+    key: item.key,
+    value: Math.floor(item.raw),
+    fraction: item.raw - Math.floor(item.raw),
+  }));
+
+  let remainder = 100 - floored.reduce((sum, item) => sum + item.value, 0);
+  floored.sort((a, b) => b.fraction - a.fraction);
+
+  for (let index = 0; remainder > 0 && index < floored.length; index += 1) {
+    floored[index].value += 1;
+    remainder -= 1;
+  }
+
+  const result = { ...DEFAULT_WEIGHTS };
+  floored.forEach((item) => {
+    result[item.key] = item.value;
+  });
+
+  return result;
 }
 
 export async function getSubjectSortingWeights(): Promise<SortingWeights> {
@@ -53,7 +95,7 @@ export async function getSubjectSortingWeights(): Promise<SortingWeights> {
 
     const parsed = sanitizeSortingWeights(doc.weights as Partial<Record<keyof SortingWeights, unknown>>);
     if (!hasValidWeightsTotal(parsed)) {
-      return { ...DEFAULT_WEIGHTS };
+      return normalizeWeightsToHundred(parsed);
     }
 
     return parsed;

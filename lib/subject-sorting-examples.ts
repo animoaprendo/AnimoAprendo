@@ -41,7 +41,8 @@ export function customWeightsExample(offerings: Offering[]) {
     tutorRating: 25,
     availabilities: 30,  // Higher priority on availability
     repeatBookings: 10,
-    bookingFrequency: 10
+    bookingFrequency: 10,
+    yearLevelProximity: 0,
   };
   
   const sorted = sortOfferingsByScore(offerings, customWeights);

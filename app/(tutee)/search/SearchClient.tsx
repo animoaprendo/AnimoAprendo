@@ -1,6 +1,6 @@
 "use client";
 
-import { getEffectiveSubjectSortingWeights, searchOfferings } from "@/app/actions";
+import { searchOfferings } from "@/app/actions";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -57,12 +57,16 @@ interface Offering {
   totalBookingsCount?: number;
   repeatBookingsCount?: number;
   availabilityCount?: number;
+  tutorYearLevel?: number;
   user?: {
     id: string;
     firstName: string;
     lastName: string;
     username: string;
     imageUrl?: string;
+    collegeInformation?: {
+      yearLevel?: number;
+    };
     displayName: string;
   };
 }
@@ -85,13 +89,22 @@ export default function SearchClient({ initialOfferings }: SearchClientProps) {
     () => ((user?.publicMetadata as any)?.tuteeAvailability as TuteeAvailability[] | undefined) || [],
     [user]
   );
+  const tuteeYearLevel = useMemo(
+    () => Number((user?.publicMetadata as any)?.collegeInformation?.yearLevel || 0) || undefined,
+    [user]
+  );
 
   useEffect(() => {
     const loadSortingWeights = async () => {
       try {
-        const response = await getEffectiveSubjectSortingWeights();
-        if (response.success && response.weights) {
-          setSortingWeights(response.weights);
+        const response = await fetch("/api/subject-sorting-weights", {
+          method: "GET",
+          cache: "no-store",
+        });
+        const data = await response.json();
+
+        if (response.ok && data?.success && data?.weights) {
+          setSortingWeights(data.weights as SortingWeights);
         } else {
           setSortingWeights(DEFAULT_WEIGHTS);
         }
@@ -114,6 +127,7 @@ export default function SearchClient({ initialOfferings }: SearchClientProps) {
           day,
           rating,
           tuteeAvailability,
+          tuteeYearLevel,
         });
 
         if (response.success && response.data) {
@@ -187,18 +201,18 @@ export default function SearchClient({ initialOfferings }: SearchClientProps) {
     // Debounce search to avoid too many API calls
     const timeoutId = setTimeout(fetchFilteredResults, 300);
     return () => clearTimeout(timeoutId);
-  }, [search, sortBy, day, rating, initialOfferings, tuteeAvailability, user]);
+  }, [search, sortBy, day, rating, initialOfferings, tuteeAvailability, tuteeYearLevel, user]);
 
   const resultsWithMatch = useMemo(
     () =>
       results.map((item) => {
-        const score = calculateOfferingScore(item, sortingWeights, { tuteeAvailability });
+        const score = calculateOfferingScore(item, sortingWeights, { tuteeAvailability, tuteeYearLevel });
         return {
           ...item,
           matchPercent: Math.round(Math.max(0, Math.min(100, score))),
         };
       }),
-    [results, tuteeAvailability, sortingWeights]
+    [results, tuteeAvailability, tuteeYearLevel, sortingWeights]
   );
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
@@ -416,7 +430,7 @@ export default function SearchClient({ initialOfferings }: SearchClientProps) {
           {resultsWithMatch.map((item) => (
             <Card
               key={item._id}
-              className="group overflow-hidden transition-all duration-300 border-0 shadow-md hover:shadow-xl hover:-translate-y-1"
+              className="flex flex-col group overflow-hidden transition-all duration-300 border-0 shadow-md hover:shadow-xl hover:-translate-y-1"
             >
               <div className="relative overflow-hidden">
                 <img
@@ -481,7 +495,7 @@ export default function SearchClient({ initialOfferings }: SearchClientProps) {
                 </div>
               </CardHeader>
 
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-4 grow flex flex-col">
                 <div
                   className="text-sm text-gray-600 line-clamp-2"
                   dangerouslySetInnerHTML={{ 
@@ -489,7 +503,7 @@ export default function SearchClient({ initialOfferings }: SearchClientProps) {
                   }}
                 />
                 
-                <div className="bg-gray-50 rounded-lg p-3 space-y-2">
+                <div className="bg-gray-50 rounded-lg p-3 space-y-2 mt-auto">
                   <div className="flex items-center gap-2 text-sm font-medium text-gray-700">
                     <Clock className="h-4 w-4" />
                     Availability
