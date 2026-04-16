@@ -24,6 +24,35 @@ export interface MeetingResponse {
   error?: string;
 }
 
+/**
+ * Get Google access token using service account
+ * This is now the default method - no user OAuth required
+ */
+export async function getServiceAccountToken(): Promise<string | null> {
+  try {
+    const url = buildApiUrl('/api/auth/service-account/token');
+    
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error('Failed to get service account token:', errorData);
+      return null;
+    }
+
+    const data = await response.json();
+    return data.tokens?.accessToken || null;
+  } catch (error) {
+    console.error('Error getting service account token:', error);
+    return null;
+  }
+}
+
 export async function createGoogleMeetMeeting(meetingData: CreateMeetingRequest): Promise<MeetingResponse> {
   try {
     const url = buildApiUrl('/api/google/createMeeting');
@@ -51,6 +80,16 @@ export async function createGoogleMeetMeetingWithAuth(
   userId?: string
 ): Promise<MeetingResponse> {
   try {
+    // Primary method: Use service account (no user OAuth required)
+    const serviceAccountToken = await getServiceAccountToken();
+    if (serviceAccountToken) {
+      return createGoogleMeetMeeting({
+        ...meetingData,
+        accessToken: serviceAccountToken
+      });
+    }
+
+    // Fallback method: Use user OAuth token if available
     if (typeof window === 'undefined') {
       const { getMicrosoftAccessTokenServerAction } = await import('@/app/actions/microsoft-token');
       const tokenResult = await getMicrosoftAccessTokenServerAction(userId);
@@ -62,9 +101,10 @@ export async function createGoogleMeetMeetingWithAuth(
         });
       }
 
+      // If neither method works, return error
       return {
         success: false,
-        error: tokenResult.error || 'Failed to get Google access token',
+        error: 'Failed to create meeting: Service account not configured and user OAuth not available.',
       };
     }
 
@@ -82,7 +122,7 @@ export async function createGoogleMeetMeetingWithAuth(
       const errorData = await tokenResponse.json();
       return {
         success: false,
-        error: errorData.error || 'Failed to get Google access token. Please reconnect your Google account.'
+        error: errorData.error || 'Failed to get Google access token.'
       };
     }
 
@@ -90,7 +130,7 @@ export async function createGoogleMeetMeetingWithAuth(
     if (!tokenData.success || !tokenData.tokens?.accessToken) {
       return {
         success: false,
-        error: 'No valid Google access token available. Please reconnect your Google account in settings.'
+        error: 'No valid Google access token available.'
       };
     }
 
