@@ -1,4 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
+import {
+  getServiceAccountAccessToken,
+  validateServiceAccountConfig,
+} from "@/lib/google-service-account";
 
 export async function POST(req: NextRequest) {
   try {
@@ -13,11 +17,11 @@ export async function POST(req: NextRequest) {
       description = ''
     } = body;
 
-    if (!startDateTime || !endDateTime || !subject || !accessToken) {
+    if (!startDateTime || !endDateTime || !subject) {
       return NextResponse.json(
         {
           success: false,
-          error: "Missing required fields: startDateTime, endDateTime, subject, accessToken"
+          error: "Missing required fields: startDateTime, endDateTime, subject"
         },
         { status: 400 }
       );
@@ -32,6 +36,27 @@ export async function POST(req: NextRequest) {
         { status: 400 }
       );
     }
+
+    // Prefer caller token when provided; otherwise mint a fresh service-account token.
+    let resolvedAccessToken = accessToken as string | undefined;
+
+    if (!resolvedAccessToken) {
+      const validation = validateServiceAccountConfig();
+      if (!validation.isValid) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: "No access token provided and Google Service Account is not configured.",
+            details: validation.errors,
+          },
+          { status: 500 }
+        );
+      }
+
+      resolvedAccessToken = await getServiceAccountAccessToken();
+    }
+
+    const calendarId = process.env.GOOGLE_MEET_CALENDAR_ID || "primary";
 
     const eventPayload = {
       summary: subject,
@@ -56,12 +81,12 @@ export async function POST(req: NextRequest) {
     };
 
     const googleResponse = await fetch(
-      'https://www.googleapis.com/calendar/v3/calendars/primary/events?conferenceDataVersion=1',
+      `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events?conferenceDataVersion=1`,
       {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${accessToken}`,
+          Authorization: `Bearer ${resolvedAccessToken}`,
         },
         body: JSON.stringify(eventPayload),
       }
@@ -69,10 +94,18 @@ export async function POST(req: NextRequest) {
 
     if (!googleResponse.ok) {
       const errorBody = await googleResponse.text();
+      const hint =
+        googleResponse.status === 401
+          ? 'Unauthorized token. Verify GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY is the full PEM private key and redeploy.'
+          : googleResponse.status === 403
+            ? 'Token is valid but lacks calendar permissions. Ensure Calendar API is enabled and the service account has calendar access.'
+            : undefined;
+
       return NextResponse.json(
         {
           success: false,
           error: `Failed to create Google Meet event: ${errorBody}`,
+          hint,
         },
         { status: googleResponse.status }
       );

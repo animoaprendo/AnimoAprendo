@@ -5,7 +5,7 @@ export interface CreateMeetingRequest {
   startDateTime: string;
   endDateTime: string;
   subject: string;
-  accessToken: string;
+  accessToken?: string;
   timezone?: string;
   description?: string;
   attendees?: string[];
