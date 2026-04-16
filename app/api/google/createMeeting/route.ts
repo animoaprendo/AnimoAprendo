@@ -79,8 +79,13 @@ export async function POST(req: NextRequest) {
     }
 
     const resolvedAccessToken = await getServiceAccountAccessToken();
+    if (typeof resolvedAccessToken !== 'string' || !resolvedAccessToken) {
+      throw new Error('Service account token is not a valid string');
+    }
+
     console.log('[GoogleMeet][createMeeting] Service account token acquired', {
       traceId,
+      tokenType: typeof resolvedAccessToken,
       tokenLength: resolvedAccessToken.length,
     });
 

@@ -69,13 +69,30 @@ export async function getCalendarClient() {
  */
 export async function getServiceAccountAccessToken(): Promise<string> {
   const auth = getServiceAccountAuth();
-  const accessToken = await auth.getAccessToken();
 
-  if (!accessToken) {
-    throw new Error('Failed to get service account access token');
+  // Prefer authorize() for JWT clients because it consistently returns access_token.
+  const credentials = await auth.authorize();
+  const authorizedToken = credentials?.access_token;
+
+  if (authorizedToken && typeof authorizedToken === 'string') {
+    return authorizedToken;
   }
 
-  return accessToken as string;
+  // Fallback for environments where getAccessToken() may return a string or object.
+  const fallbackToken = await auth.getAccessToken();
+
+  if (typeof fallbackToken === 'string' && fallbackToken) {
+    return fallbackToken;
+  }
+
+  if (fallbackToken && typeof fallbackToken === 'object' && 'token' in fallbackToken) {
+    const nestedToken = (fallbackToken as { token?: string | null }).token;
+    if (nestedToken) {
+      return nestedToken;
+    }
+  }
+
+  throw new Error('Failed to get a valid string service account access token');
 }
 
 /**
