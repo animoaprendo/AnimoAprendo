@@ -1,5 +1,8 @@
 "use server";
 import { auth } from "@clerk/nextjs/server";
+import { ObjectId } from "mongodb";
+import clientPromise from "@/lib/mongodb";
+import { getTutorQuestionBank, mergeDuplicateQuestionBankEntries } from "@/lib/question-bank";
 
 const daysOfWeek = [
   { name: "M", value: "monday" },
@@ -742,32 +745,28 @@ export async function fetchTutorQuestionBank(params: {
       return { success: false, error: "Unauthorized" };
     }
 
-    const searchParams = new URLSearchParams({ tutorId: userId });
-    if (params.subjectOfferingId) {
-      searchParams.append("subjectOfferingId", params.subjectOfferingId);
-    }
-    if (params.subjectName) {
-      searchParams.append("subjectName", params.subjectName);
-    }
-    if (params.limit && Number.isFinite(params.limit)) {
-      searchParams.append("limit", String(params.limit));
-    }
-    if (params.includeArchived === true) {
-      searchParams.append("includeArchived", "true");
-    }
+    // Call the library function directly instead of making an HTTP request
+    // This avoids auth context loss when fetch() is made from server action
+    const client = await clientPromise;
+    const db = client.db("main");
 
-    const response = await fetch(
-      `${process.env.NEXT_PUBLIC_BASE_URL}/api/tutor/question-bank?${searchParams.toString()}`,
-      { method: "GET", cache: "no-store" }
-    );
+    const entries = await getTutorQuestionBank({
+      db,
+      tutorId: userId,
+      subjectOfferingId: params.subjectOfferingId,
+      subjectName: params.subjectName,
+      limit: params.limit || 50,
+      includeArchived: params.includeArchived || false,
+    });
 
-    if (!response.ok) {
-      const text = await response.text();
-      return { success: false, error: `HTTP ${response.status}: ${text}` };
-    }
+    console.log("[fetchTutorQuestionBank] Entries retrieved:", {
+      tutorId: userId,
+      subjectOfferingId: params.subjectOfferingId,
+      subjectName: params.subjectName,
+      count: entries.length,
+    });
 
-    const data = await response.json();
-    return { success: true, entries: data.entries || [] };
+    return { success: true, entries };
   } catch (error) {
     console.error("Server action: Error fetching tutor question bank:", error);
     return { success: false, error: error instanceof Error ? error.message : "Unknown error" };
@@ -785,23 +784,50 @@ export async function updateTutorQuestionBankEntry(params: {
       return { success: false, error: "Unauthorized" };
     }
 
-    const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/tutor/question-bank`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        entryId: params.entryId,
-        ...(typeof params.isFavorite === "boolean" ? { isFavorite: params.isFavorite } : {}),
-        ...(typeof params.isArchived === "boolean" ? { isArchived: params.isArchived } : {}),
-      }),
-    });
+    // Call MongoDB directly instead of making an HTTP request
+    // This avoids auth context loss when fetch() is made from server action
+    const client = await clientPromise;
+    const db = client.db("main");
+    const collection = db.collection("quizQuestionBank");
 
-    if (!response.ok) {
-      const text = await response.text();
-      return { success: false, error: `HTTP ${response.status}: ${text}` };
+    const setPayload: Record<string, unknown> = {
+      updatedAt: new Date().toISOString(),
+    };
+
+    if (typeof params.isFavorite === "boolean") {
+      setPayload.isFavorite = params.isFavorite;
+    }
+    if (typeof params.isArchived === "boolean") {
+      setPayload.isArchived = params.isArchived;
     }
 
-    const data = await response.json();
-    return { success: true, entry: data.entry };
+    if (Object.keys(setPayload).length === 1) {
+      return { success: false, error: "No update fields provided" };
+    }
+
+    const updated = await collection.findOneAndUpdate(
+      {
+        _id: new ObjectId(params.entryId),
+        tutorId: userId,
+      },
+      {
+        $set: setPayload,
+      },
+      { returnDocument: "after" }
+    );
+
+    if (!updated) {
+      return { success: false, error: "Entry not found" };
+    }
+
+    console.log("[updateTutorQuestionBankEntry] Entry updated:", {
+      entryId: params.entryId,
+      tutorId: userId,
+      isFavorite: params.isFavorite,
+      isArchived: params.isArchived,
+    });
+
+    return { success: true, entry: updated };
   } catch (error) {
     console.error("Server action: Error updating question bank entry:", error);
     return { success: false, error: error instanceof Error ? error.message : "Unknown error" };
@@ -818,23 +844,27 @@ export async function cleanupTutorQuestionBankDuplicates(params: {
       return { success: false, error: "Unauthorized" };
     }
 
-    const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/tutor/question-bank`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        action: "cleanup-duplicates",
-        ...(params.subjectOfferingId ? { subjectOfferingId: params.subjectOfferingId } : {}),
-        ...(params.subjectName ? { subjectName: params.subjectName } : {}),
-      }),
+    // Call the library function directly instead of making an HTTP request
+    // This avoids auth context loss when fetch() is made from server action
+    const client = await clientPromise;
+    const db = client.db("main");
+
+    const result = await mergeDuplicateQuestionBankEntries({
+      db,
+      tutorId: userId,
+      subjectOfferingId: params.subjectOfferingId || null,
+      subjectName: params.subjectName || null,
     });
 
-    if (!response.ok) {
-      const text = await response.text();
-      return { success: false, error: `HTTP ${response.status}: ${text}` };
-    }
+    console.log("[cleanupTutorQuestionBankDuplicates] Cleanup completed:", {
+      tutorId: userId,
+      subjectOfferingId: params.subjectOfferingId,
+      subjectName: params.subjectName,
+      groupsMerged: result.groupsMerged,
+      duplicatesRemoved: result.duplicatesRemoved,
+    });
 
-    const data = await response.json();
-    return { success: true, result: data.result };
+    return { success: true, result };
   } catch (error) {
     console.error("Server action: Error cleaning up question bank duplicates:", error);
     return { success: false, error: error instanceof Error ? error.message : "Unknown error" };

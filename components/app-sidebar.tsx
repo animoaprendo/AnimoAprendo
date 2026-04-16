@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  BarChart3,
   BookOpen,
   Bot,
   CheckSquare2,
@@ -108,9 +109,41 @@ export default function AppSidebar({ userData, ...props }: AppSidebarProps) {
         icon: CheckSquare2,
       },
       {
+        title: "Approved Offers",
+        url: "/admin/approval/approved",
+        icon: CheckSquare2,
+      },
+      {
         title: "Leaderboards",
         url: "/admin/leaderboards",
         icon: Trophy,
+      },
+      {
+        title: "Reports",
+        icon: BarChart3,
+        url: "",
+        items: [
+          {
+            title: "Overview",
+            url: "/admin/reports",
+          },
+          {
+            title: "Subject Demand",
+            url: "/admin/reports/subjects",
+          },
+          {
+            title: "Tutor Demand",
+            url: "/admin/reports/tutors",
+          },
+          {
+            title: "Booking Trends",
+            url: "/admin/reports/bookings",
+          },
+          {
+            title: "Quiz Results",
+            url: "/admin/reports/quiz-results",
+          },
+        ],
       },
       {
         title: "Users",
@@ -145,9 +178,41 @@ export default function AppSidebar({ userData, ...props }: AppSidebarProps) {
         icon: CheckSquare2,
       },
       {
+        title: "Approved Offers",
+        url: "/admin/approval/approved",
+        icon: CheckSquare2,
+      },
+      {
         title: "Leaderboards",
         url: "/admin/leaderboards",
         icon: Trophy,
+      },
+      {
+        title: "Reports",
+        icon: BarChart3,
+        url: "",
+        items: [
+          {
+            title: "Overview",
+            url: "/admin/reports",
+          },
+          {
+            title: "Subject Demand",
+            url: "/admin/reports/subjects",
+          },
+          {
+            title: "Tutor Demand",
+            url: "/admin/reports/tutors",
+          },
+          {
+            title: "Booking Trends",
+            url: "/admin/reports/bookings",
+          },
+          {
+            title: "Quiz Results",
+            url: "/admin/reports/quiz-results",
+          },
+        ],
       },
       {
         title: "Users",

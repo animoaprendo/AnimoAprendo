@@ -146,17 +146,82 @@ export async function PATCH(request: NextRequest) {
       const subjectName =
         updatedDoc.subject || updatedDoc.appointment?.subject || null;
 
+      let resolvedSubjectOfferingId = subjectOfferingId;
+      let resolvedSubjectName = subjectName;
+
+      if (!resolvedSubjectOfferingId || !resolvedSubjectName) {
+        try {
+          const inquiriesCollection = db.collection("inquiries");
+          const inquiry = await inquiriesCollection.findOne({
+            $or: [
+              { tutorId: userId, tuteeId: updatedDoc.tuteeId },
+              { tutorId: updatedDoc.tuteeId, tuteeId: userId },
+            ],
+          });
+
+          if (inquiry) {
+            resolvedSubjectOfferingId = resolvedSubjectOfferingId || inquiry.offeringId || null;
+            resolvedSubjectName = resolvedSubjectName || inquiry.subject || null;
+            console.log("[quiz-submit] recovered subject metadata from inquiry", {
+              messageId,
+              userId,
+              subjectOfferingId: resolvedSubjectOfferingId,
+              subjectName: resolvedSubjectName,
+            });
+
+            if (resolvedSubjectOfferingId || resolvedSubjectName) {
+              await appointmentsCollection.updateOne(
+                { messageId },
+                {
+                  $set: {
+                    offeringId: resolvedSubjectOfferingId,
+                    subject: resolvedSubjectName,
+                    updatedAt: new Date().toISOString(),
+                  },
+                }
+              );
+            }
+          }
+        } catch (error) {
+          console.warn("[quiz-submit] failed to recover subject metadata from inquiry", {
+            messageId,
+            userId,
+            error,
+          });
+        }
+      }
+
       try {
+        console.log("[quiz-submit] question bank sync starting", {
+          messageId,
+          userId,
+          quizCount: Array.isArray(quiz) ? quiz.length : 0,
+          subjectOfferingId: resolvedSubjectOfferingId,
+          subjectName: resolvedSubjectName,
+        });
+
         await upsertTutorQuestionBankEntries({
           db,
           tutorId: userId,
-          subjectOfferingId,
-          subjectName,
+          subjectOfferingId: resolvedSubjectOfferingId,
+          subjectName: resolvedSubjectName,
           appointmentMessageId: messageId,
           quiz,
         });
+
+        console.log("[quiz-submit] question bank sync completed", {
+          messageId,
+          userId,
+          quizCount: Array.isArray(quiz) ? quiz.length : 0,
+          subjectOfferingId: resolvedSubjectOfferingId,
+        });
       } catch (error) {
         // Saving quiz should not fail if question bank sync fails.
+        console.error("[quiz-submit] question bank sync failed", {
+          messageId,
+          userId,
+          error,
+        });
         console.error("Error syncing quiz question bank:", error);
       }
 

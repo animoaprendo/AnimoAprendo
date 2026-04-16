@@ -83,6 +83,10 @@ const TIME_OPTIONS = Array.from({ length: 24 * 4 }, (_, i) => {
   };
 });
 
+const START_TIME_OPTIONS = TIME_OPTIONS.filter((time) => time.value <= "23:00");
+const getEndTimeOptions = (start: string) =>
+  TIME_OPTIONS.filter((time) => time.value > start);
+
 const generateLocalId = (): string => {
   const cryptoObj = globalThis.crypto;
   if (cryptoObj?.randomUUID) {
@@ -187,7 +191,22 @@ export default function OfferDetails({
     ]);
   const handleUpdateSlot = (id: string, key: keyof Slot, value: string) =>
     setAvailability(
-      availability.map((s) => (s.id === id ? { ...s, [key]: value } : s))
+      availability.map((s) => {
+        if (s.id !== id) return s;
+
+        if (key === "start") {
+          const endOptions = getEndTimeOptions(value);
+          const nextEnd = endOptions[0]?.value || value;
+
+          return {
+            ...s,
+            start: value,
+            end: s.end > value ? s.end : nextEnd,
+          };
+        }
+
+        return { ...s, [key]: value };
+      })
     );
   const handleRemoveSlot = (id: string) =>
     setAvailability(availability.filter((s) => s.id !== id));
@@ -249,7 +268,7 @@ export default function OfferDetails({
                 students
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-4 z-1">
               <div className="space-y-2">
                 <Label htmlFor="subject">Subject Name</Label>
                 <div className="relative" ref={comboboxRef}>
@@ -462,7 +481,7 @@ export default function OfferDetails({
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
-                                {TIME_OPTIONS.map((t) => (
+                                {START_TIME_OPTIONS.map((t) => (
                                   <SelectItem key={t.value} value={t.value}>
                                     {t.label}
                                   </SelectItem>
@@ -485,7 +504,7 @@ export default function OfferDetails({
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
-                                {TIME_OPTIONS.map((t) => (
+                                {getEndTimeOptions(slot.start).map((t) => (
                                   <SelectItem key={t.value} value={t.value}>
                                     {t.label}
                                   </SelectItem>

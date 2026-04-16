@@ -44,7 +44,7 @@ export default function ActionsBar({
 
   return (
     <>
-      <div className="flex flex-col gap-3 w-full">
+      <div className="flex flex-col gap-3 w-full z-10">
         <div className="grid grid-cols-1 gap-3">
           <Button
             variant="outline"

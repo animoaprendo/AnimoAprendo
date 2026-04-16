@@ -113,7 +113,7 @@ export default function OfferAndQuizPage() {
   return (
     <div className="container mx-auto py-6 px-4 lg:max-w-400">
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        <div className="lg:col-span-1">
+        <div className="lg:col-span-1 z-10">
           <Card className="sticky top-20 shadow-lg border-0 bg-linear-to-br from-background to-muted/20">
             <AnimatePresence>
               {submitState !== "default" && (
@@ -176,7 +176,7 @@ export default function OfferAndQuizPage() {
               )}
             </AnimatePresence>
             
-            <CardContent className={`p-6 ${submitState !== "default" ? "opacity-50" : ""}`}>
+            <CardContent className={`p-6 z-1000 ${submitState !== "default" ? "opacity-50" : ""}`}>
               <CompletionChecklist
                 titleComplete={titleComplete}
                 description={descriptionLength}

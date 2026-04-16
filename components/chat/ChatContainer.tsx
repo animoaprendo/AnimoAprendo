@@ -1,6 +1,6 @@
 "use client";
 
-import { InfoIcon, X } from "lucide-react";
+import { AlertTriangle, Calendar, Clock, InfoIcon, MapPin, X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
@@ -41,6 +41,111 @@ interface ChatContainerProps {
   userRole?: "tutee" | "tutor";
   offeringId?: string;
 }
+
+type AppointmentWindow = {
+  dateLabel: string;
+  end: Date;
+  start: Date;
+};
+
+type AppointmentConflict = {
+  overlapEnd: Date;
+  overlapStart: Date;
+  existingWindow: AppointmentWindow;
+  requestWindow: AppointmentWindow;
+};
+
+const formatScheduleLabel = (date: Date) => {
+  return `${date.toLocaleDateString([], {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  })} · ${date.toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit",
+  })}`;
+};
+
+const formatTimeLabel = (date: Date) =>
+  date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+
+const formatYmdLocal = (date: Date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
+const buildAppointmentWindows = (appointment: any): AppointmentWindow[] => {
+  if (!appointment?.datetimeISO) return [];
+
+  const baseDate = new Date(appointment.datetimeISO);
+  const durationMinutes = Number(appointment.durationMinutes || 60);
+  const dateStrings =
+    appointment.appointmentType === "recurring" && Array.isArray(appointment.selectedDates) &&
+    appointment.selectedDates.length > 0
+      ? appointment.selectedDates
+      : [formatYmdLocal(baseDate)];
+
+  return dateStrings.map((dateString: string) => {
+    const [year, month, day] = dateString.split("-").map(Number);
+    const start = new Date(
+      year,
+      month - 1,
+      day,
+      baseDate.getHours(),
+      baseDate.getMinutes(),
+      baseDate.getSeconds(),
+      baseDate.getMilliseconds()
+    );
+    const end = new Date(start.getTime() + durationMinutes * 60 * 1000);
+
+    return {
+      dateLabel: dateString,
+      start,
+      end,
+    };
+  });
+};
+
+const findAppointmentConflicts = (
+  requestAppointment: any,
+  existingAppointments: any[]
+) => {
+  const requestWindows = buildAppointmentWindows(requestAppointment);
+  const now = new Date();
+
+  return existingAppointments.flatMap((existingAppointment) => {
+    if (
+      existingAppointment?.status !== "accepted" ||
+      existingAppointment?.messageId === requestAppointment?.messageId
+    ) {
+      return [];
+    }
+
+    return buildAppointmentWindows(existingAppointment)
+      .filter((existingWindow) => existingWindow.end > now)
+      .flatMap((existingWindow) =>
+        requestWindows
+          .filter(
+            (requestWindow) =>
+              requestWindow.start < existingWindow.end &&
+              requestWindow.end > existingWindow.start
+          )
+          .map((requestWindow) => ({
+            existingWindow,
+            overlapEnd: new Date(
+              Math.min(requestWindow.end.getTime(), existingWindow.end.getTime())
+            ),
+            overlapStart: new Date(
+              Math.max(requestWindow.start.getTime(), existingWindow.start.getTime())
+            ),
+            requestWindow,
+          }))
+      );
+  });
+};
 
 export default function ChatContainer({
   userId = "test-user-id",
@@ -88,6 +193,9 @@ export default function ChatContainer({
   const [showDeclineReasonModal, setShowDeclineReasonModal] = useState(false);
   const [declineReason, setDeclineReason] = useState("");
   const [pendingDeclineMessage, setPendingDeclineMessage] = useState<Message | null>(null);
+  const [showAcceptConflictModal, setShowAcceptConflictModal] = useState(false);
+  const [pendingAcceptMessage, setPendingAcceptMessage] = useState<Message | null>(null);
+  const [pendingAcceptConflicts, setPendingAcceptConflicts] = useState<AppointmentConflict[]>([]);
   const [isSendingAppointment, setIsSendingAppointment] = useState(false);
   const [isSubmittingDeclineReason, setIsSubmittingDeclineReason] = useState(false);
   const [appointmentActionLoading, setAppointmentActionLoading] = useState<{
@@ -96,6 +204,7 @@ export default function ChatContainer({
   } | null>(null);
 
   // Appointment data
+  const [currentUserAppointments, setCurrentUserAppointments] = useState<any[]>([]);
   const [upcomingAppointments, setUpcomingAppointments] = useState<any[]>([]);
   const [appointmentsWithoutQuiz, setAppointmentsWithoutQuiz] = useState<any[]>(
     []
@@ -513,6 +622,7 @@ export default function ChatContainer({
       try {
         const result = await fetchAppointments(userId);
         if (result.success && result.appointments) {
+          setCurrentUserAppointments(result.appointments);
           const now = new Date();
 
           // Get normalized IDs for the active user
@@ -1094,18 +1204,11 @@ export default function ChatContainer({
     chatInputRef.current?.focus();
   }, []);
 
-  const handleAppointmentResponse = useCallback(
+  const performAppointmentResponse = useCallback(
     async (msg: Message, action: "accepted" | "declined" | "cancelled") => {
       const messageId = getMessageId(msg);
 
       if (appointmentActionLoading?.messageId === messageId) {
-        return;
-      }
-
-      if (action === "declined") {
-        setPendingDeclineMessage(msg);
-        setDeclineReason("");
-        setShowDeclineReasonModal(true);
         return;
       }
 
@@ -1172,6 +1275,37 @@ export default function ChatContainer({
     [userId, appointmentActionLoading]
   );
 
+  const handleAppointmentResponse = useCallback(
+    async (msg: Message, action: "accepted" | "declined" | "cancelled") => {
+      const messageId = getMessageId(msg);
+
+      if (appointmentActionLoading?.messageId === messageId) {
+        return;
+      }
+
+      if (action === "declined") {
+        setPendingDeclineMessage(msg);
+        setDeclineReason("");
+        setShowDeclineReasonModal(true);
+        return;
+      }
+
+      if (action === "accepted") {
+        const conflicts = findAppointmentConflicts(msg.appointment, currentUserAppointments);
+
+        if (conflicts.length > 0) {
+          setPendingAcceptMessage(msg);
+          setPendingAcceptConflicts(conflicts);
+          setShowAcceptConflictModal(true);
+          return;
+        }
+      }
+
+      await performAppointmentResponse(msg, action);
+    },
+    [appointmentActionLoading, currentUserAppointments, performAppointmentResponse]
+  );
+
   const handleSubmitDeclineReason = useCallback(async () => {
     if (!pendingDeclineMessage || !userId) return;
     if (isSubmittingDeclineReason) return;
@@ -1208,6 +1342,27 @@ export default function ChatContainer({
       );
     }
   }, [pendingDeclineMessage, userId, declineReason, isSubmittingDeclineReason]);
+
+  const handleConfirmAcceptConflict = useCallback(async () => {
+    if (!pendingAcceptMessage || isSubmittingDeclineReason) return;
+
+    setShowAcceptConflictModal(false);
+    try {
+      await performAppointmentResponse(pendingAcceptMessage, "accepted");
+    } finally {
+      setPendingAcceptMessage(null);
+      setPendingAcceptConflicts([]);
+    }
+  }, [pendingAcceptMessage, performAppointmentResponse, isSubmittingDeclineReason]);
+
+  const handleCancelAcceptConflict = useCallback(() => {
+    if (isSubmittingDeclineReason) return;
+    setShowAcceptConflictModal(false);
+    setPendingAcceptMessage(null);
+    setPendingAcceptConflicts([]);
+  }, [isSubmittingDeclineReason]);
+
+  const requestAppointment = pendingAcceptMessage?.appointment;
 
   const handleSendAppointment = useCallback(async () => {
     if (!activeUser || !userId || !appointmentTime) return;
@@ -1524,6 +1679,118 @@ export default function ChatContainer({
                 onClick={handleSubmitDeclineReason}
               >
                 {isSubmittingDeclineReason ? "Submitting..." : "Submit Decline"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showAcceptConflictModal && pendingAcceptMessage && requestAppointment && (
+        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center px-4">
+          <div className="bg-white w-full max-w-2xl rounded-2xl shadow-lg p-6 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-start gap-3 mb-4">
+              <div className="mt-1 rounded-full bg-amber-100 text-amber-700 p-2">
+                <AlertTriangle className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">
+                  Overlapping booking detected
+                </h3>
+                <p className="text-sm text-gray-600 mt-1">
+                  This appointment overlaps with one or more of your existing bookings. Review the conflict below before confirming.
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-4 mb-6">
+              <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
+                <div className="flex items-center gap-2 text-sm font-semibold text-gray-900 mb-2">
+                  <Calendar className="w-4 h-4" />
+                  Appointment you are accepting
+                </div>
+                <p className="text-sm text-gray-700">
+                  {requestAppointment.appointmentType === "recurring" &&
+                  Array.isArray(requestAppointment?.selectedDates) &&
+                  requestAppointment.selectedDates.length > 0
+                    ? requestAppointment.selectedDates
+                        .map((dateString) => {
+                          const baseDate = new Date(`${dateString}T00:00:00`);
+                          const requestStart = new Date(requestAppointment.datetimeISO);
+                          const requestWindowStart = new Date(
+                            baseDate.getFullYear(),
+                            baseDate.getMonth(),
+                            baseDate.getDate(),
+                            requestStart.getHours(),
+                            requestStart.getMinutes()
+                          );
+                          const requestWindowEnd = new Date(
+                            requestWindowStart.getTime() +
+                              Number(requestAppointment.durationMinutes || 60) * 60 * 1000
+                          );
+                          return `${requestWindowStart.toLocaleDateString([], {
+                            weekday: "short",
+                            month: "short",
+                            day: "numeric",
+                            year: "numeric",
+                          })} · ${requestWindowStart.toLocaleTimeString([], {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })} - ${requestWindowEnd.toLocaleTimeString([], {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}`;
+                        })
+                        .join("\n")
+                    : `${formatScheduleLabel(new Date(requestAppointment.datetimeISO))} - ${formatTimeLabel(new Date(new Date(requestAppointment.datetimeISO).getTime() + Number(requestAppointment.durationMinutes || 60) * 60 * 1000))}`}
+                </p>
+              </div>
+
+              {pendingAcceptConflicts.map((conflict, index) => (
+                <div key={`${conflict.existingWindow.start.toISOString()}-${index}`} className="rounded-xl border border-red-200 bg-red-50 p-4">
+                  <div className="flex items-center gap-2 text-sm font-semibold text-red-800 mb-2">
+                    <Clock className="w-4 h-4" />
+                    Conflicting booking #{index + 1}
+                  </div>
+                  <div className="grid gap-3 md:grid-cols-2 text-sm text-gray-700">
+                    <div className="rounded-lg bg-white/80 p-3 border border-red-100">
+                      <p className="font-medium text-gray-900 mb-1">Existing schedule</p>
+                      <p>
+                        {formatScheduleLabel(conflict.existingWindow.start)} - {formatTimeLabel(conflict.existingWindow.end)}
+                      </p>
+                    </div>
+                    <div className="rounded-lg bg-white/80 p-3 border border-red-100">
+                      <p className="font-medium text-gray-900 mb-1">Overlap window</p>
+                      <p>
+                        {formatScheduleLabel(conflict.overlapStart)} - {formatTimeLabel(conflict.overlapEnd)}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="mt-3 text-xs text-red-700">
+                    Your request overlaps with this booking on {conflict.requestWindow.start.toLocaleDateString([], {
+                      weekday: "short",
+                      month: "short",
+                      day: "numeric",
+                      year: "numeric",
+                    })}.
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="outline"
+                onClick={handleCancelAcceptConflict}
+                disabled={isSubmittingDeclineReason}
+              >
+                Cancel
+              </Button>
+              <Button
+                className="bg-amber-600 hover:bg-amber-700 text-white"
+                onClick={handleConfirmAcceptConflict}
+                disabled={isSubmittingDeclineReason}
+              >
+                Confirm anyway
               </Button>
             </div>
           </div>

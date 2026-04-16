@@ -110,18 +110,30 @@ export async function upsertTutorQuestionBankEntries(params: {
     }
   }
 
-  const operations = Array.from(uniqueByFingerprint.entries()).map(([fingerprint, question]) => {
+  let upsertedCount = 0;
+  let modifiedCount = 0;
+
+  for (const [fingerprint, question] of uniqueByFingerprint.entries()) {
     const sourceAppointmentIds = appointmentMessageId ? [appointmentMessageId] : [];
 
-    return {
-      updateOne: {
-        filter: {
+    try {
+      console.log("[question-bank] processing question", {
+        tutorId,
+        subjectOfferingId: normalizedOfferingId,
+        subjectName: subjectNameNormalized,
+        fingerprint,
+        quizType: question.type,
+        questionText: question.question,
+      });
+
+      const result = await collection.updateOne(
+        {
           tutorId,
           subjectOfferingId: normalizedOfferingId,
           subjectName: subjectNameNormalized,
           questionFingerprint: fingerprint,
         },
-        update: {
+        {
           $set: {
             questionText: question.question,
             answerKey: question.answer,
@@ -133,13 +145,6 @@ export async function upsertTutorQuestionBankEntries(params: {
           $inc: {
             usageCount: 1,
           },
-          ...(sourceAppointmentIds.length
-            ? {
-                $addToSet: {
-                  sourceAppointmentIds: { $each: sourceAppointmentIds },
-                },
-              }
-            : {}),
           $setOnInsert: {
             tutorId,
             subjectOfferingId: normalizedOfferingId,
@@ -151,16 +156,47 @@ export async function upsertTutorQuestionBankEntries(params: {
             firstCreatedAt: now,
           },
         },
-        upsert: true,
-      },
-    };
-  });
+        { upsert: true }
+      );
 
-  const result = await collection.bulkWrite(operations, { ordered: false });
-  return {
-    upsertedCount: result.upsertedCount,
-    modifiedCount: result.modifiedCount,
-  };
+      if (result.upsertedCount > 0) {
+        upsertedCount += result.upsertedCount;
+      }
+      modifiedCount += result.modifiedCount;
+
+      if (sourceAppointmentIds.length > 0) {
+        await collection.updateOne(
+          {
+            tutorId,
+            subjectOfferingId: normalizedOfferingId,
+            subjectName: subjectNameNormalized,
+            questionFingerprint: fingerprint,
+          },
+          {
+            $addToSet: {
+              sourceAppointmentIds: { $each: sourceAppointmentIds },
+            },
+          }
+        );
+      }
+
+      console.log("[question-bank] processed question", {
+        fingerprint,
+        upsertedCount: result.upsertedCount,
+        modifiedCount: result.modifiedCount,
+      });
+    } catch (error) {
+      console.error("Error upserting question bank entry:", {
+        tutorId,
+        subjectOfferingId: normalizedOfferingId,
+        subjectName: subjectNameNormalized,
+        fingerprint,
+        error,
+      });
+    }
+  }
+
+  return { upsertedCount, modifiedCount };
 }
 
 export async function getTutorQuestionBank(params: {
@@ -191,7 +227,8 @@ export async function getTutorQuestionBank(params: {
 
   const rows = await collection
     .find(query)
-    .sort({ isFavorite: -1, lastUsedAt: -1, updatedAt: -1 })
+    .collation({ locale: "en", strength: 2 })
+    .sort({ questionText: 1, updatedAt: -1 })
     .limit(limit)
     .toArray();
 

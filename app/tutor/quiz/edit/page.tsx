@@ -13,6 +13,8 @@ import {
   ArrowLeft,
   Calendar,
   Clock,
+  Eye,
+  Plus,
   Save,
   Star,
   Users,
@@ -116,9 +118,16 @@ function QuizEditor({
   const [deleteIdx, setDeleteIdx] = useState<number | null>(null);
   const [addedIdx, setAddedIdx] = useState<number | null>(null);
   const [questionBankFilter, setQuestionBankFilter] = useState("");
+  const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
+  const [previewQuestion, setPreviewQuestion] = useState<QuestionBankItem | null>(null);
   const lastQuestionRef = useRef<HTMLDivElement | null>(null);
 
   const filteredQuestionBank = questionBank.filter((entry) => {
+    // Filter by favorites if the toggle is on
+    if (showFavoritesOnly && !entry.isFavorite) {
+      return false;
+    }
+
     const filter = questionBankFilter.toLowerCase().trim();
     if (!filter) return true;
 
@@ -222,11 +231,11 @@ function QuizEditor({
             </p>
           </div>
 
-          <div className="mt-3 flex flex-wrap items-center gap-2">
+          <div className="mt-3 flex items-center gap-2">
             <button
               type="button"
               onClick={() => setShowArchived(!showArchived)}
-              className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${
+              className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors text-nowrap ${
                 showArchived
                   ? "border-gray-700 bg-gray-700 text-white"
                   : "border-gray-300 bg-white text-gray-700 hover:bg-gray-100"
@@ -236,23 +245,26 @@ function QuizEditor({
             </button>
             <button
               type="button"
-              onClick={onCleanupDuplicates}
-              disabled={cleanupLoading}
-              className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-medium text-amber-700 hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-70"
+              onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
+              className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors text-nowrap ${
+                showFavoritesOnly
+                  ? "border-yellow-400 bg-yellow-100 text-yellow-800"
+                  : "border-gray-300 bg-white text-gray-700 hover:bg-gray-100"
+              }`}
             >
-              {cleanupLoading ? "Cleaning..." : "Dedupe Cleanup"}
+              {showFavoritesOnly ? "Show All" : "Favorites"}
             </button>
-            {questionBankNotice && (
+            {/* {questionBankNotice && (
               <span className="text-xs text-gray-600">
                 {questionBankNotice}
               </span>
-            )}
+            )} */}
           </div>
-          <div className="text-xs text-gray-500">
+          {/* <div className="text-xs text-gray-500">
             {questionBankLoading
               ? "Loading bank..."
               : `${filteredQuestionBank.length} saved question(s)`}
-          </div>
+          </div> */}
         </div>
 
         <div className="mt-3">
@@ -286,39 +298,48 @@ function QuizEditor({
                       : ""}
                   </p>
                 </div>
-                <div className="flex shrink-0 flex-wrap items-center gap-2">
+                <div className="flex shrink-0 flex-wrap items-center gap-1">
                   <button
                     type="button"
                     onClick={() => onToggleFavorite(entry)}
                     disabled={questionBankActionId === entry._id}
-                    className={`rounded-lg border px-2.5 py-1.5 text-xs font-medium ${
+                    title={entry.isFavorite ? "Remove from favorites" : "Add to favorites"}
+                    className={`inline-flex items-center justify-center rounded-lg p-2 ${
                       entry.isFavorite
-                        ? "border-yellow-300 bg-yellow-100 text-yellow-800"
-                        : "border-gray-300 bg-white text-gray-700 hover:bg-gray-100"
-                    } disabled:cursor-not-allowed disabled:opacity-70`}
+                        ? "bg-yellow-100 text-yellow-600 hover:bg-yellow-200"
+                        : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                    } disabled:cursor-not-allowed disabled:opacity-50 transition-colors`}
                   >
-                    <span className="inline-flex items-center gap-1">
-                      <Star size={12} />
-                      {entry.isFavorite ? "Favorited" : "Favorite"}
-                    </span>
+                    <Star size={16} />
                   </button>
                   <button
                     type="button"
                     onClick={() => onToggleArchived(entry)}
                     disabled={questionBankActionId === entry._id}
-                    className="rounded-lg border border-gray-300 bg-white px-2.5 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-70"
+                    title={entry.isArchived ? "Unarchive question" : "Archive question"}
+                    className={`inline-flex items-center justify-center rounded-lg p-2 ${
+                      entry.isArchived
+                        ? "bg-red-100 text-red-600 hover:bg-red-200"
+                        : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                    } disabled:cursor-not-allowed disabled:opacity-50 transition-colors`}
                   >
-                    <span className="inline-flex items-center gap-1">
-                      <Archive size={12} />
-                      {entry.isArchived ? "Unarchive" : "Archive"}
-                    </span>
+                    <Archive size={16} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPreviewQuestion(entry)}
+                    title="Preview question"
+                    className="inline-flex items-center justify-center rounded-lg p-2 bg-blue-100 text-blue-600 hover:bg-blue-200 transition-colors"
+                  >
+                    <Eye size={16} />
                   </button>
                   <button
                     type="button"
                     onClick={() => onUseQuestionBankItem(entry)}
-                    className="rounded-lg border border-green-200 bg-green-50 px-3 py-1.5 text-xs font-medium text-green-700 hover:bg-green-100"
+                    title="Add question to quiz"
+                    className="inline-flex items-center justify-center rounded-lg p-2 bg-green-100 text-green-600 hover:bg-green-200 transition-colors"
                   >
-                    Use Question
+                    <Plus size={16} />
                   </button>
                 </div>
               </div>
@@ -720,6 +741,174 @@ function QuizEditor({
           </motion.div>
         )}
       </AnimatePresence>
+
+      <AnimatePresence>
+        {previewQuestion && (
+          <motion.div
+            className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <motion.div
+              className="bg-white rounded-xl p-6 max-w-2xl w-full shadow-xl max-h-[90vh] overflow-y-auto"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+            >
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900">
+                  Question Preview
+                </h3>
+                <button
+                  onClick={() => setPreviewQuestion(null)}
+                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <p className="text-sm font-medium text-gray-700 mb-2">
+                    Question
+                  </p>
+                  <p className="text-base text-gray-900 bg-gray-50 p-3 rounded-lg">
+                    {previewQuestion.questionText}
+                  </p>
+                </div>
+
+                <div>
+                  <p className="text-sm font-medium text-gray-700 mb-2">
+                    Type: {previewQuestion.quizType.replace("-", " ")}
+                  </p>
+                </div>
+
+                {previewQuestion.quizType === "multiple-choice" && (
+                  <div>
+                    <p className="text-sm font-medium text-gray-700 mb-2">
+                      Options
+                    </p>
+                    <div className="space-y-2">
+                      {Array.isArray(previewQuestion.options) &&
+                        previewQuestion.options.map((opt, idx) => {
+                          const isCorrect =
+                            opt === previewQuestion.answerKey ||
+                            (Array.isArray(previewQuestion.answerKey) &&
+                              previewQuestion.answerKey.includes(opt));
+                          return (
+                            <div
+                              key={idx}
+                              className={`p-3 rounded-lg border-2 ${
+                                isCorrect
+                                  ? "bg-green-50 border-green-200"
+                                  : "bg-gray-50 border-gray-200"
+                              }`}
+                            >
+                              <div className="flex items-center gap-2">
+                                <span className="text-sm">{opt}</span>
+                                {isCorrect && (
+                                  <span className="text-xs font-medium text-green-600 ml-auto">
+                                    ✓ Correct
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                    </div>
+                  </div>
+                )}
+
+                {previewQuestion.quizType === "true-false" && (
+                  <div>
+                    <p className="text-sm font-medium text-gray-700 mb-2">
+                      Answer
+                    </p>
+                    <div className="space-y-2">
+                      {["true", "false"].map((answer) => {
+                        const isCorrect =
+                          answer === previewQuestion.answerKey;
+                        return (
+                          <div
+                            key={answer}
+                            className={`p-3 rounded-lg border-2 ${
+                              isCorrect
+                                ? "bg-green-50 border-green-200"
+                                : "bg-gray-50 border-gray-200"
+                            }`}
+                          >
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm">
+                                {answer === "true" ? "True" : "False"}
+                              </span>
+                              {isCorrect && (
+                                <span className="text-xs font-medium text-green-600 ml-auto">
+                                  ✓ Correct
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {previewQuestion.quizType === "fill-in" && (
+                  <div>
+                    <p className="text-sm font-medium text-gray-700 mb-2">
+                      Possible Correct Answers
+                    </p>
+                    <div className="space-y-2">
+                      {Array.isArray(previewQuestion.answerKey) &&
+                        previewQuestion.answerKey.map((answer, idx) => (
+                          <div
+                            key={idx}
+                            className="p-3 rounded-lg border-2 bg-green-50 border-green-200"
+                          >
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm">{answer}</span>
+                              <span className="text-xs font-medium text-green-600 ml-auto">
+                                ✓ Correct
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                    </div>
+                  </div>
+                )}
+
+                {typeof previewQuestion.usageCount === "number" && (
+                  <div className="text-xs text-gray-500 bg-gray-50 p-2 rounded">
+                    Used {previewQuestion.usageCount} time
+                    {previewQuestion.usageCount !== 1 ? "s" : ""}
+                  </div>
+                )}
+              </div>
+
+              <div className="mt-6 flex gap-3 justify-end">
+                <button
+                  onClick={() => setPreviewQuestion(null)}
+                  className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                >
+                  Close
+                </button>
+                <button
+                  onClick={() => {
+                    onUseQuestionBankItem(previewQuestion);
+                    setPreviewQuestion(null);
+                  }}
+                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2"
+                >
+                  <Plus size={16} />
+                  Use This Question
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
@@ -856,11 +1045,20 @@ export default function QuizEditPage() {
         return;
       }
 
-      setQuestionBank((current) =>
-        current.map((item) =>
-          item._id === entry._id ? { ...item, isArchived: nextArchived } : item,
-        ),
-      );
+      // Auto-reload the list to reflect the archive status change
+      if (appointment) {
+        const refreshed = await fetchTutorQuestionBank({
+          subjectOfferingId: appointment.offeringId,
+          subjectName: appointment.subject,
+          limit: 100,
+          includeArchived: showArchived,
+        });
+
+        if (refreshed.success) {
+          setQuestionBank(refreshed.entries || []);
+        }
+      }
+
       setQuestionBankNotice(
         nextArchived ? "Question archived" : "Question restored from archive",
       );

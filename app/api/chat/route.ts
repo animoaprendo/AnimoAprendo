@@ -272,12 +272,12 @@ export async function PATCH(request: NextRequest) {
             fullAppointment: updated.appointment
           });
 
-          // Try to get subject from inquiry if not in appointment message (for backward compatibility)
+          // Try to get subject/offering from inquiry if missing in the appointment message
           let subject = updated.appointment.subject || null;
           let offeringId = updated.appointment.offeringId || null;
           
-          // If subject is not available, try to find it from inquiries collection
-          if (!subject) {
+          // If subject or offering is not available, try to find it from inquiries collection
+          if (!subject || !offeringId) {
             try {
               const inquiriesCollection = db.collection('inquiries');
               const inquiry = await inquiriesCollection.findOne({
@@ -286,11 +286,14 @@ export async function PATCH(request: NextRequest) {
                   { tutorId: actorId, tuteeId: updated.creatorId }
                 ]
               });
-              
+
               if (inquiry) {
-                subject = inquiry.subject;
-                offeringId = inquiry.offeringId || null;
-                console.log('Found subject from inquiry:', subject);
+                subject = subject || inquiry.subject;
+                offeringId = offeringId || inquiry.offeringId || null;
+                console.log('Found subject/offering from inquiry:', {
+                  subject,
+                  offeringId,
+                });
               }
             } catch (inquiryError) {
               console.warn('Could not fetch inquiry for subject:', inquiryError);
@@ -341,6 +344,8 @@ export async function PATCH(request: NextRequest) {
                   declineReason: status === 'declined' ? declineReason?.trim() : null,
                   meetingUrl: meetingUrl || null,
                   meetingId: meetingId || null,
+                  subject: subject,
+                  offeringId: offeringId,
                   updatedAt: new Date().toISOString()
                 }
               }

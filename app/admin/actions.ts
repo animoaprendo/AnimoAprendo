@@ -128,6 +128,34 @@ export async function rejectOffer(offerId: string) {
   }
 }
 
+export async function takeDownOffer(offerId: string) {
+  try {
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_BASE_URL}/api/updateData`,
+      {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          collection: "subjects",
+          id: offerId,
+          data: { status: "rejected" },
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error("Failed to take down offer");
+    }
+
+    return response.json();
+  } catch (error) {
+    console.error("Error taking down offer:", error);
+    throw error;
+  }
+}
+
 export async function getPendingOffers() {
   try {
     const response = await fetch(
