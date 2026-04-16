@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createJitsiMeeting } from "@/lib/jitsi";
 
 export async function POST(req: NextRequest) {
   try {
@@ -7,18 +8,17 @@ export async function POST(req: NextRequest) {
       startDateTime, 
       endDateTime, 
       subject, 
-      accessToken,
       attendees = [],
       timezone = 'UTC',
       description = ''
     } = body;
 
     // Validate required fields
-    if (!startDateTime || !endDateTime || !subject || !accessToken) {
+    if (!startDateTime || !endDateTime || !subject) {
       return NextResponse.json(
         { 
           success: false, 
-          error: "Missing required fields: startDateTime, endDateTime, subject, accessToken" 
+          error: "Missing required fields: startDateTime, endDateTime, subject" 
         },
         { status: 400 }
       );
@@ -35,74 +35,24 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const eventPayload = {
-      summary: subject,
+    const meeting = await createJitsiMeeting({
+      startDateTime,
+      endDateTime,
+      subject,
+      timezone,
       description,
-      start: {
-        dateTime: startDateTime,
-        timeZone: timezone,
-      },
-      end: {
-        dateTime: endDateTime,
-        timeZone: timezone,
-      },
-      attendees: attendees.map((email: string) => ({ email })),
-      conferenceData: {
-        createRequest: {
-          requestId: `meet-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`,
-          conferenceSolutionKey: {
-            type: 'hangoutsMeet'
-          }
-        }
-      }
-    };
-
-    const googleResponse = await fetch(
-      'https://www.googleapis.com/calendar/v3/calendars/primary/events?conferenceDataVersion=1',
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${accessToken}`,
-        },
-        body: JSON.stringify(eventPayload),
-      }
-    );
-
-    if (!googleResponse.ok) {
-      const errorBody = await googleResponse.text();
-      return NextResponse.json(
-        {
-          success: false,
-          error: `Failed to create Google Meet event: ${errorBody}`,
-        },
-        { status: googleResponse.status }
-      );
-    }
-
-    const meeting = await googleResponse.json();
-    const entryPoints = meeting?.conferenceData?.entryPoints || [];
-    const videoEntry = entryPoints.find((entry: any) => entry.entryPointType === 'video');
-
-    return NextResponse.json({ 
-      success: true, 
-      meeting: {
-        id: meeting.id,
-        joinUrl: videoEntry?.uri || meeting.hangoutLink || '',
-        subject: meeting.summary,
-        startDateTime: meeting.start?.dateTime,
-        endDateTime: meeting.end?.dateTime,
-        organizerEmail: meeting.organizer?.email,
-      }
+      attendees,
     });
 
+    return NextResponse.json(meeting);
+
   } catch (error: any) {
-    console.error("Error creating Google Meet event:", error);
+    console.error("Error creating Jitsi meeting:", error);
 
     return NextResponse.json(
       {
         success: false,
-        error: error.message || "Failed to create Google Meet event",
+        error: error.message || "Failed to create Jitsi meeting",
       },
       { status: 500 }
     );

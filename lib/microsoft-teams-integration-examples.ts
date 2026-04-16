@@ -1,10 +1,10 @@
-// Updated example showing how to create Google Meet meetings with the new authentication system
+// Updated example showing how to create Jitsi meetings with the new authentication system
 
 import { createGoogleMeetMeetingWithAuth, createMeetingTimes } from '@/lib/google-meet';
 import { buildApiUrl } from './url-utils';
 
 /**
- * Example: Create a Google Meet meeting when an appointment is accepted
+ * Example: Create a Jitsi meeting when an appointment is accepted
  */
 export async function createAppointmentGoogleMeetMeeting(appointment: {
   datetimeISO: string;
@@ -59,7 +59,7 @@ export async function createAppointmentGoogleMeetMeeting(appointment: {
 }
 
 /**
- * Example: Check if a user has connected their Google account via Clerk OAuth
+ * Example: Check whether a user can create a meeting link
  */
 export async function checkGoogleConnection(userId?: string): Promise<boolean> {
   try {
@@ -141,7 +141,7 @@ export async function acceptAppointmentWithGoogleMeet(
 }
 
 /**
- * Example: Bulk create meetings for multiple appointments
+ * Example: Bulk create Jitsi meetings for multiple appointments
  */
 export async function createBulkMeetingsForAppointments(
   appointments: Array<{
