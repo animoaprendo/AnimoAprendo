@@ -348,7 +348,7 @@ export default async function UserProfilePage({ params }: PageProps) {
             <div className="flex-1 min-w-0 space-y-3">
               <div className="flex flex-wrap items-center gap-2">
                 <h1 className="text-2xl font-semibold truncate">{displayName}</h1>
-                <Badge variant="secondary" className="capitalize">{String(profileRole)}</Badge>
+                {/* <Badge variant="secondary" className="capitalize">{String(profileRole)}</Badge> */}
                 {isVerifiedTutor ? <Badge className="bg-green-600 hover:bg-green-600">Verified</Badge> : null}
               </div>
 

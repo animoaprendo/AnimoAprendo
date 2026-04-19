@@ -1,7 +1,7 @@
 "use client";
 
 import moment from "moment";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import type { Event as RBCEvent, View } from "react-big-calendar";
 import { Calendar, momentLocalizer } from "react-big-calendar";
 // @ts-ignore
@@ -10,7 +10,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
-import { BarChart3, CalendarDays, Clock, MapPin, User, X } from "lucide-react";
+import { BarChart3, CalendarDays, Clock, MapPin, User, X, AlertTriangle, Check } from "lucide-react";
+import { toast } from "sonner";
+import { markAppointmentComplete } from "@/app/actions";
 import "react-big-calendar/lib/css/react-big-calendar.css";
 
 const localizer = momentLocalizer(moment);
@@ -36,6 +38,8 @@ interface ClientCalendarProps {
 export default function ClientCalendar({ events, stats }: ClientCalendarProps) {
   const [view, setView] = useState<View>("month");
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
+  const [showCompleteConfirm, setShowCompleteConfirm] = useState(false);
+  const [isCompleting, setIsCompleting] = useState(false);
   const getModeLabel = (mode?: string) => (mode === "in-person" ? "Onsite" : "Online");
 
   const getJoinUrl = (event: CalendarEvent | null) => {
@@ -51,11 +55,63 @@ export default function ClientCalendar({ events, stats }: ClientCalendarProps) {
     return null;
   };
 
+  const isAppointmentEarly = (event: CalendarEvent | null) => {
+    if (!event) return false;
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const endDate = new Date(event.end);
+    const endDay = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
+    return endDay > today;
+  };
+
+  const getLastEndDateForAppointment = (event: CalendarEvent | null) => {
+    if (!event) return null;
+
+    const fallbackEnd = new Date(event.end);
+    if (!event.appointmentId) return fallbackEnd;
+
+    const relatedEvents = events.filter((entry) => entry.appointmentId === event.appointmentId);
+    if (relatedEvents.length === 0) return fallbackEnd;
+
+    return relatedEvents.reduce((latestEnd, current) => {
+      const currentEnd = new Date(current.end);
+      return currentEnd > latestEnd ? currentEnd : latestEnd;
+    }, new Date(relatedEvents[0].end));
+  };
+
   const selectedJoinUrl = getJoinUrl(selectedEvent);
   const selectedStatus = selectedEvent?.status?.toLowerCase();
   const isOnlineSession = (selectedEvent?.mode || "").toLowerCase() === "online";
   const canShowJoinAction = !!selectedJoinUrl && selectedStatus !== 'cancelled' && selectedStatus !== 'declined';
   const shouldShowPendingJoin = !selectedJoinUrl && isOnlineSession && selectedStatus !== 'cancelled' && selectedStatus !== 'declined';
+  const canMarkComplete = selectedStatus === 'accepted' && selectedEvent?.appointmentId;
+  const isEarlyCompletion = isAppointmentEarly(selectedEvent);
+  const lastScheduledEnd = useMemo(() => getLastEndDateForAppointment(selectedEvent), [selectedEvent, events]);
+
+  const handleMarkComplete = async () => {
+    if (!selectedEvent?.appointmentId) return;
+    
+    setIsCompleting(true);
+    try {
+      const result = await markAppointmentComplete({
+        appointmentId: selectedEvent.appointmentId,
+      });
+
+      if (result.success) {
+        toast.success('Appointment marked as complete');
+        setShowCompleteConfirm(false);
+        setSelectedEvent(null);
+        // Optionally refresh the page
+        setTimeout(() => window.location.reload(), 1000);
+      } else {
+        toast.error(result.error || 'Failed to mark appointment as complete');
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to mark appointment as complete');
+    } finally {
+      setIsCompleting(false);
+    }
+  };
 
   useEffect(() => {
     if (typeof window !== "undefined" && window.innerWidth < 640) {
@@ -276,7 +332,7 @@ export default function ClientCalendar({ events, stats }: ClientCalendarProps) {
                   </div>
                 )}
 
-                {canShowJoinAction && (
+                {/* {canShowJoinAction && (
                   <div className="flex items-center gap-2 text-sm">
                     <div className="w-4 h-4 flex items-center justify-center">
                       <div className="w-2 h-2 rounded-full bg-emerald-500" />
@@ -293,7 +349,7 @@ export default function ClientCalendar({ events, stats }: ClientCalendarProps) {
                       </a>
                     </div>
                   </div>
-                )}
+                )} */}
 
                 {shouldShowPendingJoin && (
                   <div className="flex items-center gap-2 text-sm">
@@ -315,6 +371,15 @@ export default function ClientCalendar({ events, stats }: ClientCalendarProps) {
               <X className="w-4 h-4 mr-2" />
               Close
             </Button>
+            {canMarkComplete && (
+              <Button 
+                onClick={() => setShowCompleteConfirm(true)}
+                className="bg-green-600 hover:bg-green-700"
+              >
+                <Check className="w-4 h-4 mr-2" />
+                Mark Complete
+              </Button>
+            )}
             {canShowJoinAction && (
               <Button asChild className="bg-blue-600 hover:bg-blue-700">
                 <a href={selectedJoinUrl} target="_blank" rel="noopener noreferrer">
@@ -335,6 +400,68 @@ export default function ClientCalendar({ events, stats }: ClientCalendarProps) {
                 </a>
               </Button>
             )} */}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Mark Complete Confirmation Dialog */}
+      <Dialog open={showCompleteConfirm} onOpenChange={setShowCompleteConfirm}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            {isEarlyCompletion ? (
+              <>
+                <div className="flex items-center gap-2 mb-2">
+                  <AlertTriangle className="w-5 h-5 text-amber-600" />
+                  <DialogTitle className="text-amber-600">Complete Early?</DialogTitle>
+                </div>
+                <DialogDescription>
+                  This appointment is scheduled to end at a later date. Are you sure you want to mark it as complete now?
+                </DialogDescription>
+              </>
+            ) : (
+              <>
+                <DialogTitle className="flex items-center gap-2">
+                  <Check className="w-5 h-5" />
+                  Mark Appointment Complete?
+                </DialogTitle>
+                <DialogDescription>
+                  This will record the completion date and time as {moment().format("MMMM Do, YYYY [at] h:mm A")}
+                </DialogDescription>
+              </>
+            )}
+          </DialogHeader>
+
+          {selectedEvent && (
+            <div className="space-y-3 py-4 border-y">
+              <div className="text-sm">
+                <p className="font-medium text-gray-700">Appointment Details</p>
+                <p className="text-muted-foreground">{selectedEvent.title}</p>
+              </div>
+              {isEarlyCompletion && (
+                <div className="bg-amber-50 border border-amber-200 rounded-md p-3">
+                  <p className="text-sm text-amber-900">
+                    <strong>Last Scheduled End:</strong> {lastScheduledEnd ? moment(lastScheduledEnd).format("MMMM Do, YYYY [at] h:mm A") : "N/A"}
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowCompleteConfirm(false)}
+              disabled={isCompleting}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleMarkComplete}
+              disabled={isCompleting}
+              className={isEarlyCompletion ? "bg-amber-600 hover:bg-amber-700" : "bg-green-600 hover:bg-green-700"}
+            >
+              {isCompleting ? "Marking..." : "Confirm Complete"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

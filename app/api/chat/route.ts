@@ -318,6 +318,26 @@ export async function PATCH(request: NextRequest) {
           const tutorId = isCreatedByTutor ? updated.creatorId : actorId;
           const tuteeId = isCreatedByTutor ? actorId : updated.creatorId;
 
+          // Build dates array for new format (array of date strings)
+          let datesArray: string[] = [];
+          const appointmentType = updated.appointment.appointmentType || 'single';
+          
+          if (appointmentType === 'recurring' && Array.isArray(updated.appointment.selectedDates)) {
+            // For recurring appointments, use selectedDates as the dates array
+            datesArray = updated.appointment.selectedDates;
+          } else {
+            // For single appointments, extract date from datetimeISO
+            try {
+              const dateObj = new Date(updated.appointment.datetimeISO);
+              if (!isNaN(dateObj.getTime())) {
+                const dateString = dateObj.toISOString().split('T')[0]; // YYYY-MM-DD
+                datesArray = [dateString];
+              }
+            } catch (e) {
+              console.warn('Failed to extract date from datetimeISO:', updated.appointment.datetimeISO);
+            }
+          }
+
           // Create appointment record
           const appointmentRecord = {
             messageId: updated._id.toString(),
@@ -327,11 +347,12 @@ export async function PATCH(request: NextRequest) {
             declineReason: status === 'declined' ? declineReason?.trim() : null,
             meetingUrl: resolvedMeetingUrl,
             meetingId: resolvedMeetingId,
-            appointmentType: updated.appointment.appointmentType || 'single',
+            appointmentType: appointmentType,
             datetimeISO: updated.appointment.datetimeISO,
             endDate: updated.appointment.endDate,
             selectedDates: updated.appointment.selectedDates,
             durationMinutes: updated.appointment.durationMinutes,
+            dates: datesArray, // New format: array of date strings
             mode: updated.appointment.mode,
             subject: subject, // Save subject information from inquiry
             offeringId: offeringId, // Save offering ID if available

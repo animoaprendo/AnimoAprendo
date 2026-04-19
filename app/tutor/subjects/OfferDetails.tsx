@@ -101,6 +101,9 @@ const generateLocalId = (): string => {
   });
 };
 
+const normalizeSubjectValue = (value?: string): string =>
+  (value || "").trim().toLowerCase();
+
 export default function OfferDetails({
   subject,
   setSubject,
@@ -116,6 +119,7 @@ export default function OfferDetails({
   const { user } = useUser();
   const [isPreview, setIsPreview] = useState(false);
   const [SUBJECTS, setSUBJECTS] = useState<any[]>([]);
+  const [existingSubjectLabels, setExistingSubjectLabels] = useState<Set<string>>(new Set());
   const [searchText, setSearchText] = useState("");
   const [isOpenCombobox, setIsOpenCombobox] = useState(false);
   const comboboxRef = useRef<HTMLDivElement>(null);
@@ -133,20 +137,24 @@ export default function OfferDetails({
   }, [description]);
 
   useEffect(() => {
-    getCollectionData("subjectOptions").then((data) => {
-      if (data.success && Array.isArray(data.data)) {
-        const allSubjects = data.data.map((item: any) => item);
-        const normalize = (value?: string) => (value || "").trim().toLowerCase();
+    const loadSubjects = async () => {
+      const [subjectOptionsResult, existingOffersResult] = await Promise.all([
+        getCollectionData("subjectOptions"),
+        getCollectionData("subjects"),
+      ]);
+
+      if (subjectOptionsResult?.success && Array.isArray(subjectOptionsResult.data)) {
+        const allSubjects = subjectOptionsResult.data.map((item: any) => item);
 
         const userCollege = (user?.publicMetadata as any)?.collegeInformation?.college as string | undefined;
         const userDept = (user?.publicMetadata as any)?.collegeInformation?.department as string | undefined;
-        const normalizedUserCollege = normalize(userCollege);
-        const normalizedUserDept = normalize(userDept);
+        const normalizedUserCollege = normalizeSubjectValue(userCollege);
+        const normalizedUserDept = normalizeSubjectValue(userDept);
 
         // Keep General subjects scoped to the tutor's own college.
         const filteredSubjects = allSubjects.filter((s: any) => {
-          const subjectDepartment = normalize(s.department);
-          const subjectCollege = normalize(s.college);
+          const subjectDepartment = normalizeSubjectValue(s.department);
+          const subjectCollege = normalizeSubjectValue(s.college);
 
           const isSameDepartment =
             Boolean(normalizedUserDept) && subjectDepartment === normalizedUserDept;
@@ -161,8 +169,41 @@ export default function OfferDetails({
 
         setSUBJECTS(filteredSubjects);
       }
-    });
+
+      if (existingOffersResult?.success && Array.isArray(existingOffersResult.data) && user?.id) {
+        const blockingStatuses = new Set(["available", "pending", "draft"]);
+
+        const labels = existingOffersResult.data
+          .filter((offer: any) => {
+            return (
+              String(offer?.userId || "") === user.id &&
+              blockingStatuses.has(normalizeSubjectValue(offer?.status))
+            );
+          })
+          .map((offer: any) => normalizeSubjectValue(String(offer?.subject || "")))
+          .filter(Boolean);
+
+        setExistingSubjectLabels(new Set(labels));
+      } else {
+        setExistingSubjectLabels(new Set());
+      }
+    };
+
+    loadSubjects();
   }, [user]);
+
+  const visibleSubjects = SUBJECTS.filter((s) => {
+    const fullValue = `${s.subjectCode} - ${s.subjectName}`;
+    return !existingSubjectLabels.has(normalizeSubjectValue(fullValue));
+  });
+
+  const searchedSubjects = visibleSubjects.filter((s) => {
+    const searchLower = searchText.toLowerCase();
+    return (
+      s.subjectCode.toLowerCase().includes(searchLower) ||
+      s.subjectName.toLowerCase().includes(searchLower)
+    );
+  });
 
   // Handle click outside combobox to close dropdown
   useEffect(() => {
@@ -286,20 +327,8 @@ export default function OfferDetails({
                   />
                   {isOpenCombobox && (
                     <div className="absolute top-full left-0 right-0 z-50 mt-1 max-h-64 overflow-y-auto border border-input bg-background rounded-md shadow-md">
-                      {SUBJECTS.filter((s) => {
-                        const searchLower = searchText.toLowerCase();
-                        return (
-                          s.subjectCode.toLowerCase().includes(searchLower) ||
-                          s.subjectName.toLowerCase().includes(searchLower)
-                        );
-                      }).length > 0 ? (
-                        SUBJECTS.filter((s) => {
-                          const searchLower = searchText.toLowerCase();
-                          return (
-                            s.subjectCode.toLowerCase().includes(searchLower) ||
-                            s.subjectName.toLowerCase().includes(searchLower)
-                          );
-                        }).map((s) => {
+                      {searchedSubjects.length > 0 ? (
+                        searchedSubjects.map((s) => {
                           const fullValue = `${s.subjectCode} - ${s.subjectName}`;
                           const isSelected = subject === fullValue;
                           return (

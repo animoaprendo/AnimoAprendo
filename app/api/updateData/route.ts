@@ -55,7 +55,11 @@ export async function PUT(request: NextRequest) {
     }
 
     // Trigger gamification updates for appointment completions
-    if (collection === 'appointments' && data.status === 'completed') {
+    if (
+      collection === 'appointments' &&
+      data.status === 'completed' &&
+      existingDocument?.status !== 'completed'
+    ) {
       try {
         // Get the appointment to find the tutor ID
         const appointment = await collectionRef.findOne({ _id: mongoId });

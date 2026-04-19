@@ -32,6 +32,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { redirect, RedirectType } from "next/navigation";
+import { MdLeaderboard } from "react-icons/md";
 
 // Utility function to calculate XP required for a level
 function getXPForLevel(level: number): number {
@@ -382,6 +383,15 @@ export default async function Dashboard() {
                   <p className="text-xs text-muted-foreground text-center">
                     {100 - (gamificationProfile.totalXP % 100)} XP until next level
                   </p>
+                </div>
+
+                <div>
+                  <Button variant="outline" className="w-full" asChild>
+                    <Link href="/tutor/achievements">
+                      <MdLeaderboard className="w-4 h-4 mr-2" />
+                      View Leaderboards
+                    </Link>
+                  </Button>
                 </div>
               </CardContent>
             </Card>

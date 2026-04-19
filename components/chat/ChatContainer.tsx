@@ -223,7 +223,6 @@ export default function ChatContainer({
   // Handle real-time messages
   const handleRealtimeMessage = useCallback(
     (newMessage: Message) => {
-      console.log("Real-time message received:", newMessage);
 
       const normalizeId = (id?: string) => {
         if (!id) return "";
@@ -1064,9 +1063,6 @@ export default function ChatContainer({
                   Boolean(slot && slot.day && Array.isArray(slot.timeRanges) && slot.timeRanges.length > 0)
                 )
             : [];
-
-          console.log("Offering availability (raw):", rawAvailability);
-          console.log("Offering availability (normalized):", normalizedAvailability);
           setSubjectAvailability(normalizedAvailability);
         } else {
           setSubjectAvailability([]);
@@ -1090,14 +1086,10 @@ export default function ChatContainer({
           ? activeUser.id.replace("user_", "")
           : activeUser.id;
 
-        console.log("Fetching availability for user:", userId_normalized);
-
         const response = await fetch(
           `${process.env.NEXT_PUBLIC_BASE_URL}/api/user-availability?userIds=${userId_normalized}`
         );
         const data = await response.json();
-
-        console.log("Availability fetch response:", data);
 
         if (data.success && data.data) {
           const userKey = activeUser.id.startsWith("user_")
@@ -1105,7 +1097,6 @@ export default function ChatContainer({
             : `user_${activeUser.id}`;
           const availabilityInfo = data.data[userKey] || data.data[userId_normalized];
 
-          console.log("Availability info for user:", availabilityInfo);
 
           if (availabilityInfo) {
             const updatedActiveUser = {
@@ -1219,9 +1210,6 @@ export default function ChatContainer({
           actorId: userId!,
         });
 
-        if (result.success) {
-          console.log("Appointment status updated:", result.data);
-        }
       } catch (error) {
         console.error("Error updating appointment status:", error);
       } finally {

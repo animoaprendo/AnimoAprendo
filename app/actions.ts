@@ -560,6 +560,42 @@ export async function cancelAppointment(params: {
   }
 }
 
+// Mark appointment as complete (by tutor)
+export async function markAppointmentComplete(params: {
+  appointmentId: string;
+}): Promise<{ success: boolean; data?: any; error?: string }> {
+  try {
+    const completedAt = new Date().toISOString();
+    
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_BASE_URL}/api/updateData`,
+      {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          collection: 'appointments',
+          id: params.appointmentId,
+          data: {
+            status: 'completed',
+            completedAt: completedAt,
+          }
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      const text = await response.text();
+      return { success: false, error: `HTTP ${response.status}: ${text}` };
+    }
+
+    const data = await response.json();
+    return { success: true, data };
+  } catch (error) {
+    console.error('Server action: Error marking appointment complete:', error);
+    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+  }
+}
+
 // Submit quiz attempt for tutee
 export async function submitQuizAttempt(params: {
   messageId: string;
@@ -713,6 +749,20 @@ export async function updateAppointmentQuiz(params: {
       return { success: false, error: "Unauthorized" };
     }
 
+    // Load existing appointment first so we can detect first-time quiz creation.
+    const existingResponse = await fetch(
+      `${process.env.NEXT_PUBLIC_BASE_URL}/api/appointments?userId=${userId}&messageId=${params.messageId}`,
+      { method: "GET", cache: "no-store" }
+    );
+
+    let existingAppointment: any = null;
+    if (existingResponse.ok) {
+      const existingData = await existingResponse.json();
+      existingAppointment = Array.isArray(existingData?.appointments)
+        ? existingData.appointments[0]
+        : null;
+    }
+
     const response = await fetch(
       `${process.env.NEXT_PUBLIC_BASE_URL}/api/appointments`,
       {
@@ -728,6 +778,34 @@ export async function updateAppointmentQuiz(params: {
     }
 
     const data = await response.json();
+
+    const updatedAppointment = data.appointment;
+    const hadQuizBefore = Array.isArray(existingAppointment?.quiz) && existingAppointment.quiz.length > 0;
+    const hasQuizNow = Array.isArray(updatedAppointment?.quiz) && updatedAppointment.quiz.length > 0;
+    const preTestIsAvailable = updatedAppointment?.status === 'accepted';
+
+    if (
+      !hadQuizBefore &&
+      hasQuizNow &&
+      preTestIsAvailable &&
+      updatedAppointment?.tuteeId &&
+      updatedAppointment?.tutorId
+    ) {
+      try {
+        await sendMessage({
+          creatorId: updatedAppointment.tutorId,
+          message: 'Your quiz is ready. You can now start answering the pre-test (Attempt 1).',
+          recipients: [updatedAppointment.tutorId, updatedAppointment.tuteeId],
+          replyTo: null,
+          senderRole: 'tutor',
+          type: 'text',
+        });
+      } catch (messageError) {
+        console.error('Server action: Error sending quiz-created message:', messageError);
+        // Do not fail quiz saving if chat notification fails.
+      }
+    }
+
     return { success: true, appointment: data.appointment };
   } catch (error) {
     console.error('Server action: Error updating appointment quiz:', error);
@@ -1057,15 +1135,67 @@ export async function fetchTuteeAppointments(userId?: string): Promise<{
     }
 
     // Transform appointments to calendar event format
-    const events = tuteeAppointments.map(appointment => {
+    const events = tuteeAppointments.flatMap(appointment => {
       const tutor = users.find((user: any) => user.id === appointment.tutorId);
       const tutorName = tutor ? `${tutor.firstName} ${tutor.lastName}`.trim() : 'Unknown Tutor';
       
-      // Calculate start and end times
-      const startDate = new Date(appointment.scheduledDate || appointment.createdAt);
-      const endDate = new Date(startDate.getTime() + (60 * 60 * 1000)); // Add 1 hour
+      // Extract time from datetimeISO
+      const baseDateTime = new Date(appointment.datetimeISO || appointment.scheduledDate || appointment.createdAt);
+      const hours = baseDateTime.getHours();
+      const minutes = baseDateTime.getMinutes();
 
-      return {
+      // Duration in minutes (default 60)
+      const durationMinutes = Number(appointment.durationMinutes ?? appointment.duration ?? 60);
+      const safeDurationMinutes = Number.isFinite(durationMinutes) && durationMinutes > 0
+        ? durationMinutes
+        : 60;
+
+      // Helper function to create an event for a single date
+      const createEventForDate = (dateString: string) => {
+        try {
+          const dateObj = new Date(`${dateString}T00:00:00`);
+          const startDate = new Date(
+            dateObj.getFullYear(),
+            dateObj.getMonth(),
+            dateObj.getDate(),
+            hours,
+            minutes
+          );
+          const endDate = new Date(startDate.getTime() + safeDurationMinutes * 60 * 1000);
+
+          return {
+            id: appointment._id,
+            appointmentId: appointment._id,
+            title: `${appointment.subject || 'Tutoring'} with ${tutorName}`,
+            start: startDate,
+            end: endDate,
+            tutorName,
+            tutorId: tutor?.id || appointment.tutorId,
+            subject: appointment.subject || "No Subject",
+            mode: appointment.mode || "Online",
+            status: appointment.status || "active",
+            meetingUrl: appointment.meetingUrl || null,
+            meetingId: appointment.meetingId || appointment.messageId || appointment._id || null,
+            resource: appointment
+          };
+        } catch (e) {
+          console.warn('Failed to create event for date:', dateString, e);
+          return null;
+        }
+      };
+
+      // NEW FORMAT: If dates array exists, create event for each date
+      if (Array.isArray(appointment.dates) && appointment.dates.length > 0) {
+        return appointment.dates
+          .map((dateString: string) => createEventForDate(dateString))
+          .filter((event: any) => event !== null);
+      }
+
+      // LEGACY FORMAT: Use datetimeISO and endDate/durationMinutes logic
+      const startDate = new Date(appointment.datetimeISO || appointment.scheduledDate || appointment.createdAt);
+      const endDate = new Date(startDate.getTime() + safeDurationMinutes * 60 * 1000);
+
+      return [{
         id: appointment._id,
         appointmentId: appointment._id,
         title: `${appointment.subject || 'Tutoring'} with ${tutorName}`,
@@ -1079,7 +1209,7 @@ export async function fetchTuteeAppointments(userId?: string): Promise<{
         meetingUrl: appointment.meetingUrl || null,
         meetingId: appointment.meetingId || appointment.messageId || appointment._id || null,
         resource: appointment
-      };
+      }];
     });
 
     return {

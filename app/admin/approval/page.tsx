@@ -50,7 +50,7 @@ type UserData = {
   id: string;
   firstName?: string;
   lastName?: string;
-  emailAddresses?: Array<{ emailAddress: string }>;
+  emailAddress?: string;
   imageUrl?: string;
   collegeInformation?: {
     college?: string;
@@ -155,7 +155,7 @@ export default function OfferApprovalsPage() {
             id: user.id,
             firstName: user.firstName,
             lastName: user.lastName,
-            emailAddresses: user.emailAddresses || [{ emailAddress: user.email }],
+            emailAddress: user.emailAddress || user.email,
             imageUrl: user.imageUrl,
             collegeInformation: user.collegeInformation
           };
@@ -165,7 +165,7 @@ export default function OfferApprovalsPage() {
             id: userId,
             firstName: "Unknown",
             lastName: "User",
-            emailAddresses: [{ emailAddress: "unknown@example.com" }],
+            emailAddress: "unknown@example.com",
             imageUrl: `https://api.dicebear.com/7.x/initials/svg?seed=${userId}`
           };
         }
@@ -339,6 +339,7 @@ export default function OfferApprovalsPage() {
                 <TableHead>Subject</TableHead>
                 <TableHead>College</TableHead>
                 <TableHead>Department</TableHead>
+                <TableHead>Year Level</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
@@ -346,6 +347,7 @@ export default function OfferApprovalsPage() {
             <TableBody>
               {pendingOffers.map((offer) => {
                 const userData = usersData[offer.userId];
+                console.log("userData for offer:", offer._id, userData);
                 return (
                   <TableRow key={offer._id}>
                     <TableCell className="font-medium">
@@ -361,7 +363,7 @@ export default function OfferApprovalsPage() {
                         </span>
                       </div>
                     </TableCell>
-                    <TableCell>{userData?.emailAddresses?.[0]?.emailAddress || offer.userId}</TableCell>
+                    <TableCell>{userData?.emailAddress || offer.userId}</TableCell>
                     <TableCell className="font-semibold text-primary">{offer.subject}</TableCell>
                     <TableCell>
                       {userData?.collegeInformation?.college ? (
@@ -376,6 +378,15 @@ export default function OfferApprovalsPage() {
                       {userData?.collegeInformation?.department ? (
                         <Badge variant="secondary" className="text-xs">
                           {userData.collegeInformation.department}
+                        </Badge>
+                      ) : (
+                        <span className="text-muted-foreground text-xs">-</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {userData?.collegeInformation?.yearLevel ? (
+                        <Badge variant="secondary" className="text-xs">
+                          {userData.collegeInformation.yearLevel}
                         </Badge>
                       ) : (
                         <span className="text-muted-foreground text-xs">-</span>
@@ -465,7 +476,7 @@ export default function OfferApprovalsPage() {
                           : 'Loading...'}
                       </div>
                       <div className="text-sm text-muted-foreground">
-                        {usersData[selectedOffer.userId]?.emailAddresses?.[0]?.emailAddress || selectedOffer.userId}
+                        {usersData[selectedOffer.userId]?.emailAddress || selectedOffer.userId}
                       </div>
                       {usersData[selectedOffer.userId]?.collegeInformation && (
                         <div className="flex gap-2 mt-2">

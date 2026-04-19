@@ -12,6 +12,7 @@ import {
 
 const XP_REWARDS = {
   DAILY_LOGIN: 5,
+  TUTEE_REVIEW_SUBMITTED: 10,
   FIRST_BLOOD: 20,
   REPEAT_CUSTOMER_SECOND: 40,
   REPEAT_CUSTOMER_THIRD: 60,
@@ -286,19 +287,29 @@ export async function updateSessionStats(
     let xpAwarded = 0;
 
     if (sessionData.completed) {
-      updates['stats.completedSessions'] = profile.stats.completedSessions + 1;
-      updates['stats.totalSessions'] = profile.stats.totalSessions + 1;
-      
-      // Award XP for session completion
-      const xpResult = await awardXP(
-        'session_completed', 
-        25, 
-        'Completed tutoring session',
-        sessionData.appointmentId,
-        'appointment',
-        targetUserId
-      );
-      if (xpResult.success) xpAwarded += 25;
+      const alreadyProcessedCompletion = sessionData.appointmentId
+        ? await transactionCollection.findOne({
+            userId: targetUserId,
+            actionType: 'session_completed',
+            relatedId: sessionData.appointmentId,
+          })
+        : null;
+
+      if (!alreadyProcessedCompletion) {
+        updates['stats.completedSessions'] = profile.stats.completedSessions + 1;
+        updates['stats.totalSessions'] = profile.stats.totalSessions + 1;
+
+        // Award XP for session completion
+        const xpResult = await awardXP(
+          'session_completed',
+          25,
+          'Completed tutoring session',
+          sessionData.appointmentId,
+          'appointment',
+          targetUserId
+        );
+        if (xpResult.success) xpAwarded += 25;
+      }
 
       const appointment = await findAppointmentById(appointmentsCollection, sessionData.appointmentId);
       const tuteeId = String(appointment?.tuteeId || "");
@@ -810,6 +821,62 @@ export async function getDailyLoginStreak(userId?: string) {
   } catch (error) {
     console.error("Error fetching daily login streak:", error);
     return { success: false, error: "Failed to fetch daily login streak" };
+  }
+}
+
+export async function awardTutorReviewXP(payload: {
+  reviewerId: string;
+  appointmentId: string;
+  reviewId?: string;
+}) {
+  try {
+    const reviewerId = String(payload?.reviewerId || '').trim();
+    const appointmentId = String(payload?.appointmentId || '').trim();
+    const reviewId = String(payload?.reviewId || '').trim();
+
+    if (!reviewerId || !appointmentId) {
+      return { success: false, error: 'reviewerId and appointmentId are required' };
+    }
+
+    const relatedId = reviewId || appointmentId;
+
+    const client = await clientPromise;
+    const db = client.db('gamification');
+    const transactionCollection = db.collection<XPTransaction>('xpTransactions');
+
+    const existingTransaction = await transactionCollection.findOne({
+      userId: reviewerId,
+      actionType: 'tutee_review_submitted',
+      relatedId,
+    });
+
+    if (existingTransaction) {
+      return { success: true, data: { awarded: false, reason: 'already_awarded' } };
+    }
+
+    const xpResult = await awardXP(
+      'tutee_review_submitted',
+      XP_REWARDS.TUTEE_REVIEW_SUBMITTED,
+      'Submitted a review for a tutee',
+      relatedId,
+      'review',
+      reviewerId
+    );
+
+    if (!xpResult.success) {
+      return { success: false, error: xpResult.error || 'Failed to award tutor review XP' };
+    }
+
+    return {
+      success: true,
+      data: {
+        awarded: true,
+        xpAwarded: XP_REWARDS.TUTEE_REVIEW_SUBMITTED,
+      },
+    };
+  } catch (error) {
+    console.error('Error awarding tutor review XP:', error);
+    return { success: false, error: 'Failed to award tutor review XP' };
   }
 }
 

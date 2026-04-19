@@ -8,7 +8,7 @@
 export interface SortingWeights {
   subjectRating: number;      // Rating for the specific subject offering
   tutorRating: number;         // Overall tutor rating (future: across all subjects)
-  availabilities: number;      // Diversity of days offered
+  availabilities: number;      // Availability overlap match (kept field name for compatibility)
   repeatBookings: number;      // Number of unique tutees who booked multiple times
   bookingFrequency: number;    // Total number of completed/accepted appointments
   yearLevelProximity: number;  // How close tutor and tutee year levels are
@@ -18,7 +18,7 @@ export interface OfferingStats {
   _id: string;
   averageRating: number;       // Subject-specific rating
   totalReviews: number;
-  availabilityCount: number;   // Number of unique days with availability
+  availabilityCount: number;   // Legacy field retained for compatibility (not used in scoring)
   repeatBookingsCount: number; // Number of tutees with 2+ bookings
   totalBookingsCount: number;  // Total completed/accepted appointments
   // Add future metrics here
@@ -62,10 +62,9 @@ interface MetricRange {
 interface MetricNormalizationContext {
   subjectRatingRange: MetricRange | null;
   tutorRatingRange: MetricRange | null;
-  availabilityOverlapRange: MetricRange | null;
-  availabilityDiversityRange: MetricRange | null;
-  repeatBookingsRange: MetricRange | null;
-  bookingFrequencyRange: MetricRange | null;
+  availabilityOverlapMax: number;
+  repeatBookingsMax: number;
+  bookingFrequencyMax: number;
   hasAvailabilityContext: boolean;
 }
 
@@ -98,17 +97,11 @@ export const AVAILABILITY_WEIGHTS: SortingWeights = {
 const NORMALIZATION_TARGETS = {
   subjectRating: 5.0,           // Max rating
   tutorRating: 5.0,             // Max rating
-  availabilities: 3,            // Having all 7 days is excellent (fallback metric)
-  availabilityOverlapMinutes: 360, // 6 hours/week of overlap is excellent
-  repeatBookings: 5,           // 10+ repeat students is excellent
-  bookingFrequency: 10,         // 20+ bookings in last 30 days is excellent
 };
 
 const NEUTRAL_DEFAULTS = {
   subjectRating: NORMALIZATION_TARGETS.subjectRating / 2,
   tutorRating: NORMALIZATION_TARGETS.tutorRating / 2,
-  repeatBookings: NORMALIZATION_TARGETS.repeatBookings / 2,
-  bookingFrequency: NORMALIZATION_TARGETS.bookingFrequency / 2,
 };
 
 /**
@@ -123,11 +116,6 @@ const BAYESIAN_CONSTANTS = {
 const ROBUST_PERCENTILES = {
   lower: 0.1,
   upper: 0.9,
-};
-
-const AVAILABILITY_BLEND = {
-  overlap: 0.7,
-  diversity: 0.3,
 };
 
 const YEAR_LEVEL_SCORING = {
@@ -236,6 +224,18 @@ function normalizeWithContext(
 
   const normalized = (transformedValue - range.lower) / (range.upper - range.lower);
   return clamp01(normalized);
+}
+
+function getMaxMetricValue(values: number[]): number {
+  const finiteValues = values.filter((value) => Number.isFinite(value));
+  if (finiteValues.length === 0) return 0;
+  return Math.max(...finiteValues, 0);
+}
+
+function normalizeByMax(value: number, maxValue: number): number {
+  if (!Number.isFinite(value) || value <= 0) return 0;
+  if (!Number.isFinite(maxValue) || maxValue <= 0) return 0;
+  return clamp01(value / maxValue);
 }
 
 function normalizeDay(day: string): string {
@@ -367,7 +367,6 @@ function getOfferingMetricValues(
   tutorRating: number;
   reviewCount: number;
   availabilityOverlapMinutes: number;
-  availabilityDiversity: number;
   repeatBookings: number;
   bookingFrequency: number;
 } {
@@ -383,7 +382,6 @@ function getOfferingMetricValues(
       offering.availability,
       options.tuteeAvailability
     ),
-    availabilityDiversity: offering.availabilityCount ?? calculateAvailabilityDiversity(offering.availability),
     repeatBookings: offering.repeatBookingsCount || 0,
     bookingFrequency: offering.totalBookingsCount || 0,
   };
@@ -399,10 +397,9 @@ function buildNormalizationContext(
   return {
     subjectRatingRange: buildMetricRange(metricValues.map((m) => m.subjectRating)),
     tutorRatingRange: buildMetricRange(metricValues.map((m) => m.tutorRating)),
-    availabilityOverlapRange: buildMetricRange(metricValues.map((m) => m.availabilityOverlapMinutes)),
-    availabilityDiversityRange: buildMetricRange(metricValues.map((m) => m.availabilityDiversity)),
-    repeatBookingsRange: buildMetricRange(metricValues.map((m) => Math.log(m.repeatBookings + 1))),
-    bookingFrequencyRange: buildMetricRange(metricValues.map((m) => Math.log(m.bookingFrequency + 1))),
+    availabilityOverlapMax: getMaxMetricValue(metricValues.map((m) => m.availabilityOverlapMinutes)),
+    repeatBookingsMax: getMaxMetricValue(metricValues.map((m) => m.repeatBookings)),
+    bookingFrequencyMax: getMaxMetricValue(metricValues.map((m) => m.bookingFrequency)),
     hasAvailabilityContext,
   };
 }
@@ -431,12 +428,6 @@ export function calculateOfferingScore(
   const effectiveTutorRating = hasReviewSignals
     ? metrics.tutorRating
     : NEUTRAL_DEFAULTS.tutorRating;
-  const effectiveRepeatBookings = hasBookingSignals
-    ? metrics.repeatBookings
-    : NEUTRAL_DEFAULTS.repeatBookings;
-  const effectiveBookingFrequency = hasBookingSignals
-    ? metrics.bookingFrequency
-    : NEUTRAL_DEFAULTS.bookingFrequency;
 
   // Normalize each metric to 0-1 scale
   const normalizedSubjectRating = normalizeWithContext(
@@ -453,43 +444,23 @@ export function calculateOfferingScore(
     false
   );
 
-  const normalizedAvailabilityOverlap = normalizeWithContext(
+  const normalizedAvailabilityOverlap = normalizeByMax(
     metrics.availabilityOverlapMinutes,
-    context?.availabilityOverlapRange ?? null,
-    NORMALIZATION_TARGETS.availabilityOverlapMinutes,
-    false
+    context?.availabilityOverlapMax ?? 0
   );
 
-  const normalizedAvailabilityDiversity = normalizeWithContext(
-    metrics.availabilityDiversity,
-    context?.availabilityDiversityRange ?? null,
-    NORMALIZATION_TARGETS.availabilities,
-    false
-  );
-  
   const normalizedAvailabilities = hasAvailabilityContext
-    ? (
-        metrics.availabilityOverlapMinutes > 0
-          ? (
-              normalizedAvailabilityOverlap * AVAILABILITY_BLEND.overlap +
-              normalizedAvailabilityDiversity * AVAILABILITY_BLEND.diversity
-            )
-          : 0
-      )
-    : normalizedAvailabilityDiversity;
+    ? normalizedAvailabilityOverlap
+    : 0.5;
   
-  const normalizedRepeatBookings = normalizeWithContext(
-    effectiveRepeatBookings,
-    context?.repeatBookingsRange ?? null,
-    NORMALIZATION_TARGETS.repeatBookings,
-    true // Use log scaling
+  const normalizedRepeatBookings = normalizeByMax(
+    metrics.repeatBookings,
+    context?.repeatBookingsMax ?? 0
   );
   
-  const normalizedBookingFrequency = normalizeWithContext(
-    effectiveBookingFrequency,
-    context?.bookingFrequencyRange ?? null,
-    NORMALIZATION_TARGETS.bookingFrequency,
-    true // Use log scaling
+  const normalizedBookingFrequency = normalizeByMax(
+    metrics.bookingFrequency,
+    context?.bookingFrequencyMax ?? 0
   );
 
   const normalizedSubjectScore = hasReviewSignals ? normalizedSubjectRating : 0.5;
@@ -700,35 +671,14 @@ export function getScoreBreakdown(
   const effectiveTutorRating = hasReviewSignals
     ? metricValues.tutorRating
     : NEUTRAL_DEFAULTS.tutorRating;
-  const effectiveRepeatBookings = hasBookingSignals
-    ? metricValues.repeatBookings
-    : NEUTRAL_DEFAULTS.repeatBookings;
-  const effectiveBookingFrequency = hasBookingSignals
-    ? metricValues.bookingFrequency
-    : NEUTRAL_DEFAULTS.bookingFrequency;
 
-  const normalizedAvailabilityOverlap = normalizeWithContext(
+  const normalizedAvailabilityOverlap = normalizeByMax(
     metricValues.availabilityOverlapMinutes,
-    context?.availabilityOverlapRange ?? null,
-    NORMALIZATION_TARGETS.availabilityOverlapMinutes,
-    false
-  );
-  const normalizedAvailabilityDiversity = normalizeWithContext(
-    metricValues.availabilityDiversity,
-    context?.availabilityDiversityRange ?? null,
-    NORMALIZATION_TARGETS.availabilities,
-    false
+    context?.availabilityOverlapMax ?? 0
   );
   const normalizedAvailabilityScore = hasAvailabilityContext
-    ? (
-        metricValues.availabilityOverlapMinutes > 0
-          ? (
-              normalizedAvailabilityOverlap * AVAILABILITY_BLEND.overlap +
-              normalizedAvailabilityDiversity * AVAILABILITY_BLEND.diversity
-            )
-          : 0
-      )
-    : normalizedAvailabilityDiversity;
+    ? normalizedAvailabilityOverlap
+    : 0.5;
 
   const normalizedSubjectScore = hasReviewSignals
     ? normalizeWithContext(
@@ -747,19 +697,15 @@ export function getScoreBreakdown(
       )
     : 0.5;
   const normalizedRepeatBookingsScore = hasBookingSignals
-    ? normalizeWithContext(
-        effectiveRepeatBookings,
-        context?.repeatBookingsRange ?? null,
-        NORMALIZATION_TARGETS.repeatBookings,
-        true
+    ? normalizeByMax(
+        metricValues.repeatBookings,
+        context?.repeatBookingsMax ?? 0
       )
     : 0.5;
   const normalizedBookingFrequencyScore = hasBookingSignals
-    ? normalizeWithContext(
-        effectiveBookingFrequency,
-        context?.bookingFrequencyRange ?? null,
-        NORMALIZATION_TARGETS.bookingFrequency,
-        true
+    ? normalizeByMax(
+        metricValues.bookingFrequency,
+        context?.bookingFrequencyMax ?? 0
       )
     : 0.5;
   const normalizedYearLevelScore = yearLevelProximity ?? 0.5;
@@ -780,24 +726,24 @@ export function getScoreBreakdown(
       enabled: true,
     },
     {
-      metric: hasAvailabilityContext ? 'Availability Match (Blended)' : 'Availabilities',
+      metric: 'Availability Overlap',
       value: hasAvailabilityContext
         ? metricValues.availabilityOverlapMinutes
-        : metricValues.availabilityDiversity,
+        : 0,
       normalized: normalizedAvailabilityScore,
       weight: weights.availabilities,
       enabled: true,
     },
     {
       metric: 'Repeat Bookings',
-      value: effectiveRepeatBookings,
+      value: metricValues.repeatBookings,
       normalized: normalizedRepeatBookingsScore,
       weight: weights.repeatBookings,
       enabled: true,
     },
     {
       metric: 'Booking Frequency',
-      value: effectiveBookingFrequency,
+      value: metricValues.bookingFrequency,
       normalized: normalizedBookingFrequencyScore,
       weight: weights.bookingFrequency,
       enabled: true,

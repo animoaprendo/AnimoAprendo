@@ -134,7 +134,7 @@ export default function TuteeAppointmentsClient({ initialEvents }: TuteeAppointm
       ) : (
         <div className="flex flex-col-reverse md:flex-col">
           {/* Statistics */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Card className="bg-blue-50 border-blue-200">
               <CardContent className="p-4 text-center">
                 <div className="flex items-center justify-center gap-2 mb-2">
@@ -166,7 +166,7 @@ export default function TuteeAppointmentsClient({ initialEvents }: TuteeAppointm
                 <div className="text-yellow-600 text-sm">Upcoming</div>
               </CardContent>
             </Card>
-            <Card className="bg-red-50 border-red-200">
+            {/* <Card className="bg-red-50 border-red-200">
               <CardContent className="p-4 text-center">
                 <div className="flex items-center justify-center gap-2 mb-2">
                   <XCircle className="h-5 w-5 text-red-600" />
@@ -176,7 +176,7 @@ export default function TuteeAppointmentsClient({ initialEvents }: TuteeAppointm
                 </div>
                 <div className="text-red-600 text-sm">Cancelled</div>
               </CardContent>
-            </Card>
+            </Card> */}
           </div>
 
           {/* Calendar */}
@@ -263,7 +263,7 @@ export default function TuteeAppointmentsClient({ initialEvents }: TuteeAppointm
                 </div>
               </div>
 
-              {getJoinUrl(selectedEvent) && selectedEvent.status === "accepted" && (
+              {/* {getJoinUrl(selectedEvent) && selectedEvent.status === "accepted" && (
                 <div className="pt-2">
                   <a
                     href={getJoinUrl(selectedEvent)!}
@@ -274,7 +274,7 @@ export default function TuteeAppointmentsClient({ initialEvents }: TuteeAppointm
                     Join Session
                   </a>
                 </div>
-              )}
+              )} */}
             </div>
           )}
 

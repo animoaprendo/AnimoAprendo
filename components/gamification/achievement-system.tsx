@@ -119,6 +119,7 @@ export function AchievementSystem({ stats, onAchievementClick }: AchievementSyst
         </Card>
       </DialogTrigger>
 
+      
       <DialogContent className="max-w-6xl max-h-[80vh] w-full overflow-hidden">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">

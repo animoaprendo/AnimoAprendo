@@ -595,3 +595,261 @@ export async function getSerializedGamificationProfile(userId: string): Promise<
     };
   }
 }
+
+export type AdminFaqItem = {
+  _id: string;
+  q: string;
+  a: string;
+  order?: number;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+function toSerializableFaqItem(doc: any): AdminFaqItem {
+  return {
+    _id: String(doc?._id || ""),
+    q: String(doc?.q || ""),
+    a: String(doc?.a || ""),
+    order: typeof doc?.order === "number" ? doc.order : undefined,
+    createdAt: doc?.createdAt ? new Date(doc.createdAt).toISOString() : undefined,
+    updatedAt: doc?.updatedAt ? new Date(doc.updatedAt).toISOString() : undefined,
+  };
+}
+
+export async function getFaqItems(): Promise<{
+  success: boolean;
+  data?: AdminFaqItem[];
+  error?: string;
+}> {
+  try {
+    const clientPromise = (await import("@/lib/mongodb")).default;
+    const client = await clientPromise;
+    const db = client.db("main");
+    const collection = db.collection("faq");
+
+    const docs = await collection.find({}).toArray();
+
+    const sorted = docs.sort((left: any, right: any) => {
+      const leftOrder = typeof left?.order === "number" ? left.order : Number.MAX_SAFE_INTEGER;
+      const rightOrder = typeof right?.order === "number" ? right.order : Number.MAX_SAFE_INTEGER;
+      if (leftOrder !== rightOrder) return leftOrder - rightOrder;
+
+      const leftTime = new Date(left?.updatedAt || left?.createdAt || 0).getTime();
+      const rightTime = new Date(right?.updatedAt || right?.createdAt || 0).getTime();
+      return leftTime - rightTime;
+    });
+
+    return {
+      success: true,
+      data: sorted.map(toSerializableFaqItem),
+    };
+  } catch (error) {
+    console.error("Error fetching FAQ items:", error);
+    return {
+      success: false,
+      data: [],
+      error: error instanceof Error ? error.message : "Unknown error",
+    };
+  }
+}
+
+export async function createFaqItem(payload: {
+  q: string;
+  a: string;
+}): Promise<{ success: boolean; data?: AdminFaqItem; error?: string }> {
+  try {
+    const question = String(payload?.q || "").trim();
+    const answer = String(payload?.a || "").trim();
+
+    if (!question || !answer) {
+      return { success: false, error: "Question and answer are required" };
+    }
+
+    const clientPromise = (await import("@/lib/mongodb")).default;
+    const client = await clientPromise;
+    const db = client.db("main");
+    const collection = db.collection("faq");
+
+    const highest = await collection
+      .find({ order: { $type: "number" } })
+      .sort({ order: -1 })
+      .limit(1)
+      .toArray();
+
+    const nextOrder = (typeof highest[0]?.order === "number" ? highest[0].order : 0) + 1;
+
+    const newDoc = {
+      q: question,
+      a: answer,
+      order: nextOrder,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    const inserted = await collection.insertOne(newDoc);
+
+    return {
+      success: true,
+      data: toSerializableFaqItem({ _id: inserted.insertedId, ...newDoc }),
+    };
+  } catch (error) {
+    console.error("Error creating FAQ item:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error",
+    };
+  }
+}
+
+export async function updateFaqItem(payload: {
+  id: string;
+  q: string;
+  a: string;
+}): Promise<{ success: boolean; data?: AdminFaqItem; error?: string }> {
+  try {
+    const id = String(payload?.id || "").trim();
+    const question = String(payload?.q || "").trim();
+    const answer = String(payload?.a || "").trim();
+
+    if (!id || !question || !answer) {
+      return { success: false, error: "ID, question, and answer are required" };
+    }
+
+    const clientPromise = (await import("@/lib/mongodb")).default;
+    const { ObjectId } = await import("mongodb");
+    const client = await clientPromise;
+    const db = client.db("main");
+    const collection = db.collection("faq");
+
+    const objectId = new ObjectId(id);
+
+    const updateDoc = {
+      q: question,
+      a: answer,
+      updatedAt: new Date(),
+    };
+
+    const result = await collection.updateOne(
+      { _id: objectId },
+      { $set: updateDoc },
+    );
+
+    if (result.matchedCount === 0) {
+      return { success: false, error: "FAQ item not found" };
+    }
+
+    const updated = await collection.findOne({ _id: objectId });
+
+    return {
+      success: true,
+      data: toSerializableFaqItem(updated),
+    };
+  } catch (error) {
+    console.error("Error updating FAQ item:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error",
+    };
+  }
+}
+
+export async function deleteFaqItem(id: string): Promise<{
+  success: boolean;
+  error?: string;
+}> {
+  try {
+    const targetId = String(id || "").trim();
+    if (!targetId) {
+      return { success: false, error: "ID is required" };
+    }
+
+    const clientPromise = (await import("@/lib/mongodb")).default;
+    const { ObjectId } = await import("mongodb");
+    const client = await clientPromise;
+    const db = client.db("main");
+    const collection = db.collection("faq");
+
+    const deleteResult = await collection.deleteOne({ _id: new ObjectId(targetId) });
+    if (deleteResult.deletedCount === 0) {
+      return { success: false, error: "FAQ item not found" };
+    }
+
+    const remaining = await collection.find({}).toArray();
+    const ordered = remaining.sort((left: any, right: any) => {
+      const leftOrder = typeof left?.order === "number" ? left.order : Number.MAX_SAFE_INTEGER;
+      const rightOrder = typeof right?.order === "number" ? right.order : Number.MAX_SAFE_INTEGER;
+      return leftOrder - rightOrder;
+    });
+
+    if (ordered.length > 0) {
+      await collection.bulkWrite(
+        ordered.map((item: any, index: number) => ({
+          updateOne: {
+            filter: { _id: item._id },
+            update: {
+              $set: {
+                order: index + 1,
+                updatedAt: new Date(),
+              },
+            },
+          },
+        })),
+      );
+    }
+
+    return { success: true };
+  } catch (error) {
+    console.error("Error deleting FAQ item:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error",
+    };
+  }
+}
+
+export async function reorderFaqItems(idsInOrder: string[]): Promise<{
+  success: boolean;
+  error?: string;
+}> {
+  try {
+    if (!Array.isArray(idsInOrder) || idsInOrder.length === 0) {
+      return { success: false, error: "A non-empty FAQ ID list is required" };
+    }
+
+    const clientPromise = (await import("@/lib/mongodb")).default;
+    const { ObjectId } = await import("mongodb");
+    const client = await clientPromise;
+    const db = client.db("main");
+    const collection = db.collection("faq");
+
+    const normalized = idsInOrder
+      .map((item) => String(item || "").trim())
+      .filter(Boolean);
+
+    if (normalized.length === 0) {
+      return { success: false, error: "No valid FAQ IDs provided" };
+    }
+
+    await collection.bulkWrite(
+      normalized.map((id, index) => ({
+        updateOne: {
+          filter: { _id: new ObjectId(id) },
+          update: {
+            $set: {
+              order: index + 1,
+              updatedAt: new Date(),
+            },
+          },
+        },
+      })),
+    );
+
+    return { success: true };
+  } catch (error) {
+    console.error("Error reordering FAQ items:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error",
+    };
+  }
+}

@@ -29,7 +29,10 @@ type QuizAttempt = {
 };
 
 const normalizeAnswerText = (value: string): string =>
-  value.toLowerCase().trim();
+  value
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, " ");
 
 const isFillInAnswerCorrect = (
   userAnswer: string | undefined,

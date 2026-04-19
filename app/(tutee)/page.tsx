@@ -309,7 +309,7 @@ export default function Landing() {
       </section>
 
       {/* Teacher CTA */}
-      <section className="bg-muted/50 py-20 w-full">
+      {/* <section className="bg-muted/50 py-20 w-full">
         <div className="container mx-auto px-4 text-center">
           <Card className="max-w-2xl mx-auto">
             <CardHeader>
@@ -332,7 +332,7 @@ export default function Landing() {
             </CardContent>
           </Card>
         </div>
-      </section>
+      </section> */}
 
       {/* Community & Safety */}
       <section className="bg-primary text-primary-foreground py-20 w-full">

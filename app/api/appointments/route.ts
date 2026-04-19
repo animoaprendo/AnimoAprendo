@@ -12,7 +12,11 @@ type Question = {
   answer: string | string[];
 };
 
-const normalizeText = (value: string) => value.toLowerCase().trim();
+const normalizeText = (value: string) =>
+  value
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, " ");
 
 const isFillInCorrect = (
   userAnswer: string,

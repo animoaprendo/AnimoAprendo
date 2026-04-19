@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ObjectId } from 'mongodb';
 import clientPromise from '@/lib/mongodb';
-import { updateSessionStats } from '@/app/gamification-actions';
+import { awardTutorReviewXP, updateSessionStats } from '@/app/gamification-actions';
 
 export async function POST(request: NextRequest) {
   try {
@@ -79,6 +79,7 @@ export async function POST(request: NextRequest) {
     };
 
     const result = await reviewsCollection.insertOne(review);
+    const reviewId = result.insertedId.toString();
     
     // Update the appointment to mark it as reviewed
     const updateFields: any = {
@@ -112,11 +113,25 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Award XP when tutor successfully reviews a tutee.
+    if (isTutorReview) {
+      try {
+        await awardTutorReviewXP({
+          reviewerId,
+          appointmentId,
+          reviewId,
+        });
+      } catch (error) {
+        console.error('Error awarding tutor review XP:', error);
+        // Don't fail review creation if XP awarding fails.
+      }
+    }
+
     return NextResponse.json({ 
       success: true, 
       review: {
         ...review,
-        _id: result.insertedId.toString()
+        _id: reviewId
       }
     });
 

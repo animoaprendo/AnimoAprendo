@@ -609,7 +609,7 @@ export default function Browse() {
       <div className="max-w-7xl mx-auto px-4 py-8">
         {/* Category Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-2 lg:grid-cols-4 gap-2 mb-8">
+          <TabsList className="grid w-full grid-cols-3 lg:grid-cols-3 gap-2 mb-8">
             <TabsTrigger value="all" className="gap-2">
               <BookOpen className="w-4 h-4" />
               All Tutors
@@ -622,10 +622,10 @@ export default function Browse() {
               <Sparkles className="w-4 h-4" />
               Newest
             </TabsTrigger>
-            <TabsTrigger value="trending" className="gap-2">
+            {/* <TabsTrigger value="trending" className="gap-2">
               <TrendingUp className="w-4 h-4" />
               Trending
-            </TabsTrigger>
+            </TabsTrigger> */}
           </TabsList>
 
           <TabsContent value="all" className="mt-8 min-h-[500px] w-full">

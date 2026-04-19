@@ -1,6 +1,7 @@
 import ConditionalFooter from "@/components/ConditionalFooter";
 import NavLinksDefault from "@/components/navlinksdefault";
 import NavLinksTutee from "@/components/navlinkstutee";
+import NavLinksTutor from "@/components/navlinkstutor";
 import {
   SignedIn,
   SignedOut
@@ -33,7 +34,8 @@ export default async function Layout({
       </SignedOut>
 
       <SignedIn>
-        <NavLinksTutee />
+        {user?.publicMetadata.role === "tutee" && <NavLinksTutee />}
+        {user?.publicMetadata.role === "tutor" && <NavLinksTutor />}
         {/* Page content here */}
         <div className="flex flex-col grow items-center pt-0">
           {children}

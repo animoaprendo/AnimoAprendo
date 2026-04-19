@@ -4,6 +4,7 @@ import {
   BarChart3,
   BookOpen,
   Bot,
+  CircleHelp,
   CheckSquare2,
   GraduationCap,
   LayoutDashboard,
@@ -119,6 +120,11 @@ export default function AppSidebar({ userData, ...props }: AppSidebarProps) {
         icon: Trophy,
       },
       {
+        title: "FAQ",
+        url: "/admin/faq",
+        icon: CircleHelp,
+      },
+      {
         title: "Reports",
         icon: BarChart3,
         url: "",
@@ -186,6 +192,11 @@ export default function AppSidebar({ userData, ...props }: AppSidebarProps) {
         title: "Leaderboards",
         url: "/admin/leaderboards",
         icon: Trophy,
+      },
+      {
+        title: "FAQ",
+        url: "/admin/faq",
+        icon: CircleHelp,
       },
       {
         title: "Reports",

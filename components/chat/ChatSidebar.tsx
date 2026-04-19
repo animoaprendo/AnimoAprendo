@@ -1,7 +1,13 @@
 "use client";
 
+import { useState } from "react";
 import { User, Inquiry } from "./types";
-import { updateAppointmentCollectionStatus } from "@/app/actions";
+import { updateAppointmentCollectionStatus, markAppointmentComplete } from "@/app/actions";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { AlertTriangle, Check } from "lucide-react";
+import { toast } from "sonner";
+import moment from "moment";
 
 interface ChatSidebarProps {
   activeUser: User | null;
@@ -347,6 +353,9 @@ function AppointmentReminder({
   userId: string;
   userRole: "tutee" | "tutor";
 }) {
+  const [showCompleteConfirm, setShowCompleteConfirm] = useState(false);
+  const [isCompleting, setIsCompleting] = useState(false);
+
   const resolvedMeetingId =
     appointment.meetingId || appointment.messageId || appointment._id || null;
   const resolvedMeetingUrl =
@@ -384,63 +393,146 @@ function AppointmentReminder({
     hasQuiz &&
     hasCompletedAttempt1;
 
-  const handleMarkComplete = async () => {
+  // Check if marking complete early
+  const appointmentEnd = new Date(appointment.datetimeISO);
+  if (appointment.durationMinutes) {
+    appointmentEnd.setMinutes(appointmentEnd.getMinutes() + appointment.durationMinutes);
+  } else {
+    appointmentEnd.setHours(appointmentEnd.getHours() + 1);
+  }
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const endDay = new Date(appointmentEnd.getFullYear(), appointmentEnd.getMonth(), appointmentEnd.getDate());
+  const isEarlyCompletion = endDay > today;
+
+  const handleMarkCompleteClick = () => {
+    setShowCompleteConfirm(true);
+  };
+
+  const handleConfirmComplete = async () => {
+    if (!appointment._id) return;
+    
+    setIsCompleting(true);
     try {
-      const result = await updateAppointmentCollectionStatus({
-        messageId: appointment.messageId,
-        status: "completed",
-        userId: userId,
+      const result = await markAppointmentComplete({
+        appointmentId: appointment._id,
       });
 
       if (result.success) {
+        toast.success('Appointment marked as complete');
+        setShowCompleteConfirm(false);
         // Refresh the page to update the UI
-        window.location.reload();
+        setTimeout(() => window.location.reload(), 1000);
       } else {
-        console.error("Failed to mark appointment as complete:", result.error);
+        toast.error(result.error || 'Failed to mark appointment as complete');
       }
     } catch (error) {
-      console.error("Error marking appointment as complete:", error);
+      toast.error(error instanceof Error ? error.message : 'Failed to mark appointment as complete');
+    } finally {
+      setIsCompleting(false);
     }
   };
 
   return (
-    <div className="flex flex-col gap-2">
-      <div className="font-medium text-xs">
-        {appointment.subject || "Tutoring Session"}
-      </div>
-      <div className="text-xs opacity-90">
-        {dateText} at {timeText}
-      </div>
-
-      {appointment.status === "accepted" && (
-        <div className="text-xs opacity-75">Status: Accepted</div>
-      )}
-
-      {appointment.status === "accepted" && resolvedMeetingUrl && (
-        <a
-          href={resolvedMeetingUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="px-3 py-2 bg-blue-500 hover:bg-blue-600 text-white text-xs font-medium rounded transition-colors duration-200 text-center"
-        >
-          Join Session
-        </a>
-      )}
-
-      {/* Mark as Complete Button for Tutors */}
-      {canMarkComplete && (
-        <div className="space-y-2">
-          <div className="text-green-200 text-xs">
-            ✅ Ready to complete session
-          </div>
-          <button
-            onClick={handleMarkComplete}
-            className="px-3 py-2 bg-green-500 hover:bg-green-600 text-white text-xs font-medium rounded transition-colors duration-200"
-          >
-            Mark as Complete
-          </button>
+    <>
+      <div className="flex flex-col gap-2">
+        <div className="font-medium text-xs">
+          {appointment.subject || "Tutoring Session"}
         </div>
-      )}
-    </div>
+        <div className="text-xs opacity-90">
+          {dateText} at {timeText}
+        </div>
+
+        {appointment.status === "accepted" && (
+          <div className="text-xs opacity-75">Status: Accepted</div>
+        )}
+
+        {appointment.status === "accepted" && resolvedMeetingUrl && (
+          <a
+            href={resolvedMeetingUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="px-3 py-2 bg-blue-500 hover:bg-blue-600 text-white text-xs font-medium rounded transition-colors duration-200 text-center"
+          >
+            Join Session
+          </a>
+        )}
+
+        {/* Mark as Complete Button for Tutors */}
+        {canMarkComplete && (
+          <div className="space-y-2">
+            <div className="text-green-200 text-xs">
+              ✅ Ready to complete session
+            </div>
+            <button
+              onClick={handleMarkCompleteClick}
+              className="px-3 py-2 bg-green-500 hover:bg-green-600 text-white text-xs font-medium rounded transition-colors duration-200"
+            >
+              Mark as Complete
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Confirmation Dialog */}
+      <Dialog open={showCompleteConfirm} onOpenChange={setShowCompleteConfirm}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            {isEarlyCompletion ? (
+              <>
+                <div className="flex items-center gap-2 mb-2">
+                  <AlertTriangle className="w-5 h-5 text-amber-600" />
+                  <DialogTitle className="text-amber-600">Complete Early?</DialogTitle>
+                </div>
+                <DialogDescription>
+                  This appointment is scheduled to end later today. Are you sure you want to mark it as complete now?
+                </DialogDescription>
+              </>
+            ) : (
+              <>
+                <DialogTitle className="flex items-center gap-2">
+                  <Check className="w-5 h-5" />
+                  Mark Appointment Complete?
+                </DialogTitle>
+                <DialogDescription>
+                  This will record the completion date and time as {moment().format("MMMM Do, YYYY [at] h:mm A")}
+                </DialogDescription>
+              </>
+            )}
+          </DialogHeader>
+
+          <div className="space-y-3 py-4 border-y">
+            <div className="text-sm">
+              <p className="font-medium text-gray-700">Appointment Details</p>
+              <p className="text-muted-foreground">{appointment.subject || "Tutoring Session"}</p>
+            </div>
+            {isEarlyCompletion && (
+              <div className="bg-amber-50 border border-amber-200 rounded-md p-3">
+                <p className="text-sm text-amber-900">
+                  <strong>Scheduled End:</strong> {moment(appointmentEnd).format("MMMM Do, YYYY [at] h:mm A")}
+                </p>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowCompleteConfirm(false)}
+              disabled={isCompleting}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleConfirmComplete}
+              disabled={isCompleting}
+              className={isEarlyCompletion ? "bg-amber-600 hover:bg-amber-700" : "bg-green-600 hover:bg-green-700"}
+            >
+              {isCompleting ? "Marking..." : "Confirm Complete"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

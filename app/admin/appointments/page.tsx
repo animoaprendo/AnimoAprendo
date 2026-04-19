@@ -22,6 +22,9 @@ export type Appointment = {
   appointmentType?: 'single' | 'recurring';
   datetimeISO: string;
   endDate?: string;
+  dates?: string[]; // New format: array of date strings (YYYY-MM-DD)
+  selectedDates?: string[]; // For recurring appointments
+  durationMinutes?: number;
   mode: 'online' | 'in-person';
   subject?: string;
   offeringId?: string;
@@ -29,8 +32,13 @@ export type Appointment = {
   quizAttempts?: any[];
   createdAt: string;
   updatedAt: string;
+  completedAt?: string;
   tutorName?: string;
   tuteeName?: string;
+  tutorCollege?: string;
+  tutorDepartment?: string;
+  tuteeCollege?: string;
+  tuteeDepartment?: string;
 };
 
 type SortField = 'datetimeISO' | 'status' | 'mode' | 'subject' | 'tutorName' | 'tuteeName' | 'createdAt' | 'updatedAt';
@@ -229,22 +237,28 @@ export default function AdminAppointments() {
     monthFromNow.setMonth(monthFromNow.getMonth() + 1);
 
     return appointments.filter(apt => {
-      const appointmentDate = new Date(apt.datetimeISO);
+      // Use new format (dates array) if available, otherwise fall back to datetimeISO
+      const appointmentDates = apt.dates && apt.dates.length > 0 
+        ? apt.dates.map(d => new Date(`${d}T00:00:00`))
+        : [new Date(apt.datetimeISO)];
       
-      switch (dateFilter) {
-        case 'today':
-          return appointmentDate >= today && appointmentDate < tomorrow;
-        case 'tomorrow':
-          const dayAfterTomorrow = new Date(tomorrow);
-          dayAfterTomorrow.setDate(dayAfterTomorrow.getDate() + 1);
-          return appointmentDate >= tomorrow && appointmentDate < dayAfterTomorrow;
-        case 'week':
-          return appointmentDate >= today && appointmentDate <= weekFromNow;
-        case 'month':
-          return appointmentDate >= today && appointmentDate <= monthFromNow;
-        default:
-          return true;
-      }
+      // Check if any date in the appointment matches the filter
+      return appointmentDates.some(appointmentDate => {
+        switch (dateFilter) {
+          case 'today':
+            return appointmentDate >= today && appointmentDate < tomorrow;
+          case 'tomorrow':
+            const dayAfterTomorrow = new Date(tomorrow);
+            dayAfterTomorrow.setDate(dayAfterTomorrow.getDate() + 1);
+            return appointmentDate >= tomorrow && appointmentDate < dayAfterTomorrow;
+          case 'week':
+            return appointmentDate >= today && appointmentDate <= weekFromNow;
+          case 'month':
+            return appointmentDate >= today && appointmentDate <= monthFromNow;
+          default:
+            return true;
+        }
+      });
     });
   }
 
@@ -265,7 +279,12 @@ export default function AdminAppointments() {
     let aValue: any = a[sortField];
     let bValue: any = b[sortField];
     
-    if (sortField === 'datetimeISO' || sortField === 'createdAt' || sortField === 'updatedAt') {
+    if (sortField === 'datetimeISO') {
+      // For date sorting, use the first date from the new format if available
+      const aDate = a.dates && a.dates.length > 0 ? new Date(a.dates[0]).getTime() : new Date(a.datetimeISO).getTime();
+      const bDate = b.dates && b.dates.length > 0 ? new Date(b.dates[0]).getTime() : new Date(b.datetimeISO).getTime();
+      return sortOrder === 'asc' ? aDate - bDate : bDate - aDate;
+    } else if (sortField === 'createdAt' || sortField === 'updatedAt') {
       aValue = new Date(aValue).getTime();
       bValue = new Date(bValue).getTime();
     } else if (typeof aValue === 'string') {
@@ -290,6 +309,14 @@ export default function AdminAppointments() {
   const uniqueStatuses = ['pending', 'accepted', 'declined', 'completed', 'cancelled'];
   const uniqueModes = ['online', 'in-person'];
   const getModeLabel = (mode: string) => (mode === 'online' ? 'Online' : 'Onsite');
+  
+  // Helper function to get the first date of an appointment
+  const getFirstDate = (appointment: Appointment): Date => {
+    if (appointment.dates && appointment.dates.length > 0) {
+      return new Date(`${appointment.dates[0]}T00:00:00`);
+    }
+    return new Date(appointment.datetimeISO);
+  };
 
   if (loading) {
     return (
@@ -472,6 +499,11 @@ export default function AdminAppointments() {
                       {getSortIcon('subject')}
                     </div>
                   </TableHead>
+                  <TableHead>
+                    <div className="flex items-center gap-1">
+                      Type
+                    </div>
+                  </TableHead>
                   <TableHead 
                     className="cursor-pointer hover:bg-muted/50 select-none"
                     onClick={() => handleSort('datetimeISO')}
@@ -525,16 +557,46 @@ export default function AdminAppointments() {
                         </Badge>
                       </TableCell>
                       <TableCell>
+                        <Badge 
+                          variant={appointment.appointmentType === 'recurring' ? 'secondary' : 'outline'}
+                          className={appointment.appointmentType === 'recurring' ? 'bg-purple-100 text-purple-800' : ''}
+                        >
+                          {appointment.appointmentType === 'recurring' ? 'Recurring' : 'Single'}
+                          {appointment.appointmentType === 'recurring' && appointment.dates && (
+                            <span className="ml-1">({appointment.dates.length})</span>
+                          )}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
                         <div className="space-y-1">
-                          <div className="font-medium">
-                            {new Date(appointment.datetimeISO).toLocaleDateString()}
-                          </div>
-                          <div className="text-sm text-muted-foreground">
-                            {new Date(appointment.datetimeISO).toLocaleTimeString([], {
-                              hour: '2-digit',
-                              minute: '2-digit'
-                            })}
-                          </div>
+                          {appointment.appointmentType === 'recurring' && appointment.dates && appointment.dates.length > 0 ? (
+                            <>
+                              <div className="font-medium text-sm">
+                                {appointment.dates.length} dates
+                              </div>
+                              <div className="text-xs text-muted-foreground space-y-0.5">
+                                <div>{appointment.dates[0]} (first)</div>
+                                {appointment.dates.length > 1 && (
+                                  <div>{appointment.dates[appointment.dates.length - 1]} (last)</div>
+                                )}
+                              </div>
+                            </>
+                          ) : (
+                            <>
+                              <div className="font-medium">
+                                {appointment.dates && appointment.dates.length > 0 
+                                  ? appointment.dates[0]
+                                  : new Date(appointment.datetimeISO).toLocaleDateString()
+                                }
+                              </div>
+                              <div className="text-sm text-muted-foreground">
+                                {new Date(appointment.datetimeISO).toLocaleTimeString([], {
+                                  hour: '2-digit',
+                                  minute: '2-digit'
+                                })}
+                              </div>
+                            </>
+                          )}
                         </div>
                       </TableCell>
                       <TableCell>
@@ -666,6 +728,18 @@ export default function AdminAppointments() {
                     <Badge variant="outline">{selectedAppointment.subject || 'No Subject'}</Badge>
                   </div>
                   <div>
+                    <h4 className="font-medium mb-2">Type</h4>
+                    <Badge 
+                      variant={selectedAppointment.appointmentType === 'recurring' ? 'secondary' : 'outline'}
+                      className={selectedAppointment.appointmentType === 'recurring' ? 'bg-purple-100 text-purple-800' : ''}
+                    >
+                      {selectedAppointment.appointmentType === 'recurring' ? 'Recurring' : 'Single'}
+                    </Badge>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
                     <h4 className="font-medium mb-2">Mode</h4>
                     <div className="flex items-center gap-2">
                       {selectedAppointment.mode === 'online' ? (
@@ -676,18 +750,51 @@ export default function AdminAppointments() {
                       <span>{getModeLabel(selectedAppointment.mode)}</span>
                     </div>
                   </div>
+                  <div>
+                    <h4 className="font-medium mb-2">Date & Time</h4>
+                    {selectedAppointment.appointmentType === 'recurring' && selectedAppointment.dates && selectedAppointment.dates.length > 0 ? (
+                      <div className="space-y-2">
+                        <p className="text-sm font-medium">{selectedAppointment.dates.length} Scheduled Dates</p>
+                        <div className="max-h-48 overflow-y-auto space-y-1">
+                          {selectedAppointment.dates.map((date, index) => (
+                            <p key={index} className="text-sm text-muted-foreground">
+                              {new Date(`${date}T00:00:00`).toLocaleDateString()}
+                            </p>
+                          ))}
+                        </div>
+                        <p className="text-sm text-muted-foreground mt-2">
+                          Time: {new Date(selectedAppointment.datetimeISO).toLocaleTimeString([], {
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}
+                        </p>
+                      </div>
+                    ) : (
+                      <>
+                        <p>{selectedAppointment.dates && selectedAppointment.dates.length > 0 
+                          ? new Date(`${selectedAppointment.dates[0]}T00:00:00`).toLocaleDateString()
+                          : new Date(selectedAppointment.datetimeISO).toLocaleDateString()
+                        }</p>
+                        <p className="text-sm text-muted-foreground">
+                          {new Date(selectedAppointment.datetimeISO).toLocaleTimeString([], {
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}
+                        </p>
+                      </>
+                    )}
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <h4 className="font-medium mb-2">Date & Time</h4>
-                    <p>{new Date(selectedAppointment.datetimeISO).toLocaleDateString()}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {new Date(selectedAppointment.datetimeISO).toLocaleTimeString([], {
-                        hour: '2-digit',
-                        minute: '2-digit'
-                      })}
-                    </p>
+                    <h4 className="font-medium mb-2">Appointment Type</h4>
+                    <Badge 
+                      variant={selectedAppointment.appointmentType === 'recurring' ? 'secondary' : 'outline'}
+                      className={selectedAppointment.appointmentType === 'recurring' ? 'bg-purple-100 text-purple-800' : ''}
+                    >
+                      {selectedAppointment.appointmentType === 'recurring' ? `Recurring (${selectedAppointment.dates?.length || 0} dates)` : 'Single'}
+                    </Badge>
                   </div>
                   <div>
                     <h4 className="font-medium mb-2">Status</h4>
@@ -727,6 +834,12 @@ export default function AdminAppointments() {
                     <p><strong>Updated:</strong> {new Date(selectedAppointment.updatedAt).toLocaleString()}</p>
                   </div>
                 </div>
+
+                {selectedAppointment.status === 'completed' && selectedAppointment.completedAt && (
+                  <div className="text-sm text-muted-foreground">
+                    <p><strong>Completed At:</strong> {new Date(selectedAppointment.completedAt).toLocaleString()}</p>
+                  </div>
+                )}
               </div>
 
               <div className="flex justify-end gap-3 pt-4 border-t">
@@ -771,7 +884,18 @@ export default function AdminAppointments() {
                     <p><strong>Tutee:</strong> {selectedAppointment.tuteeName}</p>
                     <p><strong>Tutor:</strong> {selectedAppointment.tutorName}</p>
                     <p><strong>Subject:</strong> {selectedAppointment.subject || 'No Subject'}</p>
-                    <p><strong>Date:</strong> {new Date(selectedAppointment.datetimeISO).toLocaleString()}</p>
+                    <p><strong>Type:</strong> {selectedAppointment.appointmentType === 'recurring' ? 'Recurring' : 'Single'}</p>
+                    {selectedAppointment.appointmentType === 'recurring' && selectedAppointment.dates && selectedAppointment.dates.length > 0 ? (
+                      <>
+                        <p><strong>Dates:</strong> {selectedAppointment.dates.length} scheduled dates</p>
+                        <p className="text-sm text-muted-foreground">{selectedAppointment.dates[0]} to {selectedAppointment.dates[selectedAppointment.dates.length - 1]}</p>
+                      </>
+                    ) : (
+                      <p><strong>Date:</strong> {selectedAppointment.dates && selectedAppointment.dates.length > 0 
+                        ? new Date(`${selectedAppointment.dates[0]}T00:00:00`).toLocaleString()
+                        : new Date(selectedAppointment.datetimeISO).toLocaleString()
+                      }</p>
+                    )}
                   </div>
                 </div>
               </CardContent>

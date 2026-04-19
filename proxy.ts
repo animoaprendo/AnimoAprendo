@@ -18,6 +18,9 @@ const isAdminRoute = createRouteMatcher(["/admin/(.*)"]);
 const isSuperAdminRoute = createRouteMatcher(["/superadmin(.*)"]);
 const isIdentityRoute = createRouteMatcher(["/.well-known(.*)"]);
 const isAnyRoute = createRouteMatcher(["/(.*)"]);
+const isTutorRoutes = createRouteMatcher(["/tutor(.*)"]);
+const isTuteeRoutes = createRouteMatcher(["/", "/search(.*)", "/browse(.*)", "/appointments(.*)", "/chat(.*)", "/profile(.*)", "/history(.*)", "/quiz(.*)"]);
+const isAdminRoutes = createRouteMatcher(["/admin(.*)"]);
 
 export default clerkMiddleware(async (auth, req) => {
   const { sessionClaims, userId } = await auth();
@@ -30,8 +33,7 @@ export default clerkMiddleware(async (auth, req) => {
         accountType: string;
       }
     | undefined;
-
-  
+    
   if (isIdentityRoute(req)) {
     return NextResponse.next();
   }
@@ -141,6 +143,16 @@ export default clerkMiddleware(async (auth, req) => {
   //   }
   //   if (metadata?.role === "tutor" && !metadata?.isAdmin) {
   //     return NextResponse.redirect(new URL("/tutor/dashboard", req.url));
+  //   }
+  // }
+
+  // if(isAnyRoute(req) && userId){
+  //   if(metadata?.role === "tutee" && !isTuteeRoutes(req)) {
+  //     return NextResponse.redirect(new URL("/", req.url));
+  //   } else if (metadata?.role === "tutor" && !isTutorRoutes(req)) {
+  //     return NextResponse.redirect(new URL("/tutor/dashboard", req.url));
+  //   } else if (isAdmin(metadata) && !isAdminRoutes(req)) {
+  //     return NextResponse.redirect(new URL("/admin/dashboard", req.url));
   //   }
   // }
 

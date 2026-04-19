@@ -268,7 +268,7 @@ export default function Onboarding() {
           nextButtonState={nextButtonState}
         >
           {/* Student or Teacher */}
-          <Step>
+          {/* <Step>
             <div className="w-full px-4 flex flex-col gap-3">
               <div className="relative w-full">
                 <h1 className="text-sm/6 font-medium text-black">Are you a:</h1>
@@ -348,7 +348,7 @@ export default function Onboarding() {
                 </div>
               )}
             </div>
-          </Step>
+          </Step> */}
 
           {/* Course Information */}
           {accountType == "student" && colleges && (
