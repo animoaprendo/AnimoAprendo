@@ -76,13 +76,29 @@ export default function TuteeAppointmentsClient({ initialEvents }: TuteeAppointm
     return { style };
   };
 
+  const getJoinUrl = (event: AppointmentEvent | null) => {
+    if (!event) return null;
+
+    const directUrl = event.meetingUrl?.trim();
+    if (directUrl) return directUrl;
+
+    // Fallback for records that only have meetingId persisted.
+    if (event.meetingId?.trim()) {
+      return `https://meet.jit.si/${event.meetingId.trim()}`;
+    }
+
+    return null;
+  };
+
   const handleJoinSession = (event: AppointmentEvent | null) => {
     if (!event) return;
 
-    if (event.meetingUrl) {
-      window.open(event.meetingUrl, "_blank", "noopener,noreferrer");
+    const joinUrl = getJoinUrl(event);
+
+    if (joinUrl) {
+      window.open(joinUrl, "_blank", "noopener,noreferrer");
     } else {
-      alert(`📌 Joining session with ${event.tutorName}!`);
+      alert("Meeting link is not available yet. Please try again in a moment.");
     }
 
     setSelectedEvent(null);
@@ -247,15 +263,15 @@ export default function TuteeAppointmentsClient({ initialEvents }: TuteeAppointm
                 </div>
               </div>
 
-              {selectedEvent.meetingUrl && selectedEvent.status === "accepted" && (
+              {getJoinUrl(selectedEvent) && selectedEvent.status === "accepted" && (
                 <div className="pt-2">
                   <a
-                    href={selectedEvent.meetingUrl}
+                    href={getJoinUrl(selectedEvent)!}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="inline-flex items-center justify-center rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
                   >
-                    Join Google Meet
+                    Join Session
                   </a>
                 </div>
               )}

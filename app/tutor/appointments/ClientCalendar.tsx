@@ -38,6 +38,25 @@ export default function ClientCalendar({ events, stats }: ClientCalendarProps) {
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
   const getModeLabel = (mode?: string) => (mode === "in-person" ? "Onsite" : "Online");
 
+  const getJoinUrl = (event: CalendarEvent | null) => {
+    if (!event) return null;
+
+    const directUrl = event.meetingUrl?.trim();
+    if (directUrl) return directUrl;
+
+    if (event.meetingId?.trim()) {
+      return `https://meet.jit.si/${event.meetingId.trim()}`;
+    }
+
+    return null;
+  };
+
+  const selectedJoinUrl = getJoinUrl(selectedEvent);
+  const selectedStatus = selectedEvent?.status?.toLowerCase();
+  const isOnlineSession = (selectedEvent?.mode || "").toLowerCase() === "online";
+  const canShowJoinAction = !!selectedJoinUrl && selectedStatus !== 'cancelled' && selectedStatus !== 'declined';
+  const shouldShowPendingJoin = !selectedJoinUrl && isOnlineSession && selectedStatus !== 'cancelled' && selectedStatus !== 'declined';
+
   useEffect(() => {
     if (typeof window !== "undefined" && window.innerWidth < 640) {
       setView("day");
@@ -257,7 +276,7 @@ export default function ClientCalendar({ events, stats }: ClientCalendarProps) {
                   </div>
                 )}
 
-                {selectedEvent.meetingUrl && selectedEvent.status === 'accepted' && (
+                {canShowJoinAction && (
                   <div className="flex items-center gap-2 text-sm">
                     <div className="w-4 h-4 flex items-center justify-center">
                       <div className="w-2 h-2 rounded-full bg-emerald-500" />
@@ -265,13 +284,25 @@ export default function ClientCalendar({ events, stats }: ClientCalendarProps) {
                     <div>
                       <p className="font-medium">Meeting</p>
                       <a
-                        href={selectedEvent.meetingUrl}
+                        href={selectedJoinUrl}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-blue-700 hover:underline"
                       >
-                        Join Google Meet
+                        Join Session
                       </a>
+                    </div>
+                  </div>
+                )}
+
+                {shouldShowPendingJoin && (
+                  <div className="flex items-center gap-2 text-sm">
+                    <div className="w-4 h-4 flex items-center justify-center">
+                      <div className="w-2 h-2 rounded-full bg-amber-500" />
+                    </div>
+                    <div>
+                      <p className="font-medium">Meeting</p>
+                      <p className="text-muted-foreground">Meeting link pending</p>
                     </div>
                   </div>
                 )}
@@ -284,6 +315,18 @@ export default function ClientCalendar({ events, stats }: ClientCalendarProps) {
               <X className="w-4 h-4 mr-2" />
               Close
             </Button>
+            {canShowJoinAction && (
+              <Button asChild className="bg-blue-600 hover:bg-blue-700">
+                <a href={selectedJoinUrl} target="_blank" rel="noopener noreferrer">
+                  Join Session
+                </a>
+              </Button>
+            )}
+            {shouldShowPendingJoin && (
+              <Button disabled className="bg-amber-500 hover:bg-amber-500 text-white">
+                Meeting Link Pending
+              </Button>
+            )}
             {/* {selectedEvent?.appointmentId && (
               <Button asChild>
                 <a href={`/tutor/appointments/${selectedEvent.appointmentId}`}>

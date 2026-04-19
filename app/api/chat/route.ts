@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ObjectId } from 'mongodb';
 import clientPromise from '@/lib/mongodb';
-import { createJitsiMeeting } from '@/lib/jitsi';
 
 export async function GET(request: NextRequest) {
   try {
@@ -234,41 +233,15 @@ export async function PATCH(request: NextRequest) {
       });
     }
 
-    // Fallback generation on server so accepted online sessions always get a link persisted.
-    const sourceMessage = exactMessage || stringMessage;
-    const sourceAppointment = sourceMessage?.appointment;
-    const shouldAutoGenerateMeeting =
-      status === 'accepted' &&
-      !resolvedMeetingUrl &&
-      sourceAppointment?.mode === 'online' &&
-      !!sourceAppointment?.datetimeISO;
-
-    if (shouldAutoGenerateMeeting) {
-      try {
-        const appointmentStart = new Date(sourceAppointment.datetimeISO);
-        const durationMinutes = Number(sourceAppointment.durationMinutes || 60);
-        const appointmentEnd = new Date(appointmentStart.getTime() + durationMinutes * 60 * 1000);
-
-        const generatedMeeting = await createJitsiMeeting({
-          startDateTime: appointmentStart.toISOString(),
-          endDateTime: appointmentEnd.toISOString(),
-          subject: sourceAppointment.subject || 'Tutoring Session',
-        });
-
-        if (generatedMeeting.success && generatedMeeting.meeting?.joinUrl) {
-          resolvedMeetingUrl = generatedMeeting.meeting.joinUrl;
-          resolvedMeetingId = generatedMeeting.meeting.id;
-          console.log('Auto-generated Jitsi meeting for accepted appointment:', {
-            messageId,
-            meetingId: resolvedMeetingId,
-            meetingUrl: resolvedMeetingUrl,
-          });
-        } else {
-          console.warn('Could not auto-generate Jitsi meeting for accepted appointment:', generatedMeeting.error);
-        }
-      } catch (meetingError) {
-        console.warn('Error auto-generating Jitsi meeting for accepted appointment:', meetingError);
-      }
+    // Deterministic meeting link: always use appointment/chat message ID as the room ID when accepted.
+    if (status === 'accepted') {
+      resolvedMeetingId = messageId.trim();
+      resolvedMeetingUrl = `https://meet.jit.si/${resolvedMeetingId}`;
+      console.log('Assigned deterministic Jitsi meeting for accepted appointment:', {
+        messageId,
+        meetingId: resolvedMeetingId,
+        meetingUrl: resolvedMeetingUrl,
+      });
     }
 
     // The message ID should be treated as an ObjectId since that's how MongoDB stores it

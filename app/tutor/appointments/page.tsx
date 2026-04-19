@@ -70,7 +70,7 @@ export default async function TutorAppointmentsPage() {
           tuteeId: apt.tuteeId,
           tuteeName: tuteeName,
           meetingUrl: apt.meetingUrl || null,
-          meetingId: apt.meetingId || null
+          meetingId: apt.meetingId || apt.messageId || apt._id || null
         };
       });
     }

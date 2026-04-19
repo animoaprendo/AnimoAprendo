@@ -6,7 +6,6 @@ import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { useUser } from "@clerk/nextjs";
-import { createGoogleMeetMeetingWithAuth, createMeetingTimes } from "@/lib/google-meet";
 
 // Import all our new components
 import AppointmentModal from "./AppointmentModal";
@@ -1222,47 +1221,6 @@ export default function ChatContainer({
 
         if (result.success) {
           console.log("Appointment status updated:", result.data);
-
-          const appointment = msg.appointment;
-          const shouldCreateMeeting =
-            action === "accepted" &&
-            appointment?.mode === "online" &&
-            !appointment?.meetingUrl;
-
-          if (shouldCreateMeeting && appointment?.datetimeISO) {
-            const appointmentDate = new Date(appointment.datetimeISO);
-            const { startDateTime, endDateTime } = createMeetingTimes(
-              appointmentDate,
-              appointment.durationMinutes || 60
-            );
-
-            const meetingResult = await createGoogleMeetMeetingWithAuth(
-              {
-                startDateTime,
-                endDateTime,
-                subject: appointment.subject || "Tutoring Session",
-              },
-              userId
-            );
-
-            if (meetingResult.success && meetingResult.meeting?.joinUrl) {
-              const attachMeetingResult = await updateAppointmentStatus({
-                messageId,
-                status: action,
-                actorId: userId!,
-                meetingUrl: meetingResult.meeting.joinUrl,
-                meetingId: meetingResult.meeting.id,
-              });
-
-              if (attachMeetingResult.success) {
-                console.log("Google Meet link saved to appointment:", meetingResult.meeting.joinUrl);
-              } else {
-                console.warn("Appointment accepted, but failed to save Google Meet link:", attachMeetingResult.error);
-              }
-            } else {
-              console.warn("Appointment accepted, but Google Meet creation failed:", meetingResult.error);
-            }
-          }
         }
       } catch (error) {
         console.error("Error updating appointment status:", error);

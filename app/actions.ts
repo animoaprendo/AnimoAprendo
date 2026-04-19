@@ -1077,7 +1077,7 @@ export async function fetchTuteeAppointments(userId?: string): Promise<{
         mode: appointment.mode || "Online",
         status: appointment.status || "active",
         meetingUrl: appointment.meetingUrl || null,
-        meetingId: appointment.meetingId || null,
+        meetingId: appointment.meetingId || appointment.messageId || appointment._id || null,
         resource: appointment
       };
     });

@@ -347,6 +347,12 @@ function AppointmentReminder({
   userId: string;
   userRole: "tutee" | "tutor";
 }) {
+  const resolvedMeetingId =
+    appointment.meetingId || appointment.messageId || appointment._id || null;
+  const resolvedMeetingUrl =
+    appointment.meetingUrl ||
+    (resolvedMeetingId ? `https://meet.jit.si/${resolvedMeetingId}` : null);
+
   const appointmentDate = new Date(appointment.datetimeISO);
   const isToday = appointmentDate.toDateString() === new Date().toDateString();
   const isTomorrow =
@@ -410,14 +416,14 @@ function AppointmentReminder({
         <div className="text-xs opacity-75">Status: Accepted</div>
       )}
 
-      {appointment.status === "accepted" && appointment.meetingUrl && (
+      {appointment.status === "accepted" && resolvedMeetingUrl && (
         <a
-          href={appointment.meetingUrl}
+          href={resolvedMeetingUrl}
           target="_blank"
           rel="noopener noreferrer"
           className="px-3 py-2 bg-blue-500 hover:bg-blue-600 text-white text-xs font-medium rounded transition-colors duration-200 text-center"
         >
-          Join Google Meet
+          Join Session
         </a>
       )}
 
