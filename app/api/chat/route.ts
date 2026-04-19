@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ObjectId } from 'mongodb';
 import clientPromise from '@/lib/mongodb';
+import { createJitsiMeeting } from '@/lib/jitsi';
 
 export async function GET(request: NextRequest) {
   try {
@@ -173,6 +174,9 @@ export async function PATCH(request: NextRequest) {
       meetingId?: string;
     };
 
+    let resolvedMeetingUrl = meetingUrl?.trim() || null;
+    let resolvedMeetingId = meetingId?.trim() || null;
+
     console.log('PATCH request received:', { messageId, status, actorId, declineReason, meetingUrl, meetingId });
 
     if (!messageId || !status) {
@@ -230,6 +234,43 @@ export async function PATCH(request: NextRequest) {
       });
     }
 
+    // Fallback generation on server so accepted online sessions always get a link persisted.
+    const sourceMessage = exactMessage || stringMessage;
+    const sourceAppointment = sourceMessage?.appointment;
+    const shouldAutoGenerateMeeting =
+      status === 'accepted' &&
+      !resolvedMeetingUrl &&
+      sourceAppointment?.mode === 'online' &&
+      !!sourceAppointment?.datetimeISO;
+
+    if (shouldAutoGenerateMeeting) {
+      try {
+        const appointmentStart = new Date(sourceAppointment.datetimeISO);
+        const durationMinutes = Number(sourceAppointment.durationMinutes || 60);
+        const appointmentEnd = new Date(appointmentStart.getTime() + durationMinutes * 60 * 1000);
+
+        const generatedMeeting = await createJitsiMeeting({
+          startDateTime: appointmentStart.toISOString(),
+          endDateTime: appointmentEnd.toISOString(),
+          subject: sourceAppointment.subject || 'Tutoring Session',
+        });
+
+        if (generatedMeeting.success && generatedMeeting.meeting?.joinUrl) {
+          resolvedMeetingUrl = generatedMeeting.meeting.joinUrl;
+          resolvedMeetingId = generatedMeeting.meeting.id;
+          console.log('Auto-generated Jitsi meeting for accepted appointment:', {
+            messageId,
+            meetingId: resolvedMeetingId,
+            meetingUrl: resolvedMeetingUrl,
+          });
+        } else {
+          console.warn('Could not auto-generate Jitsi meeting for accepted appointment:', generatedMeeting.error);
+        }
+      } catch (meetingError) {
+        console.warn('Error auto-generating Jitsi meeting for accepted appointment:', meetingError);
+      }
+    }
+
     // The message ID should be treated as an ObjectId since that's how MongoDB stores it
     let updated = null;
     
@@ -240,8 +281,8 @@ export async function PATCH(request: NextRequest) {
           'appointment.status': status,
           'appointment.actorId': actorId,
           'appointment.declineReason': status === 'declined' ? declineReason?.trim() : null,
-          'appointment.meetingUrl': meetingUrl || null,
-          'appointment.meetingId': meetingId || null,
+          'appointment.meetingUrl': resolvedMeetingUrl,
+          'appointment.meetingId': resolvedMeetingId,
           'updatedAt': new Date().toISOString(),
         }
       };
@@ -311,8 +352,8 @@ export async function PATCH(request: NextRequest) {
             tuteeId,
             status: status, // 'accepted' or 'declined'
             declineReason: status === 'declined' ? declineReason?.trim() : null,
-            meetingUrl: meetingUrl || null,
-            meetingId: meetingId || null,
+            meetingUrl: resolvedMeetingUrl,
+            meetingId: resolvedMeetingId,
             appointmentType: updated.appointment.appointmentType || 'single',
             datetimeISO: updated.appointment.datetimeISO,
             endDate: updated.appointment.endDate,
@@ -342,8 +383,8 @@ export async function PATCH(request: NextRequest) {
                 $set: { 
                   status: status,
                   declineReason: status === 'declined' ? declineReason?.trim() : null,
-                  meetingUrl: meetingUrl || null,
-                  meetingId: meetingId || null,
+                  meetingUrl: resolvedMeetingUrl,
+                  meetingId: resolvedMeetingId,
                   subject: subject,
                   offeringId: offeringId,
                   updatedAt: new Date().toISOString()

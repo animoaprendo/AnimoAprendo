@@ -78,6 +78,27 @@ function formatDate(value?: string): string {
   });
 }
 
+function formatYearLevel(value: unknown): string {
+  if (value === null || value === undefined) return "N/A";
+
+  const raw = String(value).trim();
+  if (!raw) return "N/A";
+
+  const match = raw.match(/\d+/);
+  if (!match) return raw;
+
+  const year = Number(match[0]);
+  if (!Number.isFinite(year) || year <= 0) return raw;
+
+  const mod100 = year % 100;
+  const suffix =
+    mod100 >= 11 && mod100 <= 13
+      ? "th"
+      : ({ 1: "st", 2: "nd", 3: "rd" } as Record<number, string>)[year % 10] || "th";
+
+  return `${year}${suffix} year`;
+}
+
 function formatAvailabilityPreview(availability: OfferingRecord["availability"]): string {
   if (!Array.isArray(availability) || availability.length === 0) {
     return "No schedule listed";
@@ -379,7 +400,7 @@ export default async function UserProfilePage({ params }: PageProps) {
                   <>
                     <p><span className="text-gray-500">College:</span> {collegeInformation.college || "N/A"}</p>
                     <p><span className="text-gray-500">Department:</span> {collegeInformation.department || "N/A"}</p>
-                    <p><span className="text-gray-500">Year & section:</span> {collegeInformation.yearLevel || "N/A"} / {collegeInformation.section || "N/A"}</p>
+                    <p><span className="text-gray-500">Year Level:</span> {formatYearLevel(collegeInformation.yearLevel)}</p>
                   </>
                 ) : (
                   <p className="text-gray-500">No academic details available.</p>
