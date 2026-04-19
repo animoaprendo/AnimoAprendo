@@ -246,7 +246,7 @@ export default function SearchClient({ initialOfferings }: SearchClientProps) {
       <div className="flex flex-col lg:flex-row items-stretch gap-4 mb-8">
         <Card className="flex-1">
           <CardContent className="p-0">
-            <form onSubmit={handleSubmit} className="flex">
+            <form onSubmit={handleSubmit} className="flex flex-row">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <Input
@@ -257,10 +257,9 @@ export default function SearchClient({ initialOfferings }: SearchClientProps) {
                   defaultValue={search}
                 />
               </div>
-              <Button
+              <button
                 type="submit"
-                size="lg"
-                className="bg-green-700 hover:bg-green-800 rounded-l-none px-6"
+                className="bg-green-700 hover:bg-green-800 rounded-r-lg px-6 flex items-center text-white hover:cursor-pointer"
                 disabled={isLoading}
               >
                 {isLoading ? (
@@ -268,7 +267,7 @@ export default function SearchClient({ initialOfferings }: SearchClientProps) {
                 ) : (
                   <Search className="h-4 w-4" />
                 )}
-              </Button>
+              </button>
             </form>
           </CardContent>
         </Card>
