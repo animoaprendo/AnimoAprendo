@@ -160,7 +160,7 @@ export default function TuteeAppointmentsClient({ initialEvents }: TuteeAppointm
                 <div className="flex items-center justify-center gap-2 mb-2">
                   <Clock className="h-5 w-5 text-yellow-600" />
                   <div className="text-2xl font-bold text-yellow-800">
-                    {events.filter(e => e.status === 'pending' || e.status === 'active').length}
+                    {events.filter(e => e.status === 'accepted' || e.status === 'active').length}
                   </div>
                 </div>
                 <div className="text-yellow-600 text-sm">Upcoming</div>
