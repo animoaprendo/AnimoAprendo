@@ -194,26 +194,41 @@ export default function MobileSidebar({
                 </div>
               )}
 
-              {/* Regular Appointment Reminders Card - Show ALL appointments */}
-              {upcomingAppointments.length > 0 && (
-                <div className="bg-green-700 text-white/95 px-3 py-4 rounded-md">
-                  <div className="font-medium text-green-100 mb-2">
-                    📅 Appointment Reminders
+              {(() => {
+                const regularAppointments = upcomingAppointments.filter((apt: any) => {
+                  const hasQuiz = Array.isArray(apt.quiz) && apt.quiz.length > 0;
+                  if (!hasQuiz || userRole === "tutor") {
+                    return true;
+                  }
+
+                  const quizAttempts = Array.isArray(apt.quizAttempts) ? apt.quizAttempts : [];
+                  const hasCompletedAttempt1 = quizAttempts.some(
+                    (attempt: any) => attempt.attempt === 1 && attempt.tuteeId === userId
+                  );
+
+                  return hasCompletedAttempt1;
+                });
+
+                return regularAppointments.length > 0 ? (
+                  <div className="bg-green-700 text-white/95 px-3 py-4 rounded-md">
+                    <div className="font-medium text-green-100 mb-2">
+                      📅 Appointment Reminders
+                    </div>
+                    <div className="space-y-3">
+                      {regularAppointments
+                        .slice(0, 2)
+                        .map((apt: any, index: number) => (
+                          <MobileAppointmentReminder
+                            key={`apt-${apt._id || index}`}
+                            appointment={apt}
+                            userId={userId}
+                            userRole={userRole}
+                          />
+                        ))}
+                    </div>
                   </div>
-                  <div className="space-y-3">
-                    {upcomingAppointments
-                      .slice(0, 2)
-                      .map((apt: any, index: number) => (
-                        <MobileAppointmentReminder
-                          key={`apt-${apt._id || index}`}
-                          appointment={apt}
-                          userId={userId}
-                          userRole={userRole}
-                        />
-                      ))}
-                  </div>
-                </div>
-              )}
+                ) : null;
+              })()}
             </div>
           ) : (
             <p className="text-sm text-gray-500">No upcoming appointments</p>
