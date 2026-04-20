@@ -183,13 +183,11 @@ export default function TuteeQuizPage() {
 
   const handleAnswerChange = (questionId: string, answer: string) => {
     if (quizCompleted) return;
-
-    const question = questions.find((q) => q.id === questionId);
-    const sanitizedAnswer = sanitizeAnswerForQuestion(question, answer);
     
     setAnswers(prev => ({
       ...prev,
-      [questionId]: sanitizedAnswer
+      // Preserve exactly what the user types; sanitize later during submission.
+      [questionId]: answer
     }));
   };
 
